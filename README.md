@@ -3,7 +3,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#12466B">
-<title>Suivi muscu</title>
 <style>
   :root{
     --bg:#EEF2F7; --surface:#FFFFFF; --ink:#11202E; --muted:#5A6B7B;
