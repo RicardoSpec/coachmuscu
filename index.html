@@ -1,16 +1,16 @@
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <head>
-    <meta charset="UTF-8">
-    <title>Coach Mouche</title>
-    <meta name="apple-mobile-web-app-title" content="Coachmuscu">
-    
-    <link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
-    
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta charset="UTF-8">
+<title>Coach Muscu</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#12466B">
+<meta name="apple-mobile-web-app-title" content="Coachmuscu">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <style>
   :root{
     --bg:#EEF2F7; --surface:#FFFFFF; --ink:#11202E; --muted:#5A6B7B;
@@ -28,11 +28,9 @@
     font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;
   }
   .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
-  /* Header */
   header.top{
     position:sticky;top:0;z-index:30;background:var(--primary);color:#fff;
-    padding:14px 18px calc(14px + env(safe-area-inset-top)) 18px;
-    padding-top:max(14px,env(safe-area-inset-top));
+    padding:14px 18px;padding-top:max(14px,env(safe-area-inset-top));
     display:flex;align-items:center;justify-content:space-between;gap:12px;
   }
   .brand .eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#A9C6DC;font-weight:700}
@@ -41,7 +39,6 @@
     padding:7px 11px;border-radius:11px;text-align:right;line-height:1.15}
   .wkchip .b{font-family:var(--mono);font-weight:700;font-size:15px;display:block}
   .wkchip .s{font-size:10px;color:#CFE0EE;letter-spacing:.04em}
-  /* Main */
   main{flex:1;padding:16px 14px 92px}
   .view{display:none;animation:fade .22s ease both}
   .view.active{display:block}
@@ -51,7 +48,6 @@
   .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
   .pad{padding:16px}
   .num{font-family:var(--mono)}
-  /* Today hero */
   .hero{position:relative;overflow:hidden;border-left:5px solid var(--accent)}
   .hero .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:800}
   .hero .stitle{font-size:13px;color:var(--muted);margin-top:2px}
@@ -60,7 +56,6 @@
   .tip{background:var(--primary-soft);border:1px solid #CFE0EF;border-radius:14px;padding:12px 14px;margin-top:12px}
   .tip .t{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);font-weight:800;margin-bottom:3px}
   .tip p{margin:0;font-size:13.5px;color:#243949}
-  /* buttons */
   .btn{appearance:none;border:0;border-radius:12px;font-family:var(--sans);font-weight:700;
     font-size:15px;padding:13px 16px;cursor:pointer;display:inline-flex;align-items:center;
     justify-content:center;gap:8px;width:100%}
@@ -69,11 +64,9 @@
   .btn.accent{background:var(--accent);color:#fff}
   .btn.accent:active{filter:brightness(.94)}
   .btn.ghost{background:#fff;color:var(--primary);border:1.5px solid var(--line)}
-  .btn.sm{padding:10px 12px;font-size:13.5px;border-radius:10px;width:auto}
   .btn.danger{background:#fff;color:var(--danger);border:1.5px solid #EBC4C6}
   .row2{display:flex;gap:10px}
   .row2>*{flex:1}
-  /* field */
   .field{margin-top:14px}
   .field>label{display:block;font-size:12px;font-weight:700;color:var(--muted);
     text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
@@ -84,12 +77,10 @@
   textarea{resize:vertical;min-height:46px;line-height:1.4}
   select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235A6B7B' stroke-width='2.5'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-  /* chips */
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;
     padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;user-select:none}
   .chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
-  /* grid calendar */
   .legend{display:flex;gap:14px;align-items:center;margin:2px 4px 12px;font-size:12px;color:var(--muted)}
   .legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:5px}
   .dot-done{background:var(--done-bg);border:1px solid var(--done-line)}
@@ -105,7 +96,6 @@
   .cell.next{border:2px solid var(--accent);background:#fff;color:var(--accent)}
   .cell .chk{position:absolute;top:3px;right:4px;font-size:10px}
   .cell.sel{box-shadow:0 0 0 3px rgba(18,70,107,.18)}
-  /* session detail */
   .sd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px}
   .sd-head .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800}
   .sd-head h3{margin:3px 0 0;font-size:18px;font-weight:800;letter-spacing:-.01em}
@@ -124,13 +114,11 @@
   .set .sn{font-size:12px;color:var(--muted);font-weight:700}
   .set input{padding:9px 10px;text-align:center}
   .set .u{font-size:10px;color:var(--muted);display:block;text-align:center;margin-top:2px;letter-spacing:.04em}
-  /* journal date nav */
   .datebar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .datebar input[type=date]{flex:1;text-align:center;font-family:var(--mono)}
   .nav-sq{width:46px;height:46px;flex:none;border-radius:12px;border:1.5px solid var(--line);
     background:#fff;color:var(--primary);font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .meals .field{margin-top:10px}
-  /* progress */
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
   .stat .v{font-family:var(--mono);font-size:26px;font-weight:800;line-height:1;color:var(--primary)}
@@ -141,7 +129,6 @@
   .wlist .wi .num{color:var(--ink);font-weight:700}
   .muted{color:var(--muted);font-size:13px}
   .sec-title{font-size:15px;font-weight:800;margin:0 0 10px;letter-spacing:-.01em}
-  /* bottom nav */
   nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;border-top:1px solid var(--line);
     display:flex;max-width:520px;margin:0 auto;padding:6px 6px max(6px,env(safe-area-inset-bottom))}
   .tab{flex:1;background:none;border:0;cursor:pointer;padding:8px 2px;color:var(--muted);
@@ -162,13 +149,12 @@
   <header class="top">
     <div class="brand">
       <div class="eyebrow">Prise de masse · 8 semaines</div>
-      <h1>Suivi mouche muscu</h1>
+      <h1>Suivi muscu</h1>
     </div>
     <div class="wkchip" id="wkchip"><span class="b" id="wkB">—</span><span class="s">progression</span></div>
   </header>
 
   <main>
-    <!-- AUJOURD'HUI -->
     <section class="view active" id="v-today">
       <h2 class="page">Aujourd'hui</h2>
       <div class="card hero pad" id="heroCard"></div>
@@ -177,7 +163,6 @@
       <div class="card pad" id="todayLog"></div>
     </section>
 
-    <!-- PROGRAMME -->
     <section class="view" id="v-prog">
       <h2 class="page">Programme</h2>
       <div class="card pad">
@@ -192,7 +177,6 @@
       <div id="sessionDetail"></div>
     </section>
 
-    <!-- JOURNAL -->
     <section class="view" id="v-journal">
       <h2 class="page">Journal</h2>
       <div class="datebar">
@@ -203,7 +187,6 @@
       <div class="card pad" id="journalLog"></div>
     </section>
 
-    <!-- PROGRES -->
     <section class="view" id="v-prog2">
       <h2 class="page">Progrès</h2>
       <div class="stats" id="statGrid"></div>
@@ -215,7 +198,7 @@
       <div class="spacer"></div>
       <div class="card pad">
         <p class="sec-title">Tes données</p>
-        <p class="muted" style="margin-top:0">Tout est stocké sur cet appareil. Exporte un fichier de sauvegarde pour le garder sur Google Drive, ou le recharger sur un autre téléphone.</p>
+        <p class="muted" style="margin-top:0">Tout est stocké sur ce téléphone. Exporte une sauvegarde pour la garder sur Google Drive, ou la recharger sur un autre téléphone.</p>
         <div class="field"><button class="btn primary" id="btnExport">Exporter ma sauvegarde</button></div>
         <div class="field"><button class="btn ghost" id="btnImport">Importer une sauvegarde</button>
           <input type="file" id="fileImport" accept="application/json,.json" style="display:none"></div>
@@ -353,18 +336,18 @@ function flash(){var f=document.getElementById("flash");if(!f)return;f.classList
 
 /* ---------- Navigation ---------- */
 var currentSel=null;
+var journalDate=todayStr();
+function activateTab(id){
+  document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
+  document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
+  if(id==="v-today")renderToday();
+  if(id==="v-prog")renderProgram();
+  if(id==="v-journal")renderJournal();
+  if(id==="v-prog2")renderProgress();
+  window.scrollTo(0,0);
+}
 document.querySelectorAll(".tab").forEach(function(t){
-  t.addEventListener("click",function(){
-    document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});
-    t.classList.add("on");
-    var id=t.getAttribute("data-view");
-    document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
-    if(id==="v-today")renderToday();
-    if(id==="v-prog")renderProgram();
-    if(id==="v-journal")renderJournal();
-    if(id==="v-prog2")renderProgress();
-    window.scrollTo(0,0);
-  });
+  t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});
 });
 
 /* ---------- Header chip ---------- */
@@ -377,6 +360,8 @@ function renderChip(){
 function renderToday(){
   renderChip();
   var n=nextSession();var hero=document.getElementById("heroCard");
+  var tip=phaseTip(todayStr());
+  var tipHTML='<div class="tip"><div class="t">'+tip.t+'</div><p>'+tip.p+'</p></div>';
   if(n){
     var p=PROGRAM[n.c];
     hero.innerHTML=
@@ -387,21 +372,22 @@ function renderToday(){
       '<div class="row2" style="margin-top:14px">'+
         '<button class="btn accent" id="goSession">Ouvrir la séance</button>'+
         '<button class="btn ghost" id="quickDone">Marquer faite</button>'+
-      '</div>';
+      '</div>'+
+      tipHTML;
     document.getElementById("goSession").addEventListener("click",function(){
       currentSel={w:n.w,c:n.c};
-      document.querySelector('.tab[data-view="v-prog"]').click();
-      setTimeout(renderSessionDetail,30);
+      activateTab("v-prog");
+      var sd=document.getElementById("sessionDetail");
+      if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});
     });
     document.getElementById("quickDone").addEventListener("click",function(){
       sess(n.w,n.c).done=true;save();renderToday();
     });
   }else{
     hero.innerHTML='<div class="lbl">Bravo</div><h2>Programme terminé 🎉</h2>'+
-      '<div class="meta">32 séances bouclées. Tu peux relancer un cycle en augmentant les charges.</div>';
+      '<div class="meta">32 séances bouclées. Tu peux relancer un cycle en augmentant les charges.</div>'+
+      tipHTML;
   }
-  var tip=phaseTip(todayStr());
-  hero.innerHTML+='<div class="tip"><div class="t">'+tip.t+'</div><p>'+tip.p+'</p></div>';
   buildDayForm(document.getElementById("todayLog"),todayStr());
 }
 
@@ -429,7 +415,6 @@ function buildDayForm(container,d){
     '<div class="field"><label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)">'+
       '<input type="checkbox" class="f-medit" style="width:20px;height:20px;flex:none"> Méditation faite aujourd\'hui</label></div>';
 
-  // valeurs
   container.querySelector(".f-prog").value=dd.program||"";
   container.querySelector(".f-note").value=dd.note||"";
   container.querySelector(".f-weight").value=dd.weight||"";
@@ -444,7 +429,6 @@ function buildDayForm(container,d){
     if(dd.sports.indexOf(ch.getAttribute("data-sport"))>-1)ch.classList.add("on");
   });
 
-  // bindings
   container.querySelector(".f-prog").addEventListener("change",function(){day(d).program=this.value;save();renderChip();});
   container.querySelector(".f-note").addEventListener("input",function(){day(d).note=this.value;save();});
   container.querySelector(".f-weight").addEventListener("input",function(){day(d).weight=this.value;save();});
@@ -512,7 +496,6 @@ function renderSessionDetail(){
     var setsHTML="";
     var u=ex.unit==="sec"?"sec":"reps";
     for(var i=0;i<ex.sets;i++){
-      var rec=s.sets[ex.id][i]||{kg:"",r:""};
       setsHTML+='<div class="set" data-exo="'+ex.id+'" data-set="'+i+'">'+
         '<div class="sn">Série '+(i+1)+'</div>'+
         '<div><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="kg"><span class="u">kg</span></div>'+
@@ -530,7 +513,6 @@ function renderSessionDetail(){
   });
   wrap.innerHTML=head+exosHTML+'</div>';
 
-  // valeurs des séries
   wrap.querySelectorAll(".set").forEach(function(row){
     var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
     var rec=(s.sets[exo]&&s.sets[exo][idx])||{kg:"",r:""};
@@ -545,18 +527,15 @@ function renderSessionDetail(){
     row.querySelector(".in-kg").addEventListener("input",upd);
     row.querySelector(".in-r").addEventListener("input",upd);
   });
-  // aides
   wrap.querySelectorAll(".info-btn").forEach(function(b){
     b.addEventListener("click",function(){document.getElementById("help-"+b.getAttribute("data-help")).classList.toggle("open");});
   });
-  // toggle done
   wrap.querySelector("#toggleDone").addEventListener("click",function(){
     s.done=!s.done;save();renderProgram();renderSessionDetail();
   });
 }
 
 /* ---------- JOURNAL ---------- */
-var journalDate=todayStr();
 function renderJournal(){
   var pick=document.getElementById("dPick");
   pick.value=journalDate;
@@ -600,18 +579,15 @@ function sparkline(entries){
 function renderProgress(){
   renderChip();
   var dc=doneCount();var n=nextSession();
-  // adhérence
   var tot=0,foll=0;
   Object.keys(state.days).forEach(function(d){
     var pr=state.days[d].program;
     if(pr&&pr!==""&&pr!=="Jour de repos"){tot++;if(pr==="Oui"||pr==="Partiellement")foll++;}
   });
-  // sports
   var sc={};SPORTS.forEach(function(s){sc[s]=0;});
   Object.keys(state.days).forEach(function(d){(state.days[d].sports||[]).forEach(function(s){if(sc[s]!==undefined)sc[s]++;});});
   var topSports=SPORTS.filter(function(s){return sc[s]>0;}).sort(function(a,b){return sc[b]-sc[a];}).slice(0,3)
     .map(function(s){return s+" ×"+sc[s];}).join(" · ")||"—";
-  // sommeil & méditation
   var sleeps=[];var meditDays=0;
   Object.keys(state.days).forEach(function(d){
     var sl=parseFloat(state.days[d].sleep);if(!isNaN(sl))sleeps.push(sl);
@@ -629,7 +605,7 @@ function renderProgress(){
     '<div class="stat"><div class="v" style="font-size:15px;line-height:1.3;padding-top:4px">'+topSports+'</div><div class="k">Sports les plus loggés</div></div>';
 
   var entries=weightEntries();
-  var wb=document.getElementById("weightBlock");
+  var wbk=document.getElementById("weightBlock");
   var headTxt="";
   if(entries.length){
     var first=entries[0],lastE=entries[entries.length-1];
@@ -643,7 +619,7 @@ function renderProgress(){
   entries.slice(-6).reverse().forEach(function(e){
     listHTML+='<div class="wi"><span>'+frDate(e.d)+'</span><span class="num">'+e.w.toFixed(1)+' kg</span></div>';
   });
-  wb.innerHTML=headTxt+sparkline(entries)+'<div class="wlist">'+listHTML+'</div>';
+  wbk.innerHTML=headTxt+sparkline(entries)+'<div class="wlist">'+listHTML+'</div>';
 }
 
 /* ---------- Export / Import / Reset ---------- */
@@ -684,7 +660,7 @@ try{localStorage.setItem("__test__","1");localStorage.removeItem("__test__");STO
 if(!STORAGE_OK){
   var wbar=document.createElement("div");
   wbar.className="warnbar";
-  wbar.textContent="⚠️ Mode sans sauvegarde — tes saisies seront perdues en fermant. Ouvre l'app depuis le fichier téléchargé sur ton téléphone, ou ajoute-la à l'écran d'accueil, plutôt que dans l'aperçu.";
+  wbar.textContent="⚠️ Mode sans sauvegarde — tes saisies seront perdues en fermant. Ouvre l'app depuis ton écran d'accueil plutôt que dans un aperçu.";
   var appEl=document.querySelector(".app");
   appEl.insertBefore(wbar,appEl.children[1]);
 }
