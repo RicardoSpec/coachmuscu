@@ -96,6 +96,13 @@
   .cell.next{border:2px solid var(--accent);background:#fff;color:var(--accent)}
   .cell .chk{position:absolute;top:3px;right:4px;font-size:10px}
   .cell.sel{box-shadow:0 0 0 3px rgba(18,70,107,.18)}
+  .tcell{width:100%;min-height:48px;border-radius:11px;border:1.5px solid var(--line);background:var(--none-bg);
+    color:var(--ink);font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center;
+    text-align:center;cursor:pointer;padding:6px 4px;position:relative;line-height:1.15}
+  .tcell.done{background:var(--done-bg);border-color:var(--done-line);color:var(--done-ink)}
+  .tcell.sel{box-shadow:0 0 0 3px rgba(18,70,107,.18)}
+  .tcell .chk{position:absolute;top:2px;right:4px;font-size:9px}
+  nav.tabs .tab{font-size:10px}
   .sd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px}
   .sd-head .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800}
   .sd-head h3{margin:3px 0 0;font-size:18px;font-weight:800;letter-spacing:-.01em}
@@ -164,17 +171,22 @@
     </section>
 
     <section class="view" id="v-prog">
-      <h2 class="page">Programme</h2>
-      <div class="card pad">
-        <div class="legend">
-          <span><i class="dot-next"></i>Prochaine</span>
-          <span><i class="dot-done"></i>Faite</span>
-          <span><i class="dot-todo"></i>À faire</span>
-        </div>
-        <table class="grid" id="gridTable"></table>
-      </div>
+      <h2 class="page">Muscu</h2>
+      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Enchaîne A → B → C → D, semaine après semaine. Le Bloc 2 (août) prend le relais après les 8 semaines. Touche une case pour ouvrir la séance.</p>
+      <div id="progBlocks"></div>
       <div class="spacer"></div>
       <div id="sessionDetail"></div>
+    </section>
+
+    <section class="view" id="v-tri">
+      <h2 class="page">Triathlon</h2>
+      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Plan Distance Olympique — 10 semaines, 3 séances/sem. Touche une case pour voir la séance et la cocher. Détails complets dans ton Drive. (* = semaine d'affûtage)</p>
+      <div class="card pad">
+        <div class="legend"><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>
+        <table class="grid" id="triTable"></table>
+      </div>
+      <div class="spacer"></div>
+      <div id="triDetail"></div>
     </section>
 
     <section class="view" id="v-journal">
@@ -211,7 +223,9 @@
     <button class="tab on" data-view="v-today">
       <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Aujourd'hui</button>
     <button class="tab" data-view="v-prog">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Programme</button>
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Muscu</button>
+    <button class="tab" data-view="v-tri">
+      <svg viewBox="0 0 24 24"><path d="M3 13h3l2-4 3 8 2-5 2 3h4"/></svg>Triathlon</button>
     <button class="tab" data-view="v-journal">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
     <button class="tab" data-view="v-prog2">
@@ -282,8 +296,63 @@ var PROGRAM = {
      help:"À genoux, tu fais rouler la roue vers l'avant en gardant le dos droit, puis reviens. Très efficace. <b>Cible :</b> abdominaux (avancé)."}
   ]}
 };
+/* Bloc 2 — Août (focus plage) : variété + épaules/dos/bras/abdos */
+var PROGRAM2 = {
+  A:{title:"Séance A — Pecs & épaules (force)", sub:"Bloc 2 · Pousser", exos:[
+    {id:"a1",name:"Développé couché barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Pousser la barre du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
+    {id:"a2",name:"Développé militaire barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Barre poussée au-dessus de la tête, debout, dos gainé. <b>Cible :</b> épaules (force)."},
+    {id:"a3",name:"Développé incliné haltères",target:"3 × 8-10",sets:3,unit:"reps",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
+    {id:"a4",name:"Élévations latérales",target:"4 × 12-15",sets:4,unit:"reps",help:"Lever les bras sur les côtés à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
+    {id:"a5",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, posture."},
+    {id:"a6",name:"Relevés de jambes lestés",target:"3 × 12",sets:3,unit:"reps",help:"Suspendu ou allongé, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
+  ]},
+  B:{title:"Séance B — Bas & gainage", sub:"Bloc 2 · Jambes", exos:[
+    {id:"b1",name:"Presse à cuisses",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser la charge avec les jambes, amplitude contrôlée. <b>Cible :</b> cuisses, fessiers."},
+    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos."},
+    {id:"b3",name:"Fentes marchées haltères",target:"3 × 12/jambe",sets:3,unit:"reps",help:"Grands pas en fente, genou vers le sol. <b>Cible :</b> cuisses, fessiers, équilibre."},
+    {id:"b4",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
+    {id:"b5",name:"Roue abdos",target:"3 × 10-12",sets:3,unit:"reps",help:"À genoux, rouler vers l'avant dos droit, revenir. <b>Cible :</b> abdominaux (avancé)."},
+    {id:"b6",name:"Gainage planche",target:"3 × 60 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."}
+  ]},
+  C:{title:"Séance C — Dos & bras", sub:"Bloc 2 · Tirer", exos:[
+    {id:"c1",name:"Tractions lestées",target:"4 × 6-8",sets:4,unit:"reps",help:"Se tirer menton au-dessus de la barre, lest si besoin. <b>Cible :</b> dos (largeur), biceps."},
+    {id:"c2",name:"Tirage horizontal poulie",target:"4 × 10-12",sets:4,unit:"reps",help:"Tirer la poignée vers le ventre, serrer les omoplates. <b>Cible :</b> dos (épaisseur)."},
+    {id:"c3",name:"Pull-over haltère",target:"3 × 12",sets:3,unit:"reps",help:"Allongé, descendre l'haltère derrière la tête bras semi-tendus. <b>Cible :</b> dorsaux, pecs, cage."},
+    {id:"c4",name:"Curl barre",target:"3 × 8-10",sets:3,unit:"reps",help:"Fléchir les coudes, barre vers les épaules, sans balancer. <b>Cible :</b> biceps."},
+    {id:"c5",name:"Extension triceps poulie",target:"3 × 10-12",sets:3,unit:"reps",help:"Tendre les bras vers le bas contre la poulie. <b>Cible :</b> triceps."},
+    {id:"c6",name:"Crunch à la poulie",target:"3 × 15",sets:3,unit:"reps",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux (lesté = progression)."}
+  ]},
+  D:{title:"Séance D — Épaules & finition", sub:"Bloc 2 · Détails", exos:[
+    {id:"d1",name:"Développé épaules haltères",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser les haltères au-dessus de la tête, assis. <b>Cible :</b> épaules."},
+    {id:"d2",name:"Élévations latérales (drop set)",target:"4 × 15",sets:4,unit:"reps",help:"Séries longues, baisse la charge sans repos en fin de série. <b>Cible :</b> épaules latérales."},
+    {id:"d3",name:"Élévations frontales",target:"3 × 12",sets:3,unit:"reps",help:"Lever les bras devant soi jusqu'à l'horizontale. <b>Cible :</b> épaules avant."},
+    {id:"d4",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+    {id:"d5",name:"Dips lestés",target:"3 × 8-10",sets:3,unit:"reps",help:"Sur barres parallèles, descendre coudes pliés, remonter. <b>Cible :</b> bas des pecs, triceps."},
+    {id:"d6",name:"Gainage latéral",target:"3 × 40 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui 1 avant-bras, hanches hautes. <b>Cible :</b> obliques."}
+  ]}
+};
+var PROGRAM_BLOCKS={
+  b1:{name:"Bloc 1 — Construction",short:"B1",weeks:8,prog:PROGRAM},
+  b2:{name:"Bloc 2 — Août (plage)",short:"B2",weeks:4,prog:PROGRAM2}
+};
+var BLOCK_ORDER=["b1","b2"];
+
+/* Plan Triathlon Dinard — Distance Olympique, 10 semaines, 3 séances/sem (résumé ; détails complets dans le Drive) */
+var TRI=[
+ {w:1,nat:{t:"1200 m",d:"8×50 m (alterné amplitude/vélocité) · 4×100 m pull buoy (resp. 3 temps) · 200 m au choix."},velo:{t:"1h15",d:"Petit plateau, travail de vélocité (~90 tr/min)."},course:{t:"40′",d:"20′ footing · 10′ éducatifs (montées de genoux, talons-fesses) · 10′ footing."}},
+ {w:2,nat:{t:"1400 m",d:"300 m (crawl/dos/brasse) · 6×100 m technique · 300 m pull buoy · 200 m (50 crawl/50 dos)."},velo:{t:"1h30",d:"Petit plateau, vélocité ; danseuse/debout dans les bosses."},course:{t:"45′",d:"25′ footing · éducatifs · footing."}},
+ {w:3,nat:{t:"1600 m",d:"6×100 m (crawl/pull buoy) · 8×50 m (15 m sprint/35 m lent) · 2×200 m resp. frontale · 200 m."},velo:{t:"1h45",d:"2 blocs de 10′ en force (grand plateau/petit pignon), r 5′ en vélocité."},course:{t:"50′",d:"20′ footing · 20′ avec sprint 15 s toutes les 2′ · 10′ footing."}},
+ {w:4,nat:{t:"1800 m",d:"400 m pull buoy · 8×50 m (battements/amplitude) · 6×100 m (25 vite/75 lent) · 300 m resp. frontale · 100 m."},velo:{t:"2h00",d:"Grand plateau : bloc 12′ force + 6 sprints 15 s toutes les 4′, fin en endurance."},course:{t:"50′",d:"20′ footing · 8 accélérations en côte (~100 m), récup en descente · footing."}},
+ {w:5,nat:{t:"2000 m",d:"4×150 m · 8×50 m vite · 400 m pull buoy (resp. 3/5 temps) · 200 m resp. frontale · 200 m."},velo:{t:"2h00 +15′",d:"6 bosses de 500-800 m (petit plateau), récup en descente. Puis enchaîne 15′ de course."},course:{t:"50′",d:"20′ footing · 2×8′ (30 s vite/30 s lentes) · footings entre les blocs."}},
+ {w:6,nat:{t:"2000 m",d:"400 m alterné · 6×50 m amplitude · 800 m en pyramide (25→100→25, vite/lent) · 300 m pull buoy · 200 m."},velo:{t:"2h00 +20′",d:"Parcours vallonné, braquet selon le relief. Puis enchaîne 20′ de footing."},course:{t:"50′",d:"2×10′ (1 min vite/1 min lente) · footings entre."}},
+ {w:7,nat:{t:"2000 m",d:"12×50 m variés · 300 m pull buoy resp. frontale · 5×200 m allure course (r 30″) · 100 m."},velo:{t:"2h00 +20′",d:"Parcours vallonné. Puis enchaîne 20′ de footing."},course:{t:"50′",d:"3×10′ allure course (r 10′) · 3×5′ allure 10 km (r 2′) · footing."}},
+ {w:8,nat:{t:"2000 m",d:"500 m enchaîné (crawl/dos/brasse) · 500 m pull buoy · 500 m allure course · 500 m enchaîné."},velo:{t:"2h00 +30′",d:"Parcours vallonné souple. Puis enchaîne 30′ (15′ allure course/15′ footing)."},course:{t:"50′",d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
+ {w:9,nat:{t:"1500 m",d:"300 m au choix · 1000 m pull buoy · 200 m au choix.",taper:true},velo:{t:"1h30 +20′",d:"Vallonné souple, accélérations dans les bosses. Puis 20′ (10′ allure/10′ footing)."},course:{t:"50′",d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
+ {w:10,nat:{t:"1000 m",d:"400 m (crawl/dos/crawl/brasse) · 4×100 m allure course (r 30″) · 200 m au choix.",taper:true},velo:{t:"1h00 +20′",d:"Parcours vallonné léger. Puis enchaîne 20′ de footing."},course:{t:"30′",d:"15′ footing · 5′ allure course · 10′ footing. Dernière semaine !"}}
+];
+
 var CODES=["A","B","C","D"];
-var WEEKS=8;
+var TRI_DISC=[["nat","Natation"],["velo","Vélo"],["course","Course"]];
 var SPORTS=["Course","Vélo","Natation","Escalade","Muscu","Repos","Autre"];
 var PROG_OPTS=["","Oui","Partiellement","Non","Jour de repos"];
 
@@ -301,22 +370,26 @@ function save(){
   try{localStorage.setItem(KEY,s);}catch(e){}
   flash();
 }
-var state=load()||{sessions:{},days:{}};
+var state=load()||{sessions:{},days:{},tri:{}};
 if(!state.sessions)state.sessions={};
 if(!state.days)state.days={};
+if(!state.tri)state.tri={};
 
 /* ---------- Utilitaires ---------- */
-function sk(w,c){return w+"_"+c;}
-function sess(w,c){var k=sk(w,c);if(!state.sessions[k])state.sessions[k]={done:false,sets:{}};return state.sessions[k];}
+function sessKey(b,w,c){return b==="b1"?(w+"_"+c):(b+"_"+w+"_"+c);}
+function sess(b,w,c){var k=sessKey(b,w,c);if(!state.sessions[k])state.sessions[k]={done:false,sets:{}};return state.sessions[k];}
 function day(d){if(!state.days[d])state.days[d]={program:"",sports:[],note:"",weight:"",meals:{pd:"",dj:"",dn:"",co:""},protein:false,meditation:false,sleep:""};
   var x=state.days[d];if(!x.meals)x.meals={pd:"",dj:"",dn:"",co:""};if(!x.sports)x.sports=[];
   if(x.meditation===undefined)x.meditation=false;if(x.sleep===undefined)x.sleep="";return x;}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function nextSession(){
-  for(var w=1;w<=WEEKS;w++){for(var i=0;i<CODES.length;i++){if(!sess(w,CODES[i]).done)return{w:w,c:CODES[i]};}}
+  for(var bi=0;bi<BLOCK_ORDER.length;bi++){var b=BLOCK_ORDER[bi];var wk=PROGRAM_BLOCKS[b].weeks;
+    for(var w=1;w<=wk;w++){for(var i=0;i<CODES.length;i++){if(!sess(b,w,CODES[i]).done)return{block:b,w:w,c:CODES[i]};}}}
   return null;
 }
-function doneCount(){var n=0;for(var w=1;w<=WEEKS;w++)for(var i=0;i<CODES.length;i++)if(sess(w,CODES[i]).done)n++;return n;}
+function doneCount(){var n=0;BLOCK_ORDER.forEach(function(b){var wk=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wk;w++)for(var i=0;i<CODES.length;i++)if(sess(b,w,CODES[i]).done)n++;});return n;}
+function totalSessions(){var n=0;BLOCK_ORDER.forEach(function(b){n+=PROGRAM_BLOCKS[b].weeks*CODES.length;});return n;}
+function triDoneCount(){var n=0;TRI.forEach(function(wk){TRI_DISC.forEach(function(p){var r=state.tri[wk.w+"_"+p[0]];if(r&&r.done)n++;});});return n;}
 function frDate(iso){var p=iso.split("-");var mois=["jan.","fév.","mars","avr.","mai","juin","juil.","août","sep.","oct.","nov.","déc."];
   return parseInt(p[2],10)+" "+mois[parseInt(p[1],10)-1]+" "+p[0];}
 function phaseTip(iso){
@@ -336,12 +409,14 @@ function flash(){var f=document.getElementById("flash");if(!f)return;f.classList
 
 /* ---------- Navigation ---------- */
 var currentSel=null;
+var currentTri=null;
 var journalDate=todayStr();
 function activateTab(id){
   document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
   document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
   if(id==="v-today")renderToday();
   if(id==="v-prog")renderProgram();
+  if(id==="v-tri")renderTri();
   if(id==="v-journal")renderJournal();
   if(id==="v-prog2")renderProgress();
   window.scrollTo(0,0);
@@ -353,7 +428,7 @@ document.querySelectorAll(".tab").forEach(function(t){
 /* ---------- Header chip ---------- */
 function renderChip(){
   var n=nextSession();var dc=doneCount();
-  document.getElementById("wkB").textContent=(n?("S"+n.w):"Fini")+" · "+dc+"/32";
+  document.getElementById("wkB").textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+dc+"/"+totalSessions();
 }
 
 /* ---------- AUJOURD'HUI ---------- */
@@ -363,29 +438,29 @@ function renderToday(){
   var tip=phaseTip(todayStr());
   var tipHTML='<div class="tip"><div class="t">'+tip.t+'</div><p>'+tip.p+'</p></div>';
   if(n){
-    var p=PROGRAM[n.c];
+    var blk=PROGRAM_BLOCKS[n.block];var p=blk.prog[n.c];
     hero.innerHTML=
-      '<div class="lbl">Prochaine séance</div>'+
-      '<div class="stitle">Semaine '+n.w+' · '+p.sub+'</div>'+
+      '<div class="lbl">Prochaine séance muscu</div>'+
+      '<div class="stitle">'+blk.name+' · Semaine '+n.w+' · '+p.sub+'</div>'+
       '<h2>'+p.title.split("—")[0].trim()+' <span class="num">'+n.c+'</span></h2>'+
-      '<div class="meta">'+p.exos.length+' exercices · semaine '+n.w+'/8</div>'+
+      '<div class="meta">'+p.exos.length+' exercices · semaine '+n.w+'/'+blk.weeks+'</div>'+
       '<div class="row2" style="margin-top:14px">'+
         '<button class="btn accent" id="goSession">Ouvrir la séance</button>'+
         '<button class="btn ghost" id="quickDone">Marquer faite</button>'+
       '</div>'+
       tipHTML;
     document.getElementById("goSession").addEventListener("click",function(){
-      currentSel={w:n.w,c:n.c};
+      currentSel={block:n.block,w:n.w,c:n.c};
       activateTab("v-prog");
       var sd=document.getElementById("sessionDetail");
       if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});
     });
     document.getElementById("quickDone").addEventListener("click",function(){
-      sess(n.w,n.c).done=true;save();renderToday();
+      sess(n.block,n.w,n.c).done=true;save();renderToday();
     });
   }else{
-    hero.innerHTML='<div class="lbl">Bravo</div><h2>Programme terminé 🎉</h2>'+
-      '<div class="meta">32 séances bouclées. Tu peux relancer un cycle en augmentant les charges.</div>'+
+    hero.innerHTML='<div class="lbl">Bravo</div><h2>Programme muscu terminé 🎉</h2>'+
+      '<div class="meta">'+totalSessions()+' séances bouclées. Tu peux relancer un cycle en augmentant les charges.</div>'+
       tipHTML;
   }
   buildDayForm(document.getElementById("todayLog"),todayStr());
@@ -449,29 +524,35 @@ function buildDayForm(container,d){
 }
 
 /* ---------- PROGRAMME (grille + détail) ---------- */
+function buildGrid(block){
+  var blk=PROGRAM_BLOCKS[block];var n=nextSession();
+  var h='<div class="card pad" style="margin-bottom:14px">'+
+    '<div class="sec-title">'+blk.name+' <span class="muted" style="font-weight:600">· '+blk.weeks+' sem.</span></div>'+
+    '<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
+    '<table class="grid"><tr><th></th>';
+  CODES.forEach(function(c){h+="<th>"+c+"</th>";});
+  h+="</tr>";
+  for(var w=1;w<=blk.weeks;w++){
+    h+='<tr><td class="wk">S'+w+'</td>';
+    for(var i=0;i<CODES.length;i++){
+      var c=CODES[i];var s=sess(block,w,c);var cls="cell";
+      if(s.done)cls+=" done";
+      if(n&&n.block===block&&n.w===w&&n.c===c)cls+=" next";
+      if(currentSel&&currentSel.block===block&&currentSel.w===w&&currentSel.c===c)cls+=" sel";
+      h+='<td><div class="'+cls+'" data-b="'+block+'" data-w="'+w+'" data-c="'+c+'">'+c+(s.done?'<span class="chk">✓</span>':'')+'</div></td>';
+    }
+    h+="</tr>";
+  }
+  h+="</table></div>";
+  return h;
+}
 function renderProgram(){
   renderChip();
-  var n=nextSession();
-  var t=document.getElementById("gridTable");
-  var html="<tr><th></th>";
-  CODES.forEach(function(c){html+="<th>"+c+"</th>";});
-  html+="</tr>";
-  for(var w=1;w<=WEEKS;w++){
-    html+='<tr><td class="wk">S'+w+'</td>';
-    for(var i=0;i<CODES.length;i++){
-      var c=CODES[i];var s=sess(w,c);
-      var cls="cell";
-      if(s.done)cls+=" done";
-      if(n&&n.w===w&&n.c===c)cls+=" next";
-      if(currentSel&&currentSel.w===w&&currentSel.c===c)cls+=" sel";
-      html+='<td><div class="'+cls+'" data-w="'+w+'" data-c="'+c+'">'+c+(s.done?'<span class="chk">✓</span>':'')+'</div></td>';
-    }
-    html+="</tr>";
-  }
-  t.innerHTML=html;
-  t.querySelectorAll(".cell").forEach(function(cell){
+  var host=document.getElementById("progBlocks");
+  host.innerHTML=BLOCK_ORDER.map(buildGrid).join("");
+  host.querySelectorAll(".cell").forEach(function(cell){
     cell.addEventListener("click",function(){
-      currentSel={w:parseInt(cell.getAttribute("data-w"),10),c:cell.getAttribute("data-c")};
+      currentSel={block:cell.getAttribute("data-b"),w:parseInt(cell.getAttribute("data-w"),10),c:cell.getAttribute("data-c")};
       renderProgram();renderSessionDetail();
       document.getElementById("sessionDetail").scrollIntoView({behavior:"smooth",block:"start"});
     });
@@ -481,12 +562,12 @@ function renderProgram(){
 
 function renderSessionDetail(){
   if(!currentSel)return;
-  var w=currentSel.w,c=currentSel.c;var p=PROGRAM[c];var s=sess(w,c);
+  var b=currentSel.block,w=currentSel.w,c=currentSel.c;var p=PROGRAM_BLOCKS[b].prog[c];var s=sess(b,w,c);
   var wrap=document.getElementById("sessionDetail");
   var head=
     '<div class="eyebrow">Séance ouverte</div>'+
     '<div class="card pad">'+
-    '<div class="sd-head"><div><div class="lbl">Semaine '+w+' · '+p.sub+'</div>'+
+    '<div class="sd-head"><div><div class="lbl">'+PROGRAM_BLOCKS[b].name+' · Semaine '+w+' · '+p.sub+'</div>'+
     '<h3>'+p.title.replace(/—.*/,"").trim()+' '+c+'</h3></div></div>'+
     '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+
       (s.done?'✓ Séance faite — annuler':'Marquer la séance comme faite')+'</button></div>';
@@ -533,6 +614,56 @@ function renderSessionDetail(){
   wrap.querySelector("#toggleDone").addEventListener("click",function(){
     s.done=!s.done;save();renderProgram();renderSessionDetail();
   });
+}
+
+/* ---------- TRIATHLON ---------- */
+function renderTri(){
+  var t=document.getElementById("triTable");
+  var h='<tr><th></th><th>Natation</th><th>Vélo</th><th>Course</th></tr>';
+  TRI.forEach(function(wk){
+    var tap=wk.nat.taper;
+    h+='<tr><td class="wk">S'+wk.w+(tap?' *':'')+'</td>';
+    TRI_DISC.forEach(function(pair){
+      var dz=pair[0];var info=(dz==="nat"?wk.nat:dz==="velo"?wk.velo:wk.course);
+      var rec=state.tri[wk.w+"_"+dz];var done=rec&&rec.done;
+      var cls="tcell"+(done?" done":"");
+      if(currentTri&&currentTri.w===wk.w&&currentTri.dz===dz)cls+=" sel";
+      h+='<td><div class="'+cls+'" data-w="'+wk.w+'" data-z="'+dz+'">'+info.t+(done?'<span class="chk">✓</span>':'')+'</div></td>';
+    });
+    h+="</tr>";
+  });
+  t.innerHTML=h;
+  t.querySelectorAll(".tcell").forEach(function(cell){
+    cell.addEventListener("click",function(){
+      currentTri={w:parseInt(cell.getAttribute("data-w"),10),dz:cell.getAttribute("data-z")};
+      renderTri();renderTriDetail();
+      document.getElementById("triDetail").scrollIntoView({behavior:"smooth",block:"start"});
+    });
+  });
+  if(currentTri)renderTriDetail();else document.getElementById("triDetail").innerHTML="";
+}
+function renderTriDetail(){
+  if(!currentTri)return;
+  var wk=TRI[currentTri.w-1];var dz=currentTri.dz;
+  var names={nat:"Natation",velo:"Vélo",course:"Course à pied"};
+  var info=(dz==="nat"?wk.nat:dz==="velo"?wk.velo:wk.course);
+  var k=currentTri.w+"_"+dz;if(!state.tri[k])state.tri[k]={done:false,val:"",note:""};var rec=state.tri[k];
+  var wrap=document.getElementById("triDetail");
+  wrap.innerHTML=
+    '<div class="eyebrow">Séance ouverte</div>'+
+    '<div class="card pad">'+
+      '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.nat.taper?' · affûtage':'')+'</div>'+
+      '<h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+
+      '<p class="muted" style="margin-top:10px;color:#41525F">'+info.d+'</p>'+
+      '<div class="field"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'✓ Faite — annuler':'Marquer comme faite')+'</button></div>'+
+      '<div class="field"><label>Réalisé (optionnel)</label><input type="text" class="t-val" placeholder="ex : 1300 m · 1h20 · 8,5 km"></div>'+
+      '<div class="field"><label>Ressenti / notes</label><textarea class="t-note" placeholder="sensations, allure, météo…"></textarea></div>'+
+    '</div>';
+  wrap.querySelector(".t-val").value=rec.val||"";
+  wrap.querySelector(".t-note").value=rec.note||"";
+  wrap.querySelector(".t-val").addEventListener("input",function(){rec.val=this.value;save();});
+  wrap.querySelector(".t-note").addEventListener("input",function(){rec.note=this.value;save();});
+  wrap.querySelector("#triDone").addEventListener("click",function(){rec.done=!rec.done;save();renderTri();renderTriDetail();});
 }
 
 /* ---------- JOURNAL ---------- */
@@ -597,8 +728,8 @@ function renderProgress(){
   if(sleeps.length){var sum=0;sleeps.forEach(function(v){sum+=v;});avgSleep=sum/sleeps.length;}
 
   document.getElementById("statGrid").innerHTML=
-    '<div class="stat"><div class="v">'+dc+'<span style="font-size:15px;color:var(--muted)">/32</span></div><div class="k">Séances muscu faites</div></div>'+
-    '<div class="stat"><div class="v">'+(n?n.w:8)+'<span style="font-size:15px;color:var(--muted)">/8</span></div><div class="k">Semaine en cours</div></div>'+
+    '<div class="stat"><div class="v">'+dc+'<span style="font-size:15px;color:var(--muted)">/'+totalSessions()+'</span></div><div class="k">Séances muscu faites</div></div>'+
+    '<div class="stat"><div class="v">'+triDoneCount()+'<span style="font-size:15px;color:var(--muted)">/30</span></div><div class="k">Séances triathlon faites</div></div>'+
     '<div class="stat"><div class="v">'+foll+'<span style="font-size:15px;color:var(--muted)">/'+tot+'</span></div><div class="k">Jours programme tenu</div></div>'+
     '<div class="stat"><div class="v">'+(avgSleep?avgSleep.toFixed(1):'—')+'<span style="font-size:15px;color:var(--muted)"> h</span></div><div class="k">Sommeil moyen / nuit</div></div>'+
     '<div class="stat"><div class="v">'+meditDays+'</div><div class="k">Jours de méditation</div></div>'+
@@ -638,8 +769,8 @@ document.getElementById("fileImport").addEventListener("change",function(e){
     try{
       var data=JSON.parse(r.result);
       if(!data||typeof data!=="object")throw 0;
-      state=data;if(!state.sessions)state.sessions={};if(!state.days)state.days={};
-      save();currentSel=null;
+      state=data;if(!state.sessions)state.sessions={};if(!state.days)state.days={};if(!state.tri)state.tri={};
+      save();currentSel=null;currentTri=null;
       renderProgress();renderChip();
       alert("Sauvegarde importée. Tes données sont à jour.");
     }catch(err){alert("Fichier illisible. Choisis un fichier de sauvegarde exporté depuis cette app.");}
@@ -649,7 +780,7 @@ document.getElementById("fileImport").addEventListener("change",function(e){
 });
 document.getElementById("btnReset").addEventListener("click",function(){
   if(confirm("Effacer toutes tes données (séances, journal, poids) ? Cette action est définitive. Pense à exporter une sauvegarde avant.")){
-    state={sessions:{},days:{}};save();currentSel=null;
+    state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;
     renderProgress();renderChip();
   }
 });
