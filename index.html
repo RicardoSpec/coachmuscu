@@ -88,7 +88,8 @@
   .dot-next{background:#fff;border:2px solid var(--accent)}
   table.grid{width:100%;border-collapse:separate;border-spacing:6px}
   table.grid th{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.05em;padding-bottom:2px}
-  table.grid td.wk{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;padding-right:2px;width:34px}
+  table.grid td.wk{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;width:50px;vertical-align:middle;line-height:1.1}
+  table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;margin-top:1px}
   .cell{width:100%;aspect-ratio:1/1;border-radius:12px;border:1.5px solid var(--line);
     background:var(--none-bg);color:var(--none-ink);font-weight:800;font-size:15px;
     display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
@@ -149,6 +150,15 @@
   .hint{font-size:12px;color:var(--muted);margin:8px 4px 0}
   .warnbar{background:#FEF3C7;color:#7A4E00;border-bottom:1px solid #F2C14E;padding:11px 16px;font-size:12.5px;font-weight:600;line-height:1.4}
   h2.page{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:2px 4px 14px}
+  .stools{margin-top:2px}
+  .stool-row{display:flex;gap:8px;margin-bottom:7px;align-items:center}
+  .stool-row select{flex:1}
+  .st-del{flex:none;width:42px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer}
+  .btn.ghost.st-add{width:auto;padding:9px 14px;font-size:13.5px}
+  .exo-media{margin-top:10px}
+  .exo-img{max-width:100%;border-radius:10px;display:block;margin-bottom:8px;border:1px solid var(--line)}
+  .demo-link{display:inline-block;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none}
+  .demo-link:active{opacity:.7}
 </style>
 </head>
 <body>
@@ -172,7 +182,7 @@
 
     <section class="view" id="v-prog">
       <h2 class="page">Muscu</h2>
-      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Enchaîne A → B → C → D, semaine après semaine. Le Bloc 2 (août) prend le relais après les 8 semaines. Touche une case pour ouvrir la séance.</p>
+      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Enchaîne A → B → C → D, semaine après semaine. Bloc 1 : du 27 juin au 31 juillet (objectif 27 juillet) · Bloc 2 : en août. Touche une case pour ouvrir la séance.</p>
       <div id="progBlocks"></div>
       <div class="spacer"></div>
       <div id="sessionDetail"></div>
@@ -180,7 +190,7 @@
 
     <section class="view" id="v-tri">
       <h2 class="page">Triathlon</h2>
-      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Plan Distance Olympique — 10 semaines, 3 séances/sem. Touche une case pour voir la séance et la cocher. Détails complets dans ton Drive. (* = semaine d'affûtage)</p>
+      <p class="hint" style="margin-top:-8px;margin-bottom:12px">Plan Distance Olympique — 10 semaines, 3 séances/sem. 🏁 Course les 11-13 septembre (semaine 10). Touche une case pour voir la séance et la cocher. Détails complets dans ton Drive. (* = affûtage)</p>
       <div class="card pad">
         <div class="legend"><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>
         <table class="grid" id="triTable"></table>
@@ -332,10 +342,12 @@ var PROGRAM2 = {
   ]}
 };
 var PROGRAM_BLOCKS={
-  b1:{name:"Bloc 1 — Construction",short:"B1",weeks:8,prog:PROGRAM},
+  b1:{name:"Bloc 1 — Construction",short:"B1",weeks:5,prog:PROGRAM},
   b2:{name:"Bloc 2 — Août (plage)",short:"B2",weeks:4,prog:PROGRAM2}
 };
 var BLOCK_ORDER=["b1","b2"];
+var MUSCU_START="2026-06-27";
+var TRI_START="2026-07-06";
 
 /* Plan Triathlon Dinard — Distance Olympique, 10 semaines, 3 séances/sem (résumé ; détails complets dans le Drive) */
 var TRI=[
@@ -378,9 +390,9 @@ if(!state.tri)state.tri={};
 /* ---------- Utilitaires ---------- */
 function sessKey(b,w,c){return b==="b1"?(w+"_"+c):(b+"_"+w+"_"+c);}
 function sess(b,w,c){var k=sessKey(b,w,c);if(!state.sessions[k])state.sessions[k]={done:false,sets:{}};return state.sessions[k];}
-function day(d){if(!state.days[d])state.days[d]={program:"",sports:[],note:"",weight:"",meals:{pd:"",dj:"",dn:"",co:""},protein:false,meditation:false,sleep:""};
+function day(d){if(!state.days[d])state.days[d]={program:"",sports:[],note:"",weight:"",meals:{pd:"",dj:"",dn:"",co:""},protein:false,meditation:false,sleep:"",stools:[]};
   var x=state.days[d];if(!x.meals)x.meals={pd:"",dj:"",dn:"",co:""};if(!x.sports)x.sports=[];
-  if(x.meditation===undefined)x.meditation=false;if(x.sleep===undefined)x.sleep="";return x;}
+  if(x.meditation===undefined)x.meditation=false;if(x.sleep===undefined)x.sleep="";if(!x.stools)x.stools=[];return x;}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function nextSession(){
   for(var bi=0;bi<BLOCK_ORDER.length;bi++){var b=BLOCK_ORDER[bi];var wk=PROGRAM_BLOCKS[b].weeks;
@@ -392,6 +404,11 @@ function totalSessions(){var n=0;BLOCK_ORDER.forEach(function(b){n+=PROGRAM_BLOC
 function triDoneCount(){var n=0;TRI.forEach(function(wk){TRI_DISC.forEach(function(p){var r=state.tri[wk.w+"_"+p[0]];if(r&&r.done)n++;});});return n;}
 function frDate(iso){var p=iso.split("-");var mois=["jan.","fév.","mars","avr.","mai","juin","juil.","août","sep.","oct.","nov.","déc."];
   return parseInt(p[2],10)+" "+mois[parseInt(p[1],10)-1]+" "+p[0];}
+function addDays(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);return d;}
+function ddmm(d){return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");}
+function cumWeeks(block){var n=0;for(var i=0;i<BLOCK_ORDER.length;i++){if(BLOCK_ORDER[i]===block)break;n+=PROGRAM_BLOCKS[BLOCK_ORDER[i]].weeks;}return n;}
+function muscuWeekDate(block,w){return ddmm(addDays(MUSCU_START,(cumWeeks(block)+w-1)*7));}
+function triWeekDate(w){return ddmm(addDays(TRI_START,(w-1)*7));}
 function phaseTip(iso){
   var d=new Date(iso+"T00:00:00");
   function D(s){return new Date(s+"T00:00:00");}
@@ -466,6 +483,36 @@ function renderToday(){
   buildDayForm(document.getElementById("todayLog"),todayStr());
 }
 
+/* ---------- Transit (échelle de Bristol) & utilitaires médias ---------- */
+var BRISTOL=[
+  {v:"1",label:"Type 1 — billes dures séparées (constipation)"},
+  {v:"2",label:"Type 2 — en saucisse, grumeleuse"},
+  {v:"3",label:"Type 3 — en saucisse, craquelée"},
+  {v:"4",label:"Type 4 — lisse et molle (idéal)"},
+  {v:"5",label:"Type 5 — morceaux mous, bords nets"},
+  {v:"6",label:"Type 6 — pâteux, bords irréguliers"},
+  {v:"7",label:"Type 7 — liquide (diarrhée)"}
+];
+function bristolOptions(sel){var o='<option value="">— état —</option>';BRISTOL.forEach(function(b){o+='<option value="'+b.v+'"'+(sel===b.v?' selected':'')+'>'+b.label+'</option>';});return o;}
+function renderStools(host,d){
+  if(!host)return;
+  var arr=day(d).stools;var h="";
+  h+='<div class="muted" style="margin:0 0 8px">'+(arr.length===0?"Aucun passage noté.":arr.length+" passage"+(arr.length>1?"s":"")+" aujourd'hui")+'</div>';
+  arr.forEach(function(st,i){
+    h+='<div class="stool-row" data-i="'+i+'"><select class="st-type">'+bristolOptions(st.type||"")+'</select><button class="st-del" data-i="'+i+'" aria-label="Supprimer">✕</button></div>';
+  });
+  h+='<button class="btn ghost st-add" style="margin-top:4px">+ Ajouter un passage</button>';
+  host.innerHTML=h;
+  host.querySelectorAll(".st-type").forEach(function(sel){
+    sel.addEventListener("change",function(){var i=parseInt(sel.closest(".stool-row").getAttribute("data-i"),10);day(d).stools[i].type=sel.value;save();});
+  });
+  host.querySelectorAll(".st-del").forEach(function(b){
+    b.addEventListener("click",function(){var i=parseInt(b.getAttribute("data-i"),10);day(d).stools.splice(i,1);save();renderStools(host,d);});
+  });
+  host.querySelector(".st-add").addEventListener("click",function(){day(d).stools.push({type:""});save();renderStools(host,d);});
+}
+function slugify(s){return (""+s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
+
 /* ---------- Formulaire de journée (partagé) ---------- */
 function buildDayForm(container,d){
   var dd=day(d);
@@ -488,7 +535,8 @@ function buildDayForm(container,d){
     '<div class="field"><label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)">'+
       '<input type="checkbox" class="f-prot" style="width:20px;height:20px;flex:none"> Objectif protéines atteint (~130-150 g)</label></div>'+
     '<div class="field"><label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)">'+
-      '<input type="checkbox" class="f-medit" style="width:20px;height:20px;flex:none"> Méditation faite aujourd\'hui</label></div>';
+      '<input type="checkbox" class="f-medit" style="width:20px;height:20px;flex:none"> Méditation faite aujourd\'hui</label></div>'+
+    '<div class="field"><label>Transit — passages à la selle</label><div class="stools f-stools"></div></div>';
 
   container.querySelector(".f-prog").value=dd.program||"";
   container.querySelector(".f-note").value=dd.note||"";
@@ -521,6 +569,7 @@ function buildDayForm(container,d){
       save();
     });
   });
+  renderStools(container.querySelector(".f-stools"),d);
 }
 
 /* ---------- PROGRAMME (grille + détail) ---------- */
@@ -533,7 +582,7 @@ function buildGrid(block){
   CODES.forEach(function(c){h+="<th>"+c+"</th>";});
   h+="</tr>";
   for(var w=1;w<=blk.weeks;w++){
-    h+='<tr><td class="wk">S'+w+'</td>';
+    h+='<tr><td class="wk">S'+w+'<span class="wkd">'+muscuWeekDate(block,w)+'</span></td>';
     for(var i=0;i<CODES.length;i++){
       var c=CODES[i];var s=sess(block,w,c);var cls="cell";
       if(s.done)cls+=" done";
@@ -588,7 +637,12 @@ function renderSessionDetail(){
         '<div class="exo-top"><div class="nm">'+ex.name+'</div>'+
           '<div style="display:flex;align-items:center;gap:8px"><span class="tg">'+ex.target+'</span>'+
           '<button class="info-btn" data-help="'+ex.id+'" aria-label="Aide">i</button></div></div>'+
-        '<div class="help" id="help-'+ex.id+'">'+ex.help+'</div>'+
+        '<div class="help" id="help-'+ex.id+'">'+ex.help+
+          '<div class="exo-media">'+
+            '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
+            '<a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a>'+
+          '</div>'+
+        '</div>'+
         '<div class="sets">'+setsHTML+'</div>'+
       '</div>';
   });
@@ -622,7 +676,7 @@ function renderTri(){
   var h='<tr><th></th><th>Natation</th><th>Vélo</th><th>Course</th></tr>';
   TRI.forEach(function(wk){
     var tap=wk.nat.taper;
-    h+='<tr><td class="wk">S'+wk.w+(tap?' *':'')+'</td>';
+    h+='<tr><td class="wk">S'+wk.w+(tap?' *':'')+'<span class="wkd">'+triWeekDate(wk.w)+'</span></td>';
     TRI_DISC.forEach(function(pair){
       var dz=pair[0];var info=(dz==="nat"?wk.nat:dz==="velo"?wk.velo:wk.course);
       var rec=state.tri[wk.w+"_"+dz];var done=rec&&rec.done;
@@ -655,6 +709,7 @@ function renderTriDetail(){
       '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.nat.taper?' · affûtage':'')+'</div>'+
       '<h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+
       '<p class="muted" style="margin-top:10px;color:#41525F">'+info.d+'</p>'+
+      (currentTri.w===10?'<div class="tip" style="margin-top:10px"><div class="t">🏁 Semaine de course</div><p>Triathlon Dinard Côte d\'Émeraude — 11-13 septembre. Affûtage, sommeil, et on profite !</p></div>':'')+
       '<div class="field"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'✓ Faite — annuler':'Marquer comme faite')+'</button></div>'+
       '<div class="field"><label>Réalisé (optionnel)</label><input type="text" class="t-val" placeholder="ex : 1300 m · 1h20 · 8,5 km"></div>'+
       '<div class="field"><label>Ressenti / notes</label><textarea class="t-note" placeholder="sensations, allure, météo…"></textarea></div>'+
@@ -726,6 +781,10 @@ function renderProgress(){
   });
   var avgSleep=null;
   if(sleeps.length){var sum=0;sleeps.forEach(function(v){sum+=v;});avgSleep=sum/sleeps.length;}
+  var stoolDays=0,stoolTotal=0,typeCount={};
+  Object.keys(state.days).forEach(function(d){var arr=state.days[d].stools||[];if(arr.length){stoolDays++;stoolTotal+=arr.length;arr.forEach(function(s){if(s.type)typeCount[s.type]=(typeCount[s.type]||0)+1;});}});
+  var stoolAvg=stoolDays?(stoolTotal/stoolDays):null;
+  var domType="",domN=0;Object.keys(typeCount).forEach(function(tt){if(typeCount[tt]>domN){domN=typeCount[tt];domType=tt;}});
 
   document.getElementById("statGrid").innerHTML=
     '<div class="stat"><div class="v">'+dc+'<span style="font-size:15px;color:var(--muted)">/'+totalSessions()+'</span></div><div class="k">Séances muscu faites</div></div>'+
@@ -733,7 +792,8 @@ function renderProgress(){
     '<div class="stat"><div class="v">'+foll+'<span style="font-size:15px;color:var(--muted)">/'+tot+'</span></div><div class="k">Jours programme tenu</div></div>'+
     '<div class="stat"><div class="v">'+(avgSleep?avgSleep.toFixed(1):'—')+'<span style="font-size:15px;color:var(--muted)"> h</span></div><div class="k">Sommeil moyen / nuit</div></div>'+
     '<div class="stat"><div class="v">'+meditDays+'</div><div class="k">Jours de méditation</div></div>'+
-    '<div class="stat"><div class="v" style="font-size:15px;line-height:1.3;padding-top:4px">'+topSports+'</div><div class="k">Sports les plus loggés</div></div>';
+    '<div class="stat"><div class="v" style="font-size:15px;line-height:1.3;padding-top:4px">'+topSports+'</div><div class="k">Sports les plus loggés</div></div>'+
+    '<div class="stat"><div class="v">'+(stoolAvg?stoolAvg.toFixed(1):'—')+'</div><div class="k">Selles / jour (moy.)'+(domType?' · souvent type '+domType:'')+'</div></div>';
 
   var entries=weightEntries();
   var wbk=document.getElementById("weightBlock");
