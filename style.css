@@ -105,8 +105,9 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .tg{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--none-bg);color:var(--primary);padding:5px 9px;border-radius:8px;white-space:nowrap}
 
 .exo{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
-.exo-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.exo .nm{font-weight:700;font-size:15px}
+.exo-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.exo-top>div:last-child{flex:none}
+.exo .nm{font-weight:700;font-size:15px;flex:1;min-width:0;overflow-wrap:anywhere}
 .info-btn{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--primary);font-weight:800;font-style:italic;font-size:13px;cursor:pointer;line-height:1}
 
 .help{display:none;margin-top:10px;background:#f6f9fb;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;color:#3f4f5b;line-height:1.5}
@@ -198,6 +199,40 @@ input[type=checkbox]{accent-color:var(--primary)}
 
 /* ---------- Progrès : bilan hebdo ---------- */
 .bilan{width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fbfcfd;color:var(--ink);font-size:12.5px;line-height:1.55;padding:12px;resize:vertical;font-family:var(--mono);white-space:pre-wrap}
+
+/* ---------- Repas : aliments détaillés ---------- */
+.meal{margin-bottom:14px}
+.meal-h{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:8px}
+.food{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#fbfcfd}
+.food-line{display:flex;gap:8px;align-items:center}
+.food-line .fd-name{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;font-size:14.5px;font-family:inherit;background:#fff}
+.fd-del{flex:none;width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-weight:700;cursor:pointer}
+.food-qty{display:flex;gap:8px;align-items:center;margin-top:8px}
+.food-qty .fd-qty{width:78px;flex:none;border:1.5px solid var(--line);border-radius:10px;padding:9px 8px;font-size:14.5px;font-family:inherit;text-align:center;background:#fff}
+.food-qty .fd-unit{flex:none;width:92px;border:1.5px solid var(--line);border-radius:10px;padding:9px 6px;font-size:13.5px;font-family:inherit;background:#fff}
+.fd-nut-toggle{flex:1;min-width:0;border:1.5px dashed var(--line);background:#fff;color:var(--primary);border-radius:10px;padding:9px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.food-nut{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.food-nut[hidden]{display:none}
+.nut-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.nut-row .fd-base{width:78px;border:1.5px solid var(--line);border-radius:10px;padding:8px;font-size:14px;text-align:center;font-family:inherit;background:#fff}
+.nut-row .fd-baseunit{width:92px;border:1.5px solid var(--line);border-radius:10px;padding:8px 6px;font-size:13.5px;font-family:inherit;background:#fff}
+.nut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.nut-grid label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);font-weight:700;gap:4px}
+.nut-grid input{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;font-family:inherit;text-align:center;background:#fff}
+.food-sum{margin-top:8px;font-size:12.5px;font-weight:700;color:var(--primary)}
+.fd-add{width:auto;padding:8px 13px;font-size:13px}
+.meal-total{margin-top:6px;font-size:12.5px;color:var(--muted)}
+.meal-total.on{color:var(--primary);font-weight:700;background:#eef4f8;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+
+/* ---------- Objectifs : barres de progression ---------- */
+#goalsHost .goal{padding:12px 0;border-top:1px solid var(--line)}
+#goalsHost .goal:first-of-type{border-top:none;padding-top:2px}
+.goal-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.goal-name{font-weight:700;font-size:14px}
+.goal-cd{font-family:var(--mono);font-weight:800;color:var(--accent);font-size:13px;flex:none}
+.bar{height:10px;background:var(--none-bg);border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#155080,#2f7fb8);border-radius:999px;transition:width .3s}
+.goal-meta{font-size:12px;color:var(--muted);margin-top:7px}
 
 /* ---------- Barre de navigation ---------- */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
