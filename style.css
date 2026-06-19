@@ -117,12 +117,10 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .lastrep{font-size:12px;color:var(--muted);margin-top:10px;font-style:italic}
 
 .sets{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-.set{display:grid;grid-template-columns:64px 1fr 1fr;gap:8px;align-items:center}
+.set{display:grid;grid-template-columns:54px 1fr 1fr;gap:8px;align-items:center}
 .set .sn{font-size:12px;color:var(--muted);font-weight:700}
-.set>div:not(.sn){display:flex;align-items:center;gap:5px}
-.set input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:15px;font-family:inherit;text-align:center;background:#fff;-moz-appearance:textfield}
+.set input{width:100%;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:11px 8px;font-size:15px;font-family:inherit;text-align:center;background:#fff;-moz-appearance:textfield}
 .set input::-webkit-outer-spin-button,.set input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.set .u{font-size:10.5px;color:var(--muted);font-weight:600;flex:none}
 
 /* ---------- Médias d'exercice (image + démo) ---------- */
 .exo-media{margin-top:10px}
@@ -131,7 +129,7 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .demo-link:active{opacity:.7}
 
 /* ---------- Minuteur de repos ---------- */
-.rest{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--primary);color:#fff;border-radius:14px;padding:12px 14px;margin-top:12px}
+.rest{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--primary);color:#fff;border-radius:14px;padding:12px 14px;margin-top:12px;position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:5;box-shadow:0 4px 14px rgba(14,58,91,.25)}
 .rest-disp{font-family:var(--mono);font-size:26px;font-weight:800;min-width:74px;letter-spacing:.02em}
 .rest-disp.done{color:#ffd2c2}
 .rest-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -200,39 +198,42 @@ input[type=checkbox]{accent-color:var(--primary)}
 /* ---------- Progrès : bilan hebdo ---------- */
 .bilan{width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fbfcfd;color:var(--ink);font-size:12.5px;line-height:1.55;padding:12px;resize:vertical;font-family:var(--mono);white-space:pre-wrap}
 
-/* ---------- Repas : aliments détaillés ---------- */
+/* ---------- Repas : étiquettes (balises) ---------- */
 .meal{margin-bottom:14px}
 .meal-h{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:8px}
-.food{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#fbfcfd}
-.food-line{display:flex;gap:8px;align-items:center}
-.food-line .fd-name{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;font-size:14.5px;font-family:inherit;background:#fff}
-.fd-del{flex:none;width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-weight:700;cursor:pointer}
-.food-qty{display:flex;gap:8px;align-items:center;margin-top:8px}
-.food-qty .fd-qty{width:78px;flex:none;border:1.5px solid var(--line);border-radius:10px;padding:9px 8px;font-size:14.5px;font-family:inherit;text-align:center;background:#fff}
-.food-qty .fd-unit{flex:none;width:92px;border:1.5px solid var(--line);border-radius:10px;padding:9px 6px;font-size:13.5px;font-family:inherit;background:#fff}
-.fd-nut-toggle{flex:1;min-width:0;border:1.5px dashed var(--line);background:#fff;color:var(--primary);border-radius:10px;padding:9px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.food-nut{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
-.food-nut[hidden]{display:none}
-.nut-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.nut-row .fd-base{width:78px;border:1.5px solid var(--line);border-radius:10px;padding:8px;font-size:14px;text-align:center;font-family:inherit;background:#fff}
-.nut-row .fd-baseunit{width:92px;border:1.5px solid var(--line);border-radius:10px;padding:8px 6px;font-size:13.5px;font-family:inherit;background:#fff}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tags:empty{display:none}
+.tag{display:inline-flex;align-items:center;gap:6px;background:#eef2f6;border:1.5px solid var(--line);border-radius:999px;padding:6px 6px 6px 12px;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink)}
+.tag.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tag.has-nut{border-color:var(--done-line)}
+.tag.on.has-nut{border-color:var(--primary)}
+.tag-x{flex:none;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.08);color:inherit;font-size:14px;line-height:1;cursor:pointer;font-family:inherit}
+.tag.on .tag-x{background:rgba(255,255,255,.25)}
+.tag-input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+.tag-editor{margin-top:10px;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfd}
+.te-title{font-weight:800;font-size:14px;margin-bottom:10px}
+.te-row{display:flex;gap:10px;margin-bottom:8px}
+.te-row label{flex:1;display:flex;flex-direction:column;font-size:11px;color:var(--muted);font-weight:700;gap:4px}
+.te-row input,.te-row select{border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;font-size:14px;font-family:inherit;background:#fff}
 .nut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .nut-grid label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);font-weight:700;gap:4px}
 .nut-grid input{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;font-family:inherit;text-align:center;background:#fff}
-.food-sum{margin-top:8px;font-size:12.5px;font-weight:700;color:var(--primary)}
-.fd-add{width:auto;padding:8px 13px;font-size:13px}
+.food-sum{margin-top:10px;font-size:13px;font-weight:700;color:var(--primary)}
+.te-close{margin-top:10px;width:auto;border:1.5px solid var(--line);background:#fff;color:var(--primary);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 .meal-total{margin-top:6px;font-size:12.5px;color:var(--muted)}
 .meal-total.on{color:var(--primary);font-weight:700;background:#eef4f8;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 
 /* ---------- Objectifs : barres de progression ---------- */
-#goalsHost .goal{padding:12px 0;border-top:1px solid var(--line)}
+#goalsHost .goal{padding:14px 0;border-top:1px solid var(--line)}
 #goalsHost .goal:first-of-type{border-top:none;padding-top:2px}
-.goal-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
-.goal-name{font-weight:700;font-size:14px}
-.goal-cd{font-family:var(--mono);font-weight:800;color:var(--accent);font-size:13px;flex:none}
-.bar{height:10px;background:var(--none-bg);border-radius:999px;overflow:hidden}
-.bar-fill{height:100%;background:linear-gradient(90deg,#155080,#2f7fb8);border-radius:999px;transition:width .3s}
-.goal-meta{font-size:12px;color:var(--muted);margin-top:7px}
+.goal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.goal-name{font-weight:800;font-size:14.5px}
+.goal-badge{flex:none;background:rgba(244,98,43,.12);color:var(--accent);font-weight:800;font-size:12.5px;padding:5px 11px;border-radius:999px;font-family:var(--mono)}
+.goal-sub{font-size:12px;color:var(--muted);margin:2px 0 10px}
+.bar{position:relative;height:14px;background:#e7edf3;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#1f6fb0,#3f93cf);border-radius:999px;transition:width .4s ease}
+.goal-meta{font-size:12.5px;color:var(--muted);margin-top:8px}
+.goal-meta b{color:var(--primary);font-size:14px}
 
 /* ---------- Barre de navigation ---------- */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
