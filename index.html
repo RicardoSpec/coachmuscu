@@ -12,7 +12,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="favicon.ico">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -20,9 +20,22 @@
   <div class="warn" id="warnbar" hidden>Le stockage local n'est pas disponible sur ce navigateur : tes saisies ne seront pas conservées après fermeture. Pense à exporter tes données.</div>
 
   <header class="top">
-    <h1>Suivi muscu</h1>
+    <div class="top-left">
+      <button class="menu-btn" id="menuBtn" aria-label="Ouvrir le menu des apps" aria-expanded="false"><span></span><span></span><span></span></button>
+      <h1>Suivi muscu</h1>
+    </div>
     <span class="chip" id="wkChip"></span>
   </header>
+
+  <!-- Panneau lanceur d'apps (ouvert par le bouton ☰) -->
+  <div class="drawer-bg" id="drawerBg" hidden></div>
+  <aside class="drawer" id="drawer" hidden aria-label="Mes applications">
+    <div class="drawer-head">
+      <span class="drawer-title">Mes apps</span>
+      <button class="drawer-close" id="drawerClose" aria-label="Fermer le menu">&times;</button>
+    </div>
+    <nav class="app-list" id="appList"></nav>
+  </aside>
 
   <main>
 
@@ -123,7 +136,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
