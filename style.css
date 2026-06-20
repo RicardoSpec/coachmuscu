@@ -34,6 +34,29 @@ body{
   padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
 }
 .top h1{font-size:18px;font-weight:800;letter-spacing:-.01em;margin:0}
+.top-left{display:flex;align-items:center;gap:10px;min-width:0}
+.menu-btn{display:flex;flex-direction:column;justify-content:center;gap:4px;width:34px;height:34px;padding:8px 6px;border:none;background:transparent;cursor:pointer;border-radius:9px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.menu-btn:active{background:rgba(255,255,255,.18)}
+.menu-btn span{display:block;height:2.5px;width:100%;background:#fff;border-radius:2px}
+
+.drawer-bg{position:fixed;inset:0;background:rgba(8,20,33,.5);z-index:60;opacity:0;transition:opacity .22s}
+.drawer-bg.open{opacity:1}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:82%;max-width:312px;background:#fff;z-index:61;box-shadow:2px 0 26px rgba(0,0,0,.2);transform:translateX(-100%);transition:transform .24s ease;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;background:var(--primary);color:#fff;padding:calc(env(safe-area-inset-top) + 16px) 16px 16px}
+.drawer-title{font-size:17px;font-weight:800}
+.drawer-close{border:none;background:transparent;color:#fff;font-size:27px;line-height:1;cursor:pointer;padding:0 4px}
+.app-list{padding:8px;overflow-y:auto;flex:1;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+.app-item{display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:12px;text-decoration:none;color:var(--ink);font-weight:600;font-size:15px}
+.app-item+.app-item{margin-top:2px}
+.app-item:active{background:#eef2f6}
+.app-ic{width:36px;height:36px;border-radius:10px;background:#eef2f6;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.app-arrow{margin-left:auto;color:var(--muted);font-size:20px;line-height:1}
+.app-item.here{background:#eef2f6;font-weight:800}
+.app-item.here .app-ic{background:var(--accent)}
+.app-badge{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:#f1f4f7;border:1px solid var(--line);padding:3px 9px;border-radius:999px}
+.app-item.soon{color:var(--muted)}
+.app-item.soon .app-ic{filter:grayscale(1);opacity:.6}
 .chip{background:rgba(255,255,255,.16);color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;font-family:var(--mono)}
 
 /* ---------- Structure ---------- */
