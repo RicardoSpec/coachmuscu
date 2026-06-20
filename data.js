@@ -10,7 +10,7 @@
 var APPS = [
   {name:"Suivi muscu",            icon:"💪", here:true},
   {name:"L'Atelier — orthographe", icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
-  {name:"Anglais",                icon:"🇬🇧", ready:false},
+  {name:"The Workbook — anglais", icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
   {name:"Espagnol",               icon:"🇪🇸", ready:false},
   {name:"Suivi révisions",        icon:"📚", ready:false}
 ];
