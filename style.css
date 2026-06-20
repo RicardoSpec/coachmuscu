@@ -233,6 +233,12 @@ input[type=checkbox]{accent-color:var(--primary)}
 .tag-x{flex:none;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.08);color:inherit;font-size:14px;line-height:1;cursor:pointer;font-family:inherit}
 .tag.on .tag-x{background:rgba(255,255,255,.25)}
 .tag-input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+.tag-suggest{margin-top:6px;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 6px 18px rgba(8,20,33,.08)}
+.tag-suggest .sug{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:none;background:#fff;padding:11px 13px;font-size:14.5px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit}
+.tag-suggest .sug+.sug{border-top:1px solid var(--line)}
+.tag-suggest .sug:active{background:#eef2f6}
+.sug-meta{font-weight:600;color:var(--muted);font-size:12px}
+.sug-empty{font-style:italic}
 .tag-editor{margin-top:10px;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfd}
 .te-title{font-weight:800;font-size:14px;margin-bottom:10px}
 .te-row{display:flex;gap:10px;margin-bottom:8px}
