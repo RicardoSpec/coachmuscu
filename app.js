@@ -320,7 +320,6 @@
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
         '<div class="field"><label>Repas</label>'+
-          '<datalist id="'+dlId+'">'+foodNames().map(function(n){return '<option value="'+esc(n)+'">';}).join("")+'</datalist>'+
           MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           '<div class="meal-total"></div>'+
         '</div>'+
@@ -361,7 +360,8 @@
         h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
       });
       h+='</div>';
-      h+='<input type="text" class="tag-input" list="'+dlId+'" placeholder="Aliment puis Entrée…" enterkeyhint="done">';
+      h+='<input type="text" class="tag-input" placeholder="Aliment puis Entrée…" enterkeyhint="done" autocomplete="off">';
+      h+='<div class="tag-suggest" hidden></div>';
       if(ed>-1&&arr[ed]){
         var it=arr[ed];
         h+='<div class="tag-editor"><div class="te-title">'+esc(it.name)+'</div>'+
@@ -387,13 +387,40 @@
         b.addEventListener("click",function(e){e.stopPropagation();var i=parseInt(b.getAttribute("data-i"),10);day(d).mealItems[mk].splice(i,1);if(mealEdit[mk]===i)mealEdit[mk]=-1;else if(mealEdit[mk]>i)mealEdit[mk]--;save();renderMeal(mk);recalcTotals();});
       });
       var inp=host.querySelector(".tag-input");
+      var sug=host.querySelector(".tag-suggest");
+      function addFood(v){
+        v=(""+v).trim();if(!v)return;
+        var nit={name:v,qty:"",unit:"g",nut:null};var hit=foodCatalog()[v.toLowerCase()];
+        if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";}
+        day(d).mealItems[mk].push(nit);save();renderMeal(mk);recalcTotals();
+        var ni=host.querySelector(".tag-input");if(ni)ni.focus();
+      }
+      function showSug(){
+        if(!sug)return;
+        var v=inp.value.trim().toLowerCase();
+        if(!v){sug.hidden=true;sug.innerHTML="";return;}
+        var cat=foodCatalog(),starts=[],contains=[];
+        Object.keys(cat).forEach(function(k){var idx=cat[k].name.toLowerCase().indexOf(v);if(idx===0)starts.push(k);else if(idx>0)contains.push(k);});
+        var list=starts.concat(contains).slice(0,6);
+        if(!list.length){sug.hidden=true;sug.innerHTML="";return;}
+        sug.innerHTML=list.map(function(k){
+          var f=cat[k],meta;
+          if(f.nut&&f.nut.kcal!==""&&f.nut.kcal!=null&&!isNaN(num(f.nut.kcal))){
+            meta='<span class="sug-meta">'+Math.round(num(f.nut.kcal))+' kcal'+(f.nut.prot!==""&&f.nut.prot!=null&&!isNaN(num(f.nut.prot))?' · '+fr1(num(f.nut.prot))+' g prot':'')+' / '+esc(f.nut.base||"100")+esc(f.nut.baseUnit||"g")+'</span>';
+          }else{meta='<span class="sug-meta sug-empty">sans valeurs</span>';}
+          return '<button type="button" class="sug" data-k="'+esc(k)+'">'+esc(f.name)+meta+'</button>';
+        }).join("");
+        sug.hidden=false;
+        sug.querySelectorAll(".sug").forEach(function(b){
+          b.addEventListener("mousedown",function(e){e.preventDefault();});
+          b.addEventListener("click",function(){var f=foodCatalog()[b.getAttribute("data-k")];sug.hidden=true;addFood(f?f.name:b.getAttribute("data-k"));});
+        });
+      }
+      inp.addEventListener("input",showSug);
+      inp.addEventListener("focus",showSug);
+      inp.addEventListener("blur",function(){setTimeout(function(){if(sug)sug.hidden=true;},180);});
       inp.addEventListener("keydown",function(e){
-        if(e.key==="Enter"||e.keyCode===13){e.preventDefault();var v=this.value.trim();if(!v)return;
-          var nit={name:v,qty:"",unit:"g",nut:null};var hit=foodCatalog()[v.toLowerCase()];
-          if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";}
-          day(d).mealItems[mk].push(nit);this.value="";save();renderMeal(mk);recalcTotals();
-          var ni=host.querySelector(".tag-input");if(ni)ni.focus();
-        }
+        if(e.key==="Enter"||e.keyCode===13){e.preventDefault();var v=this.value.trim();if(!v)return;if(sug)sug.hidden=true;addFood(v);}
       });
       if(ed>-1&&arr[ed]){
         var item=day(d).mealItems[mk][ed];
