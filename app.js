@@ -575,9 +575,38 @@
     fr.readAsText(file);
   }
 
+  /* ---------------- Menu lanceur d'apps ---------------- */
+  function renderApps(){
+    var host=document.getElementById("appList");if(!host||typeof APPS==="undefined")return;
+    host.innerHTML=APPS.map(function(a){
+      var ic='<span class="app-ic">'+esc(a.icon||(a.name||"?").charAt(0))+'</span>';
+      var nm='<span class="app-name">'+esc(a.name)+'</span>';
+      if(a.here)return '<div class="app-item here">'+ic+nm+'</div>';
+      if(a.ready&&a.url)return '<a class="app-item" href="'+esc(a.url)+'">'+ic+nm+'<span class="app-arrow">›</span></a>';
+      return '<div class="app-item soon">'+ic+nm+'<span class="app-badge">bientôt</span></div>';
+    }).join("");
+  }
+  function openDrawer(){
+    var d=document.getElementById("drawer"),bg=document.getElementById("drawerBg"),btn=document.getElementById("menuBtn");
+    if(!d||!bg)return;bg.hidden=false;d.hidden=false;
+    requestAnimationFrame(function(){bg.classList.add("open");d.classList.add("open");});
+    if(btn)btn.setAttribute("aria-expanded","true");
+  }
+  function closeDrawer(){
+    var d=document.getElementById("drawer"),bg=document.getElementById("drawerBg"),btn=document.getElementById("menuBtn");
+    if(!d||!bg)return;bg.classList.remove("open");d.classList.remove("open");
+    if(btn)btn.setAttribute("aria-expanded","false");
+    setTimeout(function(){bg.hidden=true;d.hidden=true;},240);
+  }
+
   /* ---------------- Initialisation ---------------- */
   function init(){
     if(!STORAGE_OK){var wb=document.getElementById("warnbar");if(wb)wb.hidden=false;}
+    renderApps();
+    var mb=document.getElementById("menuBtn");if(mb)mb.addEventListener("click",openDrawer);
+    var dcl=document.getElementById("drawerClose");if(dcl)dcl.addEventListener("click",closeDrawer);
+    var dbg=document.getElementById("drawerBg");if(dbg)dbg.addEventListener("click",closeDrawer);
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDrawer();});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});
     var dp=document.getElementById("dayPrev"),dn=document.getElementById("dayNext");
     if(dp)dp.addEventListener("click",function(){journalDate=isoOf(addDays(journalDate,-1));renderJournal();});
