@@ -527,9 +527,18 @@
     var domType="",domN=0;Object.keys(typeCount).forEach(function(t){if(typeCount[t]>domN){domN=typeCount[t];domType=t;}});
     var topSports=Object.keys(sportTally).sort(function(a,b){return sportTally[b]-sportTally[a];}).slice(0,3).map(function(k){return k+" ("+sportTally[k]+")";}).join(", ")||"—";
 
+    var protList=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)protList.push(t.prot);});
+    var protAvg=avg(protList);
+    var protStatus=protAvg==null?"":(protAvg>=130?" · ✓":" · ↓ "+Math.round(130-protAvg)+" g");
+    var we=weightEntries();var kgWeek=null;
+    if(we.length>=2){var spanDays=(new Date(we[we.length-1].d+"T00:00:00")-new Date(we[0].d+"T00:00:00"))/86400000;if(spanDays>=1)kgWeek=(we[we.length-1].w-we[0].w)/(spanDays/7);}
+    var wStatus=kgWeek==null?"":(kgWeek<0.2?" · sous la cible":(kgWeek>0.3?" · au-dessus":" · ✓"));
+
     document.getElementById("statGrid").innerHTML=
       '<div class="stat"><div class="v">'+dc+'<span style="font-size:15px;color:var(--muted)">/'+totalSessions()+'</span></div><div class="k">Séances muscu faites</div></div>'+
       '<div class="stat"><div class="v">'+triDoneCount()+'<span style="font-size:15px;color:var(--muted)">/30</span></div><div class="k">Séances triathlon faites</div></div>'+
+      '<div class="stat"><div class="v">'+(protAvg!=null?Math.round(protAvg):'—')+(protAvg!=null?'<span style="font-size:15px;color:var(--muted)"> g</span>':'')+'</div><div class="k">Protéines / j · cible 130-150'+protStatus+'</div></div>'+
+      '<div class="stat"><div class="v">'+(kgWeek!=null?((kgWeek>=0?'+':'')+fr1(kgWeek)):'—')+(kgWeek!=null?'<span style="font-size:15px;color:var(--muted)"> kg/sem</span>':'')+'</div><div class="k">Prise de poids · cible +0,2-0,3'+wStatus+'</div></div>'+
       '<div class="stat"><div class="v">'+(avgSleep?fr1(avgSleep):'—')+'<span style="font-size:15px;color:var(--muted)"> h</span></div><div class="k">Sommeil moyen / nuit</div></div>'+
       '<div class="stat"><div class="v">'+(waterAvg?fr1(waterAvg):'—')+'</div><div class="k">Eau / jour (verres)</div></div>'+
       '<div class="stat"><div class="v">'+meditDays+'</div><div class="k">Jours de méditation</div></div>'+
