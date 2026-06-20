@@ -4,6 +4,17 @@
    Doit être chargé AVANT app.js.
    ========================================================= */
 
+/* ---------- Mes autres apps (menu lanceur ☰) ----------
+   Pour activer une app à venir : passe ready:true et ajoute son url.
+   --------------------------------------------------------- */
+var APPS = [
+  {name:"Suivi muscu",            icon:"💪", here:true},
+  {name:"L'Atelier — orthographe", icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
+  {name:"Anglais",                icon:"🇬🇧", ready:false},
+  {name:"Espagnol",               icon:"🇪🇸", ready:false},
+  {name:"Suivi révisions",        icon:"📚", ready:false}
+];
+
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
 var PROGRAM = {
   A:{title:"Séance A — Haut (force) + abdos", sub:"Haut · force", exos:[
