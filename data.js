@@ -12,7 +12,7 @@ var APPS = [
   {name:"L'Atelier — orthographe", icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
   {name:"The Workbook — anglais", icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
   {name:"Espagnol",               icon:"🇪🇸", ready:false},
-  {name:"Suivi révisions",        icon:"📚", ready:false}
+  {name:"Mémoire & révisions — DSCG", icon:"📚", ready:true, url:"https://ricardospec.github.io/Mouche-Universit-/"}
 ];
 
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
