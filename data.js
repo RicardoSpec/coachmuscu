@@ -8,11 +8,12 @@
    Pour activer une app à venir : passe ready:true et ajoute son url.
    --------------------------------------------------------- */
 var APPS = [
-  {name:"Suivi muscu",            icon:"💪", here:true},
-  {name:"L'Atelier — orthographe", icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
-  {name:"The Workbook — anglais", icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
-  {name:"Espagnol",               icon:"🇪🇸", ready:false},
-  {name:"Mémoire & révisions — DSCG", icon:"📚", ready:true, url:"https://ricardospec.github.io/Mouche-Universit-/"}
+  {name:"Suivi muscu",                icon:"💪", here:true},
+  {name:"L'Atelier — orthographe",    icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
+  {name:"The Workbook — anglais",     icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
+  {name:"Mémoire & révisions — DSCG", icon:"📚", ready:true, url:"https://ricardospec.github.io/Mouche-Universit-/"},
+  {name:"Grand livre — budget",       icon:"💶", ready:true, url:"https://ricardospec.github.io/Budgetisation/"},
+  {name:"Espagnol",                   icon:"🇪🇸", ready:false}
 ];
 
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
