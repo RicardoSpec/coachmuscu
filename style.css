@@ -183,6 +183,17 @@ input[type=checkbox]{accent-color:var(--primary)}
 .check{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer}
 .check input{width:20px;height:20px;flex:none}
 
+/* ---------- Compléments ---------- */
+.supps{display:flex;flex-direction:column;gap:8px}
+.supp{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;text-transform:none;letter-spacing:0}
+.supp input{width:20px;height:20px;flex:none}
+.supp-txt{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.supp-name{font-size:14.5px;font-weight:700;color:var(--ink)}
+.supp-dose{font-size:12px;color:var(--muted)}
+.supp-badge{flex:none;font-size:11px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.supp:has(input:checked){border-color:var(--primary);background:#f4f8fb}
+.supp-hint{margin-top:8px;font-size:12px;color:var(--muted)}
+
 /* ---------- Hydratation ---------- */
 .water{display:flex;align-items:center;gap:14px}
 .wbtn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--primary);font-size:22px;font-weight:700;cursor:pointer;line-height:1;flex:none}
