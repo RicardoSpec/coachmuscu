@@ -44,7 +44,7 @@
   function foodCatalog(){var cat={};Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){cat[(""+it.name).trim().toLowerCase()]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
   function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base),q=num(it.qty);if(isNaN(base)||base<=0||isNaN(q)||q<=0)return null;if((it.unit||"")!==(it.nut.baseUnit||""))return null;var f=q/base,r={};var kc=num(it.nut.kcal),pr=num(it.nut.prot);if(!isNaN(kc))r.kcal=kc*f;if(!isNaN(pr))r.prot=pr*f;if(r.kcal===undefined&&r.prot===undefined)return null;return r;}
-  function dayTotals(d){var x=state.days[d];if(!x||!x.mealItems)return null;var k=0,p=0,any=false;MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot)p+=s.prot;}});});return any?{kcal:k,prot:p}:null;}
+  function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,any=false;if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot)p+=s.prot;}});});if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){if(sp.prot){p+=sp.prot;any=true;}if(sp.kcal){k+=sp.kcal;any=true;}}});return any?{kcal:k,prot:p}:null;}
 
   /* ---------------- Objectifs ---------------- */
   var MUSCU_DEADLINE="2026-07-27";
@@ -79,6 +79,7 @@
     if(x.sleep===undefined)x.sleep="";
     if(!x.stools)x.stools=[];
     if(x.water===undefined)x.water=0;
+    if(!x.supps)x.supps={};
     if(!x.mealItems){x.mealItems={pd:[],dj:[],dn:[],co:[]};["pd","dj","dn","co"].forEach(function(kk){var t=(x.meals&&x.meals[kk])||"";if((""+t).trim())x.mealItems[kk].push({name:(""+t).trim(),qty:"",unit:"g",nut:null});});}
     else{["pd","dj","dn","co"].forEach(function(kk){if(!x.mealItems[kk])x.mealItems[kk]=[];});}
     return x;
@@ -323,6 +324,10 @@
           MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           '<div class="meal-total"></div>'+
         '</div>'+
+        '<div class="field"><label>Compléments</label>'+
+          '<div class="supps f-supps">'+(typeof SUPPS!=="undefined"?SUPPS:[]).map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'</label>';}).join("")+'</div>'+
+          '<div class="supp-hint">Le whey coché s\'ajoute à tes protéines du jour (ne le saisis pas aussi dans les repas).</div>'+
+        '</div>'+
         '<div class="field"><label class="check"><input type="checkbox" class="f-medit"> Méditation faite</label></div>'+
         '<div class="field"><label>Transit — passages à la selle</label><div class="stools f-stools"></div></div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
@@ -337,6 +342,11 @@
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
     container.querySelector(".f-medit").addEventListener("change",function(){x.meditation=this.checked;save();});
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
+    container.querySelectorAll(".f-supp").forEach(function(cb){
+      var id=cb.getAttribute("data-id");
+      cb.checked=!!(x.supps&&x.supps[id]);
+      cb.addEventListener("change",function(){if(!x.supps)x.supps={};x.supps[id]=cb.checked;save();recalcTotals();});
+    });
     container.querySelectorAll(".chip").forEach(function(ch){ch.addEventListener("click",function(){var sp=ch.getAttribute("data-sport");var arr=x.sports;var i=arr.indexOf(sp);if(i>-1){arr.splice(i,1);ch.classList.remove("on");}else{arr.push(sp);ch.classList.add("on");}save();});});
 
     (function(){
