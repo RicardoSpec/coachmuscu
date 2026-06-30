@@ -324,9 +324,13 @@
           MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           '<div class="meal-total"></div>'+
         '</div>'+
-        '<div class="field"><label>Compléments</label>'+
-          '<div class="supps f-supps">'+(typeof SUPPS!=="undefined"?SUPPS:[]).map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'</label>';}).join("")+'</div>'+
-          '<div class="supp-hint">Le whey coché s\'ajoute à tes protéines du jour (ne le saisis pas aussi dans les repas).</div>'+
+        '<div class="field"><label>Compléments — ta routine</label>'+
+          (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
+            var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
+            if(!items.length)return "";
+            return '<div class="supp-slot"><div class="supp-slot-h">'+esc(slot.label)+'</div>'+items.map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'</label>';}).join("")+'</div>';
+          }).join("")+
+          '<div class="supp-hint">Le whey coché s\'ajoute à tes protéines du jour.</div>'+
         '</div>'+
         '<div class="field"><label class="check"><input type="checkbox" class="f-medit"> Méditation faite</label></div>'+
         '<div class="field"><label>Transit — passages à la selle</label><div class="stools f-stools"></div></div>'+
