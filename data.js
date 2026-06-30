@@ -16,18 +16,25 @@ var APPS = [
   {name:"Espagnol",                   icon:"🇪🇸", ready:false}
 ];
 
-/* ---------- Compléments à cocher chaque jour ----------
-   prot : grammes de protéines ajoutés au total du jour quand le complément est coché (whey).
-   Pour retirer un complément : supprime sa ligne. Pour en ajouter : copie une ligne.
-   ------------------------------------------------------- */
+/* ---------- Compléments : routine quotidienne (groupée par moment) ----------
+   when  : créneau de prise (voir SUPP_SLOTS ci-dessous).
+   prot  : g de protéines ajoutés au total du jour quand le complément est coché (whey).
+   Retirer un complément : supprime sa ligne. En ajouter : copie une ligne.
+   ---------------------------------------------------------------------------- */
+var SUPP_SLOTS = [
+  {id:"matin",  label:"Matin, à jeun"},
+  {id:"repas",  label:"À un repas (matin ou midi)"},
+  {id:"seance", label:"Après la séance (ou en collation)"},
+  {id:"soir",   label:"Le soir, après le dîner"}
+];
 var SUPPS = [
-  {id:"whey",      name:"Whey Isolate Native",      dose:"30 g après séance ou dans la journée", prot:28},
-  {id:"omega3",    name:"Oméga 3",                  dose:"3 capsules pendant un repas"},
-  {id:"fenugrec",  name:"Fenugrec",                 dose:"4 gélules le soir après le repas"},
-  {id:"probio",    name:"Pure Bio² (probiotiques)", dose:"1 à 2 gélules le matin, à jeun"},
-  {id:"spiruline", name:"Spiruline (Hainan)",       dose:"selon l'étiquette"},
-  {id:"magnesium", name:"Magnésium bisglycinate",   dose:"le soir, selon l'étiquette"},
-  {id:"oyster",    name:"Poudre d'huître",          dose:"selon l'étiquette"}
+  {id:"probio",    name:"Pure Bio² (probiotiques)", when:"matin",  dose:"1 à 2 gélules, avant le petit-déj"},
+  {id:"spiruline", name:"Spiruline (Hainan)",       when:"repas",  dose:"selon l'étiquette"},
+  {id:"oyster",    name:"Poudre d'huître",          when:"repas",  dose:"selon l'étiquette"},
+  {id:"omega3",    name:"Oméga 3",                  when:"repas",  dose:"3 capsules pendant le repas"},
+  {id:"whey",      name:"Whey Isolate Native",      when:"seance", dose:"30 g (≈ 2 dosettes)", prot:28},
+  {id:"fenugrec",  name:"Fenugrec",                 when:"soir",   dose:"4 gélules après le repas"},
+  {id:"magnesium", name:"Magnésium bisglycinate",   when:"soir",   dose:"selon l'étiquette"}
 ];
 
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
