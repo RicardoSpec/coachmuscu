@@ -15,6 +15,56 @@
   function save(){try{var s=JSON.stringify(state);if(STORAGE_OK)localStorage.setItem(KEY,s);else memStore=state;}catch(e){}}
 
   var state=load()||{sessions:{},days:{},tri:{}};
+
+  /* ============================================================
+     STORE PARTAGÉ entre toutes les apps ricardospec.github.io
+     (même origine = même localStorage). Clé dédiée, distincte de
+     celle de chaque app, pour le calendrier commun :
+       states   : { "YYYY-MM-DD": "cours|occupe|repos|vacances" }
+       events   : [ {id,start,end,label,type} ]
+       deadlines: [ {id,date,label,icon} ]
+     RÈGLE ANTI-CLOBBER : on relit TOUJOURS la version fraîche du
+     disque avant d'écrire, et on ne modifie que l'entrée concernée
+     (upsert par id). Aucune écriture n'écrase le store en bloc.
+     ============================================================ */
+  var PKEY="ricardospec_planning_v1";
+  var pMem=null;
+  function pLoad(){
+    var o=null;
+    if(STORAGE_OK){try{var r=localStorage.getItem(PKEY);o=r?JSON.parse(r):null;}catch(e){o=null;}}
+    else o=pMem;
+    if(!o||typeof o!=="object")o={};
+    o.states=o.states||{};o.events=o.events||[];o.deadlines=o.deadlines||[];
+    return o;
+  }
+  function pWrite(o){o.rev=Date.now();try{var s=JSON.stringify(o);if(STORAGE_OK)localStorage.setItem(PKEY,s);else pMem=o;}catch(e){}}
+  function pMutate(fn){var o=pLoad();fn(o);pWrite(o);return o;}   // relit frais puis écrit
+
+  function getDayState(iso){return pLoad().states[iso]||"";}
+  function setDayState(iso,st){pMutate(function(o){if(st)o.states[iso]=st;else delete o.states[iso];});}
+  function pDeadlines(){return pLoad().deadlines.slice().sort(function(a,b){return a.date<b.date?-1:1;});}
+  function pEvents(){return pLoad().events;}
+  function eventsOn(iso){return pEvents().filter(function(e){return iso>=e.start&&iso<=(e.end||e.start);});}
+
+  /* Upsert idempotent des entrées statiques connues de CETTE app (deadlines/events),
+     par id stable : présent une seule fois, ne duplique pas avec l'autre app. */
+  function pEnsureSeed(){
+    pMutate(function(o){
+      (typeof DEADLINES!=="undefined"?DEADLINES:[]).forEach(function(d){
+        var id=d.id||("dl:"+d.date+":"+d.label);
+        if(!o.deadlines.some(function(x){return x.id===id;}))o.deadlines.push({id:id,date:d.date,label:d.label,icon:d.icon||"🎯"});
+      });
+      (typeof EVENTS!=="undefined"?EVENTS:[]).forEach(function(e){
+        var id=e.id||("ev:"+e.start+":"+e.label);
+        if(!o.events.some(function(x){return x.id===id;}))o.events.push({id:id,start:e.start,end:e.end||"",label:e.label,type:e.type||"perso"});
+      });
+    });
+  }
+  /* Migration unique : récupère les anciens états de jour stockés dans cette app
+     (state.days[iso].status) vers le store partagé, sans écraser ce qui existe. */
+  function pMigrateStates(){
+    pMutate(function(o){Object.keys(state.days).forEach(function(iso){var st=state.days[iso].status;if(st&&!o.states[iso])o.states[iso]=st;});});
+  }
   if(!state.sessions)state.sessions={};
   if(!state.days)state.days={};
   if(!state.tri)state.tri={};
@@ -110,12 +160,11 @@
     var t;
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
-    if(id==="v-today")renderToday();
+    if(id==="v-today"){renderToday();renderCalendars();}
     else if(id==="v-prog")renderProgram();
     else if(id==="v-tri")renderTri();
-    else if(id==="v-journal")renderJournal();
+    else if(id==="v-journal"){renderJournal();renderCalendars();}
     else if(id==="v-prog2")renderProgress();
-    else if(id==="v-cal")renderCalendar();
     window.scrollTo(0,0);
   }
 
@@ -672,7 +721,7 @@
     if(slot.type==="tri"){var ti=triInfoForDate(iso);if(!ti)return null;var r=state.tri[ti.w+"_"+slot.disc];return {kind:"tri",abbr:triLabel(slot.disc),label:triLabel(slot.disc),icon:triIcon(slot.disc),done:!!(r&&r.done)};}
     return null;
   }
-  function dayBlocked(iso){var x=state.days[iso];var st=x?x.status:"";return typeof DAY_BLOCKED!=="undefined"&&DAY_BLOCKED.indexOf(st)>=0;}
+  function dayBlocked(iso){return typeof DAY_BLOCKED!=="undefined"&&DAY_BLOCKED.indexOf(getDayState(iso))>=0;}
 
   function scheduleWeek(weekIsos){
     var map={},cap={},displaced=[],overflow=[];
@@ -689,27 +738,21 @@
 
   function startOfWeekMonday(d){var dow=d.getDay();var diff=(dow===0?-6:1-dow);var n=new Date(d);n.setDate(d.getDate()+diff);return n;}
 
-  function renderCountdown(){
-    var host=document.getElementById("calCountdown");if(!host)return;
+  function countdownHTML(){
     var today=todayStr();
-    var up=(typeof DEADLINES!=="undefined"?DEADLINES:[]).map(function(dl){return {dl:dl,d:diffDays(dl.date,today)};}).filter(function(it){return it.d>=0;}).sort(function(a,b){return a.d-b.d;});
-    if(!up.length){host.innerHTML="";return;}
-    host.innerHTML='<div class="cd-row">'+up.map(function(it){var lbl=it.d===0?"Jour J":("J-"+it.d);return '<div class="cd-card"><div class="cd-j">'+lbl+'</div><div class="cd-l">'+it.dl.icon+' '+esc(it.dl.label)+'</div><div class="cd-d">'+frDateShort(it.dl.date)+'</div></div>';}).join("")+'</div>';
+    var up=pDeadlines().map(function(dl){return {dl:dl,d:diffDays(dl.date,today)};}).filter(function(it){return it.d>=0;}).sort(function(a,b){return a.d-b.d;});
+    if(!up.length)return "";
+    return '<div class="cd-row">'+up.map(function(it){var lbl=it.d===0?"Jour J":("J-"+it.d);return '<div class="cd-card"><div class="cd-j">'+lbl+'</div><div class="cd-l">'+(it.dl.icon||"🎯")+' '+esc(it.dl.label)+'</div><div class="cd-d">'+frDateShort(it.dl.date)+'</div></div>';}).join("")+'</div>';
   }
-  function renderCalLegend(){
-    var host=document.getElementById("calLegend");if(!host)return;
-    host.innerHTML='<div class="cal-leg"><span><i class="lg p-muscu"></i>Muscu</span><span><i class="lg p-tri"></i>Triathlon</span><span><i class="lg done"></i>Faite</span><span><i class="lg missed"></i>Manquée</span><span class="lg-note">↪ séance décalée automatiquement · touche un jour pour changer son état</span></div>';
+  function legendHTML(){
+    return '<div class="cal-leg"><span><i class="lg p-muscu"></i>Muscu</span><span><i class="lg p-tri"></i>Triathlon</span><span><i class="lg done"></i>Faite</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">↪ séance décalée auto · touche un jour pour changer son état</span></div>';
   }
-
-  function renderCalendar(){
-    renderCountdown();
-    var y=calRef.y,m=calRef.m;
-    document.getElementById("calMonth").textContent=MOIS_LONG[m]+" "+y;
+  function monthGridHTML(y,m){
     var first=new Date(y,m,1),last=new Date(y,m+1,0);
     var cur=startOfWeekMonday(first);
     var lastEnd=startOfWeekMonday(last);lastEnd.setDate(lastEnd.getDate()+6);
     var today=todayStr();
-    var dlMap={};(typeof DEADLINES!=="undefined"?DEADLINES:[]).forEach(function(dl){dlMap[dl.date]=dl;});
+    var dlMap={};pDeadlines().forEach(function(dl){dlMap[dl.date]=dl;});
     var html='<div class="cal"><div class="cal-dows"><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
     var guard=0;
     while(cur<=lastEnd&&guard<8){
@@ -718,25 +761,40 @@
       var sched=scheduleWeek(weekIsos);
       html+='<div class="cal-week">';
       weekIsos.forEach(function(iso){
-        var o=new Date(iso+"T00:00:00"),inMonth=(o.getMonth()===m),st=(state.days[iso]&&state.days[iso].status)||"",dl=dlMap[iso],past=iso<today;
+        var o=new Date(iso+"T00:00:00"),inMonth=(o.getMonth()===m),st=getDayState(iso),dl=dlMap[iso],past=iso<today,evs=eventsOn(iso);
         var cls="cal-day";if(!inMonth)cls+=" off";if(iso===today)cls+=" today";if(st)cls+=" st-"+st;if(dl)cls+=" deadline";
         var pills=sched.map[iso].map(function(p){var pc="pill "+(p.kind==="muscu"?"p-muscu":"p-tri");if(p.done)pc+=" done";else if(past)pc+=" missed";return '<span class="'+pc+'">'+(p.bumped?'<span class="bmp">↪</span>':'')+esc(p.abbr)+(p.done?' ✓':'')+'</span>';}).join("");
-        var dlB=dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+dl.icon+'</span>':'';
-        html+='<button class="'+cls+'" data-iso="'+iso+'"><span class="cal-n">'+o.getDate()+dlB+'</span><span class="cal-pills">'+pills+'</span></button>';
+        var marks=(dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+(dl.icon||"🎯")+'</span>':'')+(evs.length?'<span class="ev-dot" title="'+esc(evs.map(function(e){return e.label;}).join(" · "))+'"></span>':'');
+        html+='<button class="'+cls+'" data-iso="'+iso+'"><span class="cal-n">'+o.getDate()+(marks?'<span class="cal-marks">'+marks+'</span>':'')+'</span><span class="cal-pills">'+pills+'</span></button>';
       });
       html+='</div>';
       if(sched.overflow.length)html+='<div class="cal-of">↪ '+sched.overflow.length+' séance'+(sched.overflow.length>1?'s':'')+' à caser cette semaine</div>';
       cur.setDate(cur.getDate()+7);
     }
-    html+='</div>';
-    document.getElementById("calGrid").innerHTML=html;
-    document.querySelectorAll("#calGrid .cal-day").forEach(function(b){b.addEventListener("click",function(){openDaySheet(b.getAttribute("data-iso"));});});
-    renderCalLegend();
+    return html+'</div>';
   }
+  function monthEventsHTML(y,m){
+    var ms=isoOf(new Date(y,m,1)),me=isoOf(new Date(y,m+1,0));
+    var evs=pEvents().filter(function(e){var s=e.start,en=e.end||e.start;return (s>=ms&&s<=me)||(en>=ms&&en<=me)||(s<ms&&en>me);}).sort(function(a,b){return a.start<b.start?-1:1;});
+    if(!evs.length)return "";
+    return '<div class="calevents"><div class="sec-mini">Événements du mois</div>'+evs.map(function(e){var d=frDateShort(e.start)+(e.end&&e.end!==e.start?" → "+frDateShort(e.end):"");return '<div class="calev-row"><span class="calev-d">'+esc(d)+'</span><span class="calev-l">'+esc(e.label)+'</span></div>';}).join("")+'</div>';
+  }
+  function renderCalendarInto(host){
+    if(!host)return;
+    host.innerHTML='<div class="calwrap-inner">'+countdownHTML()+
+      '<div class="calbar"><button class="navbtn calPrev" aria-label="Mois précédent">‹</button><div class="calmonth">'+MOIS_LONG[calRef.m]+' '+calRef.y+'</div><button class="navbtn calNext" aria-label="Mois suivant">›</button></div>'+
+      '<div class="calhead"><button class="btn ghost calToday">Aujourd\'hui</button></div>'+
+      monthGridHTML(calRef.y,calRef.m)+monthEventsHTML(calRef.y,calRef.m)+legendHTML()+'</div>';
+    host.querySelectorAll(".cal-day").forEach(function(b){b.onclick=function(){openDaySheet(b.getAttribute("data-iso"));};});
+    var pv=host.querySelector(".calPrev");if(pv)pv.onclick=function(){calRef.m--;if(calRef.m<0){calRef.m=11;calRef.y--;}renderCalendars();};
+    var nx=host.querySelector(".calNext");if(nx)nx.onclick=function(){calRef.m++;if(calRef.m>11){calRef.m=0;calRef.y++;}renderCalendars();};
+    var td=host.querySelector(".calToday");if(td)td.onclick=function(){var n=new Date();calRef={y:n.getFullYear(),m:n.getMonth()};renderCalendars();};
+  }
+  function renderCalendars(){["homeCal","journalCal"].forEach(function(id){var h=document.getElementById(id);if(h)renderCalendarInto(h);});}
 
   function openDaySheet(iso){
     var sheet=document.getElementById("calSheet"),bg=document.getElementById("calSheetBg");if(!sheet||!bg)return;
-    var curSt=(state.days[iso]&&state.days[iso].status)||"";
+    var curSt=getDayState(iso);
     var p=plannedForDate(iso);
     var planTxt=p?(p.icon+" "+p.label+(p.done?" — faite ✓":"")):"Aucune séance prévue ce jour";
     sheet.innerHTML='<div class="sheet-handle"></div><div class="sheet-title">'+esc(frDateFull(iso))+'</div><div class="sheet-sub">'+esc(planTxt)+'</div>'+
@@ -745,7 +803,7 @@
       '<button class="sheet-close" id="sheetCloseBtn">Fermer</button>';
     bg.hidden=false;sheet.hidden=false;
     requestAnimationFrame(function(){bg.classList.add("open");sheet.classList.add("open");});
-    sheet.querySelectorAll(".st-btn").forEach(function(b){b.addEventListener("click",function(){var x=day(iso);x.status=b.getAttribute("data-st");save();renderCalendar();closeDaySheet();});});
+    sheet.querySelectorAll(".st-btn").forEach(function(b){b.addEventListener("click",function(){setDayState(iso,b.getAttribute("data-st"));renderCalendars();closeDaySheet();});});
     var go=sheet.querySelector(".sheet-link");if(go)go.addEventListener("click",function(){journalDate=iso;closeDaySheet();activateTab("v-journal");});
     var cl=document.getElementById("sheetCloseBtn");if(cl)cl.addEventListener("click",closeDaySheet);
   }
@@ -763,10 +821,11 @@
     var dp=document.getElementById("dayPrev"),dn=document.getElementById("dayNext");
     if(dp)dp.addEventListener("click",function(){journalDate=isoOf(addDays(journalDate,-1));renderJournal();});
     if(dn)dn.addEventListener("click",function(){var c=isoOf(addDays(journalDate,1));if(c<=todayStr()){journalDate=c;renderJournal();}});
-    var cp=document.getElementById("calPrev");if(cp)cp.addEventListener("click",function(){calRef.m--;if(calRef.m<0){calRef.m=11;calRef.y--;}renderCalendar();});
-    var cn=document.getElementById("calNext");if(cn)cn.addEventListener("click",function(){calRef.m++;if(calRef.m>11){calRef.m=0;calRef.y++;}renderCalendar();});
-    var ct=document.getElementById("calTodayBtn");if(ct)ct.addEventListener("click",function(){var n=new Date();calRef={y:n.getFullYear(),m:n.getMonth()};renderCalendar();});
     var csb=document.getElementById("calSheetBg");if(csb)csb.addEventListener("click",closeDaySheet);
+    /* Au retour sur l'app (ou si l'autre app a modifié le store partagé), on relit et on rafraîchit. */
+    document.addEventListener("visibilitychange",function(){if(!document.hidden)renderCalendars();});
+    window.addEventListener("focus",function(){renderCalendars();});
+    window.addEventListener("storage",function(e){if(e.key===PKEY)renderCalendars();});
     var be=document.getElementById("btnExport");if(be)be.addEventListener("click",exportData);
     var fi=document.getElementById("fileImport");if(fi)fi.addEventListener("change",function(){if(this.files&&this.files[0])importData(this.files[0]);this.value="";});
     var br=document.getElementById("btnReset");if(br)br.addEventListener("click",function(){if(confirm("Tout effacer ? Action irréversible (pense à exporter avant).")){state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;activateTab("v-today");}});
@@ -776,6 +835,7 @@
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
+    pEnsureSeed();pMigrateStates();
     activateTab("v-today");
   }
   init();
