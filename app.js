@@ -80,6 +80,7 @@
     if(!x.stools)x.stools=[];
     if(x.water===undefined)x.water=0;
     if(!x.supps)x.supps={};
+    if(x.status===undefined)x.status="";
     if(!x.mealItems){x.mealItems={pd:[],dj:[],dn:[],co:[]};["pd","dj","dn","co"].forEach(function(kk){var t=(x.meals&&x.meals[kk])||"";if((""+t).trim())x.mealItems[kk].push({name:(""+t).trim(),qty:"",unit:"g",nut:null});});}
     else{["pd","dj","dn","co"].forEach(function(kk){if(!x.mealItems[kk])x.mealItems[kk]=[];});}
     return x;
@@ -114,6 +115,7 @@
     else if(id==="v-tri")renderTri();
     else if(id==="v-journal")renderJournal();
     else if(id==="v-prog2")renderProgress();
+    else if(id==="v-cal")renderCalendar();
     window.scrollTo(0,0);
   }
 
@@ -640,6 +642,115 @@
     setTimeout(function(){bg.hidden=true;d.hidden=true;},240);
   }
 
+  /* ---------------- Agenda / Calendrier ---------------- */
+  var MOIS_LONG=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var MOIS_AB=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+  var DOW_KEYS=["dim","lun","mar","mer","jeu","ven","sam"];
+  var calRef={y:(new Date()).getFullYear(),m:(new Date()).getMonth()};
+
+  function dateMs(iso){return new Date(iso+"T00:00:00").getTime();}
+  function diffDays(a,b){return Math.round((dateMs(a)-dateMs(b))/86400000);}
+  function frDateShort(iso){var d=new Date(iso+"T00:00:00");return d.getDate()+" "+MOIS_AB[d.getMonth()];}
+
+  function muscuInfoForDate(iso){
+    var dd=diffDays(iso,MUSCU_START);if(dd<0)return null;
+    var wIdx=Math.floor(dd/7),tot=0;BLOCK_ORDER.forEach(function(b){tot+=PROGRAM_BLOCKS[b].weeks;});
+    if(wIdx>=tot)return null;
+    var rem=wIdx,block=null,w=0;
+    for(var i=0;i<BLOCK_ORDER.length;i++){var b=BLOCK_ORDER[i],wk=PROGRAM_BLOCKS[b].weeks;if(rem<wk){block=b;w=rem+1;break;}rem-=wk;}
+    return {block:block,w:w};
+  }
+  function triInfoForDate(iso){var dd=diffDays(iso,TRI_START);if(dd<0)return null;var wIdx=Math.floor(dd/7);if(wIdx>=TRI.length)return null;return {w:wIdx+1};}
+  function triLabel(disc){for(var i=0;i<TRI_DISC.length;i++)if(TRI_DISC[i][0]===disc)return TRI_DISC[i][1];return disc;}
+  function triIcon(disc){return disc==="nat"?"🏊":disc==="velo"?"🚴":disc==="course"?"🏃":"•";}
+
+  function plannedForDate(iso){
+    if(typeof TRAIN_TEMPLATE==="undefined")return null;
+    var slot=TRAIN_TEMPLATE[DOW_KEYS[new Date(iso+"T00:00:00").getDay()]];
+    if(!slot)return null;
+    if(slot.type==="muscu"){var mi=muscuInfoForDate(iso);if(!mi)return null;return {kind:"muscu",abbr:slot.code,label:"Muscu "+slot.code,icon:"💪",done:sess(mi.block,mi.w,slot.code).done};}
+    if(slot.type==="tri"){var ti=triInfoForDate(iso);if(!ti)return null;var r=state.tri[ti.w+"_"+slot.disc];return {kind:"tri",abbr:triLabel(slot.disc),label:triLabel(slot.disc),icon:triIcon(slot.disc),done:!!(r&&r.done)};}
+    return null;
+  }
+  function dayBlocked(iso){var x=state.days[iso];var st=x?x.status:"";return typeof DAY_BLOCKED!=="undefined"&&DAY_BLOCKED.indexOf(st)>=0;}
+
+  function scheduleWeek(weekIsos){
+    var map={},cap={},displaced=[],overflow=[];
+    weekIsos.forEach(function(iso){map[iso]=[];cap[iso]=dayBlocked(iso)?0:2;});
+    weekIsos.forEach(function(iso){var p=plannedForDate(iso);if(!p)return;if(!dayBlocked(iso)){map[iso].push(p);cap[iso]--;}else{p.fromIso=iso;displaced.push(p);}});
+    displaced.forEach(function(p){
+      var target=null,i;
+      for(i=0;i<weekIsos.length;i++){if(weekIsos[i]>p.fromIso&&cap[weekIsos[i]]>0){target=weekIsos[i];break;}}
+      if(!target)for(i=0;i<weekIsos.length;i++){if(cap[weekIsos[i]]>0){target=weekIsos[i];break;}}
+      if(target){p.bumped=true;map[target].push(p);cap[target]--;}else overflow.push(p);
+    });
+    return {map:map,overflow:overflow};
+  }
+
+  function startOfWeekMonday(d){var dow=d.getDay();var diff=(dow===0?-6:1-dow);var n=new Date(d);n.setDate(d.getDate()+diff);return n;}
+
+  function renderCountdown(){
+    var host=document.getElementById("calCountdown");if(!host)return;
+    var today=todayStr();
+    var up=(typeof DEADLINES!=="undefined"?DEADLINES:[]).map(function(dl){return {dl:dl,d:diffDays(dl.date,today)};}).filter(function(it){return it.d>=0;}).sort(function(a,b){return a.d-b.d;});
+    if(!up.length){host.innerHTML="";return;}
+    host.innerHTML='<div class="cd-row">'+up.map(function(it){var lbl=it.d===0?"Jour J":("J-"+it.d);return '<div class="cd-card"><div class="cd-j">'+lbl+'</div><div class="cd-l">'+it.dl.icon+' '+esc(it.dl.label)+'</div><div class="cd-d">'+frDateShort(it.dl.date)+'</div></div>';}).join("")+'</div>';
+  }
+  function renderCalLegend(){
+    var host=document.getElementById("calLegend");if(!host)return;
+    host.innerHTML='<div class="cal-leg"><span><i class="lg p-muscu"></i>Muscu</span><span><i class="lg p-tri"></i>Triathlon</span><span><i class="lg done"></i>Faite</span><span><i class="lg missed"></i>Manquée</span><span class="lg-note">↪ séance décalée automatiquement · touche un jour pour changer son état</span></div>';
+  }
+
+  function renderCalendar(){
+    renderCountdown();
+    var y=calRef.y,m=calRef.m;
+    document.getElementById("calMonth").textContent=MOIS_LONG[m]+" "+y;
+    var first=new Date(y,m,1),last=new Date(y,m+1,0);
+    var cur=startOfWeekMonday(first);
+    var lastEnd=startOfWeekMonday(last);lastEnd.setDate(lastEnd.getDate()+6);
+    var today=todayStr();
+    var dlMap={};(typeof DEADLINES!=="undefined"?DEADLINES:[]).forEach(function(dl){dlMap[dl.date]=dl;});
+    var html='<div class="cal"><div class="cal-dows"><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
+    var guard=0;
+    while(cur<=lastEnd&&guard<8){
+      guard++;
+      var weekIsos=[];for(var i=0;i<7;i++){var dd=new Date(cur);dd.setDate(cur.getDate()+i);weekIsos.push(isoOf(dd));}
+      var sched=scheduleWeek(weekIsos);
+      html+='<div class="cal-week">';
+      weekIsos.forEach(function(iso){
+        var o=new Date(iso+"T00:00:00"),inMonth=(o.getMonth()===m),st=(state.days[iso]&&state.days[iso].status)||"",dl=dlMap[iso],past=iso<today;
+        var cls="cal-day";if(!inMonth)cls+=" off";if(iso===today)cls+=" today";if(st)cls+=" st-"+st;if(dl)cls+=" deadline";
+        var pills=sched.map[iso].map(function(p){var pc="pill "+(p.kind==="muscu"?"p-muscu":"p-tri");if(p.done)pc+=" done";else if(past)pc+=" missed";return '<span class="'+pc+'">'+(p.bumped?'<span class="bmp">↪</span>':'')+esc(p.abbr)+(p.done?' ✓':'')+'</span>';}).join("");
+        var dlB=dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+dl.icon+'</span>':'';
+        html+='<button class="'+cls+'" data-iso="'+iso+'"><span class="cal-n">'+o.getDate()+dlB+'</span><span class="cal-pills">'+pills+'</span></button>';
+      });
+      html+='</div>';
+      if(sched.overflow.length)html+='<div class="cal-of">↪ '+sched.overflow.length+' séance'+(sched.overflow.length>1?'s':'')+' à caser cette semaine</div>';
+      cur.setDate(cur.getDate()+7);
+    }
+    html+='</div>';
+    document.getElementById("calGrid").innerHTML=html;
+    document.querySelectorAll("#calGrid .cal-day").forEach(function(b){b.addEventListener("click",function(){openDaySheet(b.getAttribute("data-iso"));});});
+    renderCalLegend();
+  }
+
+  function openDaySheet(iso){
+    var sheet=document.getElementById("calSheet"),bg=document.getElementById("calSheetBg");if(!sheet||!bg)return;
+    var curSt=(state.days[iso]&&state.days[iso].status)||"";
+    var p=plannedForDate(iso);
+    var planTxt=p?(p.icon+" "+p.label+(p.done?" — faite ✓":"")):"Aucune séance prévue ce jour";
+    sheet.innerHTML='<div class="sheet-handle"></div><div class="sheet-title">'+esc(frDateFull(iso))+'</div><div class="sheet-sub">'+esc(planTxt)+'</div>'+
+      '<div class="sheet-states">'+(typeof DAY_STATES!=="undefined"?DAY_STATES:[]).map(function(s){var on=curSt===s.id;return '<button class="st-btn st-'+(s.id||"dispo")+(on?" on":"")+'" data-st="'+s.id+'">'+esc(s.label)+'</button>';}).join("")+'</div>'+
+      '<button class="sheet-link" data-go="'+iso+'">Ouvrir ce jour dans le Journal →</button>'+
+      '<button class="sheet-close" id="sheetCloseBtn">Fermer</button>';
+    bg.hidden=false;sheet.hidden=false;
+    requestAnimationFrame(function(){bg.classList.add("open");sheet.classList.add("open");});
+    sheet.querySelectorAll(".st-btn").forEach(function(b){b.addEventListener("click",function(){var x=day(iso);x.status=b.getAttribute("data-st");save();renderCalendar();closeDaySheet();});});
+    var go=sheet.querySelector(".sheet-link");if(go)go.addEventListener("click",function(){journalDate=iso;closeDaySheet();activateTab("v-journal");});
+    var cl=document.getElementById("sheetCloseBtn");if(cl)cl.addEventListener("click",closeDaySheet);
+  }
+  function closeDaySheet(){var sheet=document.getElementById("calSheet"),bg=document.getElementById("calSheetBg");if(!sheet||!bg)return;bg.classList.remove("open");sheet.classList.remove("open");setTimeout(function(){bg.hidden=true;sheet.hidden=true;},240);}
+
   /* ---------------- Initialisation ---------------- */
   function init(){
     if(!STORAGE_OK){var wb=document.getElementById("warnbar");if(wb)wb.hidden=false;}
@@ -652,6 +763,10 @@
     var dp=document.getElementById("dayPrev"),dn=document.getElementById("dayNext");
     if(dp)dp.addEventListener("click",function(){journalDate=isoOf(addDays(journalDate,-1));renderJournal();});
     if(dn)dn.addEventListener("click",function(){var c=isoOf(addDays(journalDate,1));if(c<=todayStr()){journalDate=c;renderJournal();}});
+    var cp=document.getElementById("calPrev");if(cp)cp.addEventListener("click",function(){calRef.m--;if(calRef.m<0){calRef.m=11;calRef.y--;}renderCalendar();});
+    var cn=document.getElementById("calNext");if(cn)cn.addEventListener("click",function(){calRef.m++;if(calRef.m>11){calRef.m=0;calRef.y++;}renderCalendar();});
+    var ct=document.getElementById("calTodayBtn");if(ct)ct.addEventListener("click",function(){var n=new Date();calRef={y:n.getFullYear(),m:n.getMonth()};renderCalendar();});
+    var csb=document.getElementById("calSheetBg");if(csb)csb.addEventListener("click",closeDaySheet);
     var be=document.getElementById("btnExport");if(be)be.addEventListener("click",exportData);
     var fi=document.getElementById("fileImport");if(fi)fi.addEventListener("change",function(){if(this.files&&this.files[0])importData(this.files[0]);this.value="";});
     var br=document.getElementById("btnReset");if(br)br.addEventListener("click",function(){if(confirm("Tout effacer ? Action irréversible (pense à exporter avant).")){state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;activateTab("v-today");}});
