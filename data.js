@@ -121,6 +121,38 @@ var CODES = ["A","B","C","D"];
 var MUSCU_START = "2026-06-27";  /* Bloc 1, semaine 1 */
 var TRI_START   = "2026-07-06";  /* Triathlon, semaine 1 (semaine 10 = course 11-13 sept) */
 
+/* ---------- Agenda : modèle de semaine ----------
+   Pour chaque jour : {type:"muscu", code:"A"} (A/B/C/D) ou {type:"tri", disc:"nat"} (nat/velo/course),
+   ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
+   Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
+var TRAIN_TEMPLATE = {
+  lun:{type:"muscu", code:"A"},
+  mar:{type:"tri",   disc:"nat"},
+  mer:{type:"muscu", code:"B"},
+  jeu:{type:"tri",   disc:"velo"},
+  ven:{type:"muscu", code:"C"},
+  sam:{type:"tri",   disc:"course"},
+  dim:{type:"muscu", code:"D"}
+};
+
+/* ---------- États possibles d'un jour (couleurs gérées dans le CSS) ---------- */
+var DAY_STATES = [
+  {id:"",        label:"Dispo"},
+  {id:"cours",   label:"Cours"},
+  {id:"occupe",  label:"Occupé"},
+  {id:"repos",   label:"Repos"},
+  {id:"vacances",label:"Vacances"}
+];
+/* Jours qui bloquent l'entraînement (la séance prévue se décale) */
+var DAY_BLOCKED = ["cours","occupe","repos","vacances"];
+
+/* ---------- Échéances marquées sur le calendrier ---------- */
+var DEADLINES = [
+  {date:"2026-07-25", label:"Départ Vercors",          icon:"🚆", short:"Départ"},
+  {date:"2026-07-27", label:"Objectif forme / plage",  icon:"🏖️", short:"Forme"},
+  {date:"2026-09-11", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
+];
+
 /* ---------- Plan Triathlon Dinard — Distance Olympique, 10 semaines, 3 séances/sem.
    Résumé des volumes/séances (détails complets dans le Drive). ---------- */
 var TRI = [
