@@ -256,20 +256,21 @@
     }
   }
 
+  function renderTodayNutri(){
+    var nut=document.getElementById("todayNutri");if(!nut)return;
+    var tot=dayTotals(todayStr());
+    if(tot){
+      var reste=Math.round(130-tot.prot);
+      var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
+      nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
+    }else{
+      nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
+    }
+  }
   function renderToday(){
     renderChip();
     renderHero();
-    var nut=document.getElementById("todayNutri");
-    if(nut){
-      var tot=dayTotals(todayStr());
-      if(tot){
-        var reste=Math.round(130-tot.prot);
-        var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-        nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
-      }else{
-        nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
-      }
-    }
+    renderTodayNutri();
     buildDayForm(document.getElementById("todayLog"),todayStr());
   }
 
@@ -503,7 +504,7 @@
     renderStools(container.querySelector(".f-stools"),d);
 
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
-    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(!el)return;if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(t.prot)+" g protéines";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}
+    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(t.prot)+" g protéines";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}if(d===todayStr())renderTodayNutri();}
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1};
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
