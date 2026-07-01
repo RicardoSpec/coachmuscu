@@ -90,6 +90,8 @@
   function triWeekDate(w){return ddmm(addDays(TRI_START,(w-1)*7));}
   function num(v){return parseFloat((v===undefined||v===null?"":v).toString().replace(",","."));}
   function fr1(n){return n.toFixed(1).replace(".",",");}
+  function nFmt(n){return (n%1===0)?(""+n):fr1(n);}
+  function effPortion(it){if(!it||!it.nut)return "";var b=num(it.nut.base),q=num(it.qty);var n=(!isNaN(q)&&q>0)?q:b;if(isNaN(n)||n<=0)return "";var u=it.nut.baseUnit||it.unit||"g";return (u==="g"||u==="ml")?(nFmt(n)+" "+u):("×"+nFmt(n));}
 
   /* ---------------- Divers ---------------- */
   function slugify(s){return (""+s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
@@ -117,7 +119,10 @@
     Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){cat[(""+it.name).trim().toLowerCase()]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});
     return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
-  function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base),q=num(it.qty);if(isNaN(base)||base<=0||isNaN(q)||q<=0)return null;if((it.unit||"")!==(it.nut.baseUnit||""))return null;var f=q/base,r={};var kc=num(it.nut.kcal),pr=num(it.nut.prot);if(!isNaN(kc))r.kcal=kc*f;if(!isNaN(pr))r.prot=pr*f;if(r.kcal===undefined&&r.prot===undefined)return null;return r;}
+  function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base);var q=num(it.qty);var f;
+    if(!isNaN(q)&&q>0&&!isNaN(base)&&base>0&&(it.unit||"")===(it.nut.baseUnit||""))f=q/base; /* quantité explicite compatible */
+    else f=1; /* défaut : 1 portion (valeurs de base), unités ignorées */
+    var r={};var kc=num(it.nut.kcal),pr=num(it.nut.prot);if(!isNaN(kc))r.kcal=kc*f;if(!isNaN(pr))r.prot=pr*f;if(r.kcal===undefined&&r.prot===undefined)return null;return r;}
   function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,any=false;if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot)p+=s.prot;}});});if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){if(sp.prot){p+=sp.prot;any=true;}if(sp.kcal){k+=sp.kcal;any=true;}}});return any?{kcal:k,prot:p}:null;}
 
   /* ---------------- Objectifs ---------------- */
@@ -190,6 +195,7 @@
     else if(id==="v-journal"){renderJournal();renderCalendars();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
+    var sp0=document.getElementById("stickyProt");if(sp0&&id!=="v-today")sp0.classList.remove("show");
   }
   /* Sous-onglets de l'onglet Sport : construits à partir des activités actives (Réglages). */
   var sportSel="muscu";
@@ -257,14 +263,22 @@
   }
 
   function renderTodayNutri(){
-    var nut=document.getElementById("todayNutri");if(!nut)return;
     var tot=dayTotals(todayStr());
-    if(tot){
-      var reste=Math.round(130-tot.prot);
-      var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-      nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
-    }else{
-      nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
+    var nut=document.getElementById("todayNutri");
+    if(nut){
+      if(tot){
+        var reste=Math.round(130-tot.prot);
+        var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
+        nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
+      }else{
+        nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
+      }
+    }
+    var sp=document.getElementById("stickyProt");
+    if(sp){
+      if(tot){var rst=Math.round(130-tot.prot);var st2=tot.prot>=130?'<span class="ok">✓ cible</span>':'<span class="low">encore '+rst+' g</span>';
+        sp.innerHTML='<div class="sprot"><span class="sprot-v">'+fr1(tot.prot)+' g</span><span class="sprot-goal">protéines · cible 130–150 · '+st2+'</span></div>';
+      }else sp.innerHTML='<div class="sprot"><span class="sprot-v">0 g</span><span class="sprot-goal">protéines aujourd\'hui</span></div>';
     }
   }
   function renderToday(){
@@ -511,7 +525,7 @@
       var arr=day(d).mealItems[mk];var ed=mealEdit[mk];var h="";
       h+='<div class="tags">';
       arr.forEach(function(it,i){
-        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
+        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+(it.nut?'<span class="tag-q">'+esc(effPortion(it))+'</span>':'')+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
       });
       h+='</div>';
       h+='<input type="text" class="tag-input" placeholder="Aliment puis Entrée…" enterkeyhint="done" autocomplete="off">';
@@ -545,7 +559,7 @@
       function addFood(v){
         v=(""+v).trim();if(!v)return;
         var nit={name:v,qty:"",unit:"g",nut:null};var hit=foodCatalog()[v.toLowerCase()];
-        if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";}
+        if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";if(num(nit.nut.base)>0)nit.qty=""+nit.nut.base;}
         day(d).mealItems[mk].push(nit);save();renderMeal(mk);recalcTotals();
         var ni=host.querySelector(".tag-input");if(ni)ni.focus();
       }
@@ -1048,6 +1062,11 @@
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});
     var hct=document.getElementById("homeCalToggle");if(hct)hct.addEventListener("click",function(){homeCalOpen=!homeCalOpen;renderCalendars();});
+    (function(){var card=document.getElementById("todayNutri"),sp=document.getElementById("stickyProt");
+      if(card&&sp&&"IntersectionObserver" in window){
+        var io=new IntersectionObserver(function(es){var e=es[0];var onToday=document.getElementById("v-today").classList.contains("active");var show=onToday&&!e.isIntersecting&&e.boundingClientRect.top<60;sp.classList.toggle("show",show);},{rootMargin:"-56px 0px 0px 0px",threshold:0});
+        io.observe(card);
+      }})();
     var dp=document.getElementById("dayPrev"),dn=document.getElementById("dayNext");
     if(dp)dp.addEventListener("click",function(){journalDate=isoOf(addDays(journalDate,-1));renderJournal();});
     if(dn)dn.addEventListener("click",function(){var c=isoOf(addDays(journalDate,1));if(c<=todayStr()){journalDate=c;renderJournal();}});
