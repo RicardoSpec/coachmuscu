@@ -186,6 +186,7 @@
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var homeCalOpen=false, heroOpen=false;  /* accueil : calendrier & prochaine séance repliés par défaut */
+  var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   function activateTab(id){
     var t;
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
@@ -289,10 +290,19 @@
   }
 
   /* ---------------- Muscu (grilles) ---------------- */
+  function ensureBlockOpen(){
+    if(blockOpen)return;
+    blockOpen={};var n=nextSession();var cur=n?n.block:BLOCK_ORDER[0];
+    BLOCK_ORDER.forEach(function(b){blockOpen[b]=(b===cur);});
+  }
   function buildGrid(block){
     var blk=PROGRAM_BLOCKS[block];var n=nextSession();
-    var h='<div class="card pad">'+
-      '<div class="sec-title">'+blk.name+' <span class="muted" style="font-weight:600">· '+blk.weeks+' sem.</span></div>'+
+    ensureBlockOpen();var open=!!blockOpen[block];
+    var doneN=0,totN=blk.weeks*CODES.length,ww,ii;
+    for(ww=1;ww<=blk.weeks;ww++)for(ii=0;ii<CODES.length;ii++)if(sess(block,ww,CODES[ii]).done)doneN++;
+    var h='<div class="card pad blockcard'+(open?" open":"")+'">'+
+      '<button type="button" class="blk-toggle" data-blk="'+block+'"><span class="blk-ttl">'+esc(blk.name)+'</span><span class="blk-meta">'+doneN+'/'+totN+'</span><span class="blk-chev">▾</span></button>'+
+      '<div class="blk-body'+(open?"":" collapsed")+'">'+
       '<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
       '<table class="grid"><tr><th></th>';
     CODES.forEach(function(c){h+="<th>"+c+"</th>";});
@@ -308,13 +318,14 @@
       }
       h+="</tr>";
     }
-    h+="</table></div>";
+    h+="</table></div></div>";
     return h;
   }
   function renderProgram(){
     renderChip();
     var host=document.getElementById("progBlocks");
     host.innerHTML=BLOCK_ORDER.map(buildGrid).join("");
+    host.querySelectorAll(".blk-toggle").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-blk");if(blockOpen)blockOpen[k]=!blockOpen[k];renderProgram();};});
     host.querySelectorAll(".cell").forEach(function(cell){
       cell.addEventListener("click",function(){
         currentSel={block:cell.getAttribute("data-b"),w:parseInt(cell.getAttribute("data-w"),10),c:cell.getAttribute("data-c")};
@@ -372,8 +383,20 @@
           '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
         '</div>';
     });
+    if(!s.extra)s.extra=[];
+    var extraHTML="";
+    if(s.extra.length){
+      extraHTML+='<div class="extra-sep">Exercices ajoutés</div>';
+      s.extra.forEach(function(ex){
+        if(!s.sets[ex.id])s.sets[ex.id]=[];
+        var ns=ex.sets||3,sh="";
+        for(var i=0;i<ns;i++){sh+='<div class="set" data-exo="'+ex.id+'" data-set="'+i+'"><span class="sn">Série '+(i+1)+'</span><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="kg"><input type="number" inputmode="numeric" class="in-r" placeholder="reps"></div>';}
+        extraHTML+='<div class="exo exo-extra" data-ex="'+ex.id+'"><div class="exo-top"><input class="exo-name-in" data-xid="'+ex.id+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice (ex. Tractions)"><button class="exo-del" data-xid="'+ex.id+'" aria-label="Retirer">×</button></div><div class="sets">'+sh+'</div><button class="add-set" data-xid="'+ex.id+'">+ série</button></div>';
+      });
+    }
+    var addBtnHTML='<button class="btn ghost add-extra" id="addExtraBtn">+ Ajouter un exercice</button>';
     var wrap=document.getElementById("sessionDetail");
-    wrap.innerHTML=head+exosHTML+'</div>';
+    wrap.innerHTML=head+exosHTML+extraHTML+addBtnHTML+'</div>';
 
     wrap.querySelectorAll(".set").forEach(function(row){
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
@@ -390,6 +413,10 @@
     var rs=wrap.querySelector("#restStop");if(rs)rs.addEventListener("click",stopRest);
     wrap.querySelector("#toggleDone").addEventListener("click",function(){s.done=!s.done;if(s.done&&!s.date)s.date=todayStr();save();renderProgram();renderSessionDetail();});
     var mdd=wrap.querySelector("#doneDate");if(mdd)mdd.addEventListener("change",function(){if(this.value){s.date=this.value;save();renderProgram();}});
+    var aeb=wrap.querySelector("#addExtraBtn");if(aeb)aeb.addEventListener("click",function(){s.extra.push({id:"x"+Date.now().toString(36),name:"",sets:3});save();renderSessionDetail();var ni=document.querySelector("#sessionDetail .exo-extra:last-of-type .exo-name-in");if(ni)ni.focus();});
+    wrap.querySelectorAll(".exo-name-in").forEach(function(inp){inp.addEventListener("input",function(){var id=inp.getAttribute("data-xid");for(var j=0;j<s.extra.length;j++)if(s.extra[j].id===id){s.extra[j].name=inp.value;break;}save();});});
+    wrap.querySelectorAll(".exo-del").forEach(function(bt){bt.addEventListener("click",function(){var id=bt.getAttribute("data-xid");s.extra=s.extra.filter(function(e){return e.id!==id;});delete s.sets[id];save();renderSessionDetail();});});
+    wrap.querySelectorAll(".add-set").forEach(function(bt){bt.addEventListener("click",function(){var id=bt.getAttribute("data-xid");for(var j=0;j<s.extra.length;j++)if(s.extra[j].id===id){s.extra[j].sets=(s.extra[j].sets||3)+1;break;}save();renderSessionDetail();});});
   }
 
   /* ---------------- Triathlon ---------------- */
