@@ -318,10 +318,10 @@ nav.tabs .tab.on{color:var(--primary)}
 .pill .bmp{margin-right:1px}
 
 .cal-day.st-cours{background:#e8f0fb}
-.cal-day.st-occupe{background:#fdeede}
+.cal-day.st-conge{background:#e7f4ea}
 .cal-day.st-repos{background:#eef1f5}
-.cal-day.st-vacances{background:#f0e9f9}
-.cal-day.st-cours.today,.cal-day.st-occupe.today,.cal-day.st-repos.today,.cal-day.st-vacances.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal-day.st-indispo{background:#fdecec}
+.cal-day.st-cours.today,.cal-day.st-conge.today,.cal-day.st-repos.today,.cal-day.st-indispo.today{box-shadow:inset 0 0 0 2px var(--accent)}
 
 .cal-of{grid-column:1 / -1;font-size:11.5px;font-weight:600;color:#9a5a16;background:#fff3e3;border-top:1px solid var(--line);padding:6px 10px}
 
@@ -345,9 +345,17 @@ nav.tabs .tab.on{color:var(--primary)}
 .sheet-states{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
 .st-btn{flex:1 1 calc(33.33% - 8px);min-width:88px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 8px;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit}
 .st-btn.on{border-color:var(--primary);background:#eef4fb;color:var(--primary)}
-.st-btn.st-occupe.on{border-color:#e08a3c;background:#fdeede;color:#9a5a16}
+.st-btn.st-cours.on{border-color:#3b6fb0;background:#e8f0fb;color:#204a7a}
+.st-btn.st-conge.on{border-color:#4c9a63;background:#e7f4ea;color:#2f6b41}
 .st-btn.st-repos.on{border-color:#9aa3ad;background:#eef1f5;color:#5b6571}
-.st-btn.st-vacances.on{border-color:#8a63c9;background:#f0e9f9;color:#6b3fae}
+.st-btn.st-indispo.on{border-color:#d9534f;background:#fdecec;color:#a3352f}
+
+/* Réglages — types de jour partagés */
+.dt-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line)}
+.dt-row:last-child{border-bottom:none}
+.dt-ic{flex:none;width:30px;text-align:center;font-size:17px}
+.dt-lbl{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--ink)}
+.dt-eff{flex:none;font-size:11.5px;font-weight:600;color:var(--muted)}
 .sheet-link{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--primary);font-size:14px;font-weight:700;padding:14px 2px 6px;cursor:pointer;font-family:inherit}
 .sheet-close{display:block;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:6px}
 
@@ -435,3 +443,26 @@ nav.tabs .tab.on{color:var(--primary)}
 .supps-toggle.open .supps-chev{transform:rotate(180deg)}
 .supps-body{margin-top:12px}
 .supps-body.collapsed{display:none}
+
+/* ---------- Sous-onglets Sport ---------- */
+.subtabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.subtab{flex:1 1 auto;min-width:130px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.subtab.on{border-color:var(--primary);background:#eef4fb;color:var(--primary)}
+.sport-solo{font-size:16px;font-weight:800;color:var(--ink);padding:2px 2px 8px}
+
+/* ---------- Bloc protéines (accueil) ---------- */
+.nutri-card{display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:14px}
+.nutri-left{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;padding-right:14px;border-right:1.5px solid var(--line)}
+.nutri-v{font-size:28px;font-weight:900;line-height:1;color:var(--primary);font-family:var(--mono)}
+.nutri-u{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:3px;text-align:center}
+.nutri-right{flex:1;min-width:0}
+.nutri-kcal{font-size:15px;font-weight:800;color:var(--ink)}
+.nutri-goal{font-size:12.5px;color:var(--muted);margin-top:3px}
+.nutri-goal .ok{color:#2f8a4e;font-weight:700}
+.nutri-goal .low{color:#c2691f;font-weight:700}
+.nutri-card.empty{display:block;font-size:13px;color:var(--muted);line-height:1.45}
+
+/* ---------- Date de séance faite ---------- */
+.donedate{margin:-2px 0 12px}
+.donedate label{font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px}
+.donedate input{border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff}
