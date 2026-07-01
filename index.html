@@ -12,7 +12,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="favicon.ico">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -44,7 +44,9 @@
 
     <!-- ====================== AUJOURD'HUI ====================== -->
     <section class="view active" id="v-today">
-      <div id="homeCal" class="calwrap"></div>
+      <div id="homeCountdown"></div>
+      <button class="hcol" id="homeCalToggle"><span class="hcol-ic">📅</span><span class="hcol-txt"><span class="hcol-k">Calendrier</span><span class="hcol-v" id="homeCalSummary"></span></span><span class="hcol-chev">▾</span></button>
+      <div id="homeCal" class="calwrap collapsed"></div>
       <div class="hero" id="heroCard"></div>
       <div id="todayNutri"></div>
       <h2 class="page">Journal du jour</h2>
@@ -153,7 +155,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=16"></script>
-  <script src="app.js?v=16"></script>
+  <script src="data.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
