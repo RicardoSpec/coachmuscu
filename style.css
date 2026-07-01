@@ -492,3 +492,15 @@ nav.tabs .tab.on{color:var(--primary)}
 .pill-ab{font-size:9px;font-weight:800}
 .pill-ck{font-size:8px;margin-left:1px}
 .cal-book{font-size:10px;line-height:1}
+
+/* ---------- Barre protéines collante (apparaît après la carte) ---------- */
+#stickyProt{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 50px);z-index:25;pointer-events:none;display:flex;justify-content:center;opacity:0;transform:translateY(-8px);transition:opacity .18s,transform .18s}
+#stickyProt.show{opacity:1;transform:translateY(0)}
+.sprot{max-width:560px;width:calc(100% - 24px);background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:0 4px 14px rgba(14,58,91,.14);padding:8px 14px;display:flex;align-items:baseline;gap:9px}
+.sprot-v{font-weight:900;color:var(--primary);font-family:var(--mono);font-size:16px}
+.sprot-goal{color:var(--muted);font-size:12px}
+.sprot-goal .low{color:#c2691f;font-weight:700}
+.sprot-goal .ok{color:#2f8a4e;font-weight:700}
+
+/* Portion affichée sur l'étiquette d'aliment */
+.tag-q{margin-left:5px;font-size:11px;font-weight:700;opacity:.72}
