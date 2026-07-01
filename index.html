@@ -12,7 +12,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="favicon.ico">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -35,6 +35,9 @@
       <button class="drawer-close" id="drawerClose" aria-label="Fermer le menu">&times;</button>
     </div>
     <nav class="app-list" id="appList"></nav>
+    <div class="drawer-foot">
+      <button class="drawer-gear" id="settingsBtn"><span class="gear-ic">⚙️</span><span>Réglages</span></button>
+    </div>
   </aside>
 
   <main>
@@ -125,6 +128,15 @@
   <div class="sheet-bg" id="calSheetBg" hidden></div>
   <div class="sheet" id="calSheet" hidden role="dialog" aria-label="Modifier le jour"></div>
 
+  <!-- Panneau Réglages (plein écran, ouvert par l'engrenage du menu) -->
+  <section class="settings" id="settings" hidden aria-label="Réglages">
+    <header class="settings-head">
+      <button class="settings-close" id="settingsClose" aria-label="Fermer les réglages">‹</button>
+      <span class="settings-title">Réglages</span>
+    </header>
+    <div class="settings-body" id="settingsBody"></div>
+  </section>
+
   <!-- ====================== NAVIGATION ====================== -->
   <nav class="tabs">
     <button class="tab on" data-view="v-today">
@@ -142,7 +154,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="data.js?v=14"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
