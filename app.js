@@ -20,7 +20,7 @@
      STORE PARTAGÉ entre toutes les apps ricardospec.github.io
      (même origine = même localStorage). Clé dédiée, distincte de
      celle de chaque app, pour le calendrier commun :
-       states   : { "YYYY-MM-DD": "cours|occupe|repos|vacances" }
+       states   : { "YYYY-MM-DD": "cours|conge|repos|indispo" }  // voir DAY_TYPES (vocabulaire commun)
        events   : [ {id,start,end,label,type} ]
        deadlines: [ {id,date,label,icon} ]
      RÈGLE ANTI-CLOBBER : on relit TOUJOURS la version fraîche du
@@ -72,6 +72,7 @@
   function pMigrateStates(){
     pMutate(function(o){Object.keys(state.days).forEach(function(iso){var st=state.days[iso].status;if(st&&!o.states[iso])o.states[iso]=st;});});
   }
+  function pMigrateDayTypes(){if(typeof DAY_TYPE_MIGRATE==="undefined")return;pMutate(function(o){var s=o.states||{};Object.keys(s).forEach(function(iso){var nv=DAY_TYPE_MIGRATE[s[iso]];if(nv)s[iso]=nv;});});}
   if(!state.sessions)state.sessions={};
   if(!state.days)state.days={};
   if(!state.tri)state.tri={};
@@ -98,7 +99,23 @@
   var MEALS=[{k:"pd",label:"Petit-déjeuner"},{k:"dj",label:"Déjeuner"},{k:"dn",label:"Dîner"},{k:"co",label:"Collation"}];
   var FOOD_UNITS=["g","ml","unité","portion","c. à s.","c. à c."];
   function unitOptions(sel){return FOOD_UNITS.map(function(u){return '<option value="'+u+'"'+(sel===u?' selected':'')+'>'+u+'</option>';}).join("");}
-  function foodCatalog(){var cat={};Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){cat[(""+it.name).trim().toLowerCase()]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});return cat;}
+  /* ---------- Base d'aliments de référence (fichier base_aliments.json, enrichissable) ---------- */
+  var FOOD_DB=[];
+  function normFood(f,cat){if(!f||!f.name)return null;function s(v){return v==null?"":(""+v).trim();}var u=s(f.unit)||"g";
+    return {name:s(f.name),unit:u,cat:cat,nut:{base:s(f.base),baseUnit:u,kcal:s(f.kcal),prot:s(f.prot),gluc:s(f.gluc),lip:s(f.lip)}};}
+  function loadFoodDB(){
+    try{
+      if(typeof fetch!=="function")return;
+      fetch("base_aliments.json",{cache:"no-store"}).then(function(r){return r&&r.ok?r.json():null;}).then(function(j){
+        if(!j)return;var arr=[];["staples","suivi"].forEach(function(cat){(j[cat]||[]).forEach(function(f){var n=normFood(f,cat);if(n)arr.push(n);});});
+        FOOD_DB=arr;
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function foodCatalog(){var cat={};
+    (FOOD_DB||[]).forEach(function(f){var k=(""+f.name).trim().toLowerCase();if(k)cat[k]={name:(""+f.name).trim(),unit:f.unit||"g",nut:f.nut||null,ref:true};});
+    Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){cat[(""+it.name).trim().toLowerCase()]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});
+    return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
   function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base),q=num(it.qty);if(isNaN(base)||base<=0||isNaN(q)||q<=0)return null;if((it.unit||"")!==(it.nut.baseUnit||""))return null;var f=q/base,r={};var kc=num(it.nut.kcal),pr=num(it.nut.prot);if(!isNaN(kc))r.kcal=kc*f;if(!isNaN(pr))r.prot=pr*f;if(r.kcal===undefined&&r.prot===undefined)return null;return r;}
   function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,any=false;if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot)p+=s.prot;}});});if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){if(sp.prot){p+=sp.prot;any=true;}if(sp.kcal){k+=sp.kcal;any=true;}}});return any?{kcal:k,prot:p}:null;}
@@ -168,12 +185,26 @@
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     if(id==="v-today"){renderToday();renderCalendars();}
-    else if(id==="v-prog")renderProgram();
-    else if(id==="v-tri")renderTri();
+    else if(id==="v-sport"){renderProgram();renderTri();renderSportTabs();}
     else if(id==="v-journal"){renderJournal();renderCalendars();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
   }
+  /* Sous-onglets de l'onglet Sport : construits à partir des activités actives (Réglages). */
+  var sportSel="muscu";
+  function sportActs(){var a=[];if(actEnabled("muscu"))a.push("muscu");if(actEnabled("tri"))a.push("tri");return a;}
+  function renderSportTabs(){
+    var host=document.getElementById("sportSub");if(!host)return;
+    var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
+    var acts=sportActs();
+    if(!acts.length){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';if(pm)pm.hidden=true;if(pt)pt.hidden=true;return;}
+    if(acts.indexOf(sportSel)<0)sportSel=acts[0];
+    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>';}
+    else{host.innerHTML=acts.map(function(k){return '<button class="subtab'+(k===sportSel?" on":"")+'" data-sport="'+k+'">'+esc((k==="muscu"?"💪 ":"🏊 ")+actName(k))+'</button>';}).join("");}
+    if(pm)pm.hidden=(sportSel!=="muscu");if(pt)pt.hidden=(sportSel!=="tri");
+    host.querySelectorAll("[data-sport]").forEach(function(b){b.onclick=function(){sportSel=b.getAttribute("data-sport");renderSportTabs();window.scrollTo(0,0);};});
+  }
+  function goSport(sel){sportSel=sel;activateTab("v-sport");}
 
   /* ---------------- En-tête ---------------- */
   function renderChip(){var n=nextSession();document.getElementById("wkChip").textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+doneCount()+"/"+totalSessions();}
@@ -194,10 +225,21 @@
         '<div class="row2"><button class="btn accent" id="goSession">Ouvrir la séance</button>'+
         '<button class="btn ghost" id="quickDone">Marquer faite</button></div>'+
         tipHTML;
-      document.getElementById("goSession").addEventListener("click",function(){currentSel={block:n.block,w:n.w,c:n.c};activateTab("v-prog");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});});
+      document.getElementById("goSession").addEventListener("click",function(){currentSel={block:n.block,w:n.w,c:n.c};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});});
       document.getElementById("quickDone").addEventListener("click",function(){var s=sess(n.block,n.w,n.c);s.done=true;if(!s.date)s.date=todayStr();save();renderToday();});
     }else{
       hero.innerHTML='<div class="lbl">Bravo</div><h2>Programme muscu terminé 🎉</h2><div class="meta">'+totalSessions()+' séances bouclées. Relance un cycle en augmentant les charges.</div>'+tipHTML;
+    }
+    var nut=document.getElementById("todayNutri");
+    if(nut){
+      var tot=dayTotals(todayStr());
+      if(tot){
+        var reste=Math.round(130-tot.prot);
+        var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
+        nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
+      }else{
+        nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
+      }
     }
     buildDayForm(document.getElementById("todayLog"),todayStr());
   }
@@ -250,6 +292,7 @@
       '<div class="sd-head"><div><div class="lbl">'+PROGRAM_BLOCKS[b].name+' · Semaine '+w+' · '+p.sub+'</div>'+
       '<h3>'+p.title.replace(/—.*/,"").trim()+' '+c+'</h3></div></div>'+
       '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+(s.done?'✓ Séance faite — annuler':'Marquer la séance comme faite')+'</button></div>'+
+      (s.done?'<div class="donedate"><label>Faite le <input type="date" id="doneDate" value="'+esc(s.date||todayStr())+'"></label></div>':'')+
       '<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns">'+
         '<button data-sec="30">30 s</button><button data-sec="60">1:00</button><button data-sec="120">2:00</button><button class="stop" id="restStop">Stop</button>'+
       '</div></div>';
@@ -302,6 +345,7 @@
     wrap.querySelectorAll(".rest-btns button[data-sec]").forEach(function(bt){bt.addEventListener("click",function(){startRest(parseInt(bt.getAttribute("data-sec"),10));});});
     var rs=wrap.querySelector("#restStop");if(rs)rs.addEventListener("click",stopRest);
     wrap.querySelector("#toggleDone").addEventListener("click",function(){s.done=!s.done;if(s.done&&!s.date)s.date=todayStr();save();renderProgram();renderSessionDetail();});
+    var mdd=wrap.querySelector("#doneDate");if(mdd)mdd.addEventListener("change",function(){if(this.value){s.date=this.value;save();renderProgram();}});
   }
 
   /* ---------------- Triathlon ---------------- */
@@ -343,6 +387,7 @@
         '<p class="muted" style="margin-top:10px">'+info.d+'</p>'+
         (currentTri.w===10?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — 11-13 septembre. Affûtage, sommeil, et on profite !</p></div>':'')+
         '<div class="field" style="margin-top:12px"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'✓ Faite — annuler':'Marquer comme faite')+'</button></div>'+
+        (rec.done?'<div class="donedate"><label>Faite le <input type="date" id="triDoneDate" value="'+esc(rec.date||todayStr())+'"></label></div>':'')+
         '<div class="field"><label>Réalisé (optionnel)</label><input type="text" class="t-val" placeholder="ex : 1300 m · 1h20 · 8,5 km"></div>'+
         '<div class="field"><label>Ressenti / notes</label><textarea class="t-note" placeholder="sensations, allure, météo…"></textarea></div>'+
       '</div>';
@@ -351,6 +396,7 @@
     wrap.querySelector(".t-val").addEventListener("input",function(){rec.val=this.value;save();});
     wrap.querySelector(".t-note").addEventListener("input",function(){rec.note=this.value;save();});
     wrap.querySelector("#triDone").addEventListener("click",function(){rec.done=!rec.done;if(rec.done&&!rec.date)rec.date=todayStr();save();renderTri();renderTriDetail();});
+    var tdd=wrap.querySelector("#triDoneDate");if(tdd)tdd.addEventListener("change",function(){if(this.value){rec.date=this.value;save();renderTri();}});
   }
 
   /* ---------------- Transit (Bristol) ---------------- */
@@ -734,7 +780,8 @@
     if(slot.type==="tri"){var ti=triInfoForDate(iso);if(!ti)return null;var r=state.tri[ti.w+"_"+slot.disc];return {kind:"tri",abbr:triLabel(slot.disc),label:triLabel(slot.disc),icon:triIcon(slot.disc),done:!!(r&&r.done)};}
     return null;
   }
-  function dayBlocked(iso){return typeof DAY_BLOCKED!=="undefined"&&DAY_BLOCKED.indexOf(getDayState(iso))>=0;}
+  function dayTypeOf(id){var L=(typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]);for(var i=0;i<L.length;i++)if(L[i].id===(id||""))return L[i];return null;}
+  function dayBlocked(iso){var t=dayTypeOf(getDayState(iso));return !!(t&&t.train===false);}
 
   /* Planification PROGRESSIVE : on ne fige pas les séances sur des dates.
      On enchaîne ce qui RESTE à faire à partir d'aujourd'hui, et on "remonte"
@@ -758,22 +805,27 @@
 
   function muscuSeqAll(){if(!actEnabled("muscu"))return [];var s=[];BLOCK_ORDER.forEach(function(b){var wks=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wks;w++){CODES.forEach(function(c){s.push({kind:"muscu",block:b,w:w,code:c});});}});return s;}
   function triSeqAll(){if(!actEnabled("tri"))return [];var s=[];for(var i=0;i<TRI.length;i++){var ww=TRI[i].w;TRI_DISC.forEach(function(p){s.push({kind:"tri",w:ww,disc:p[0]});});}return s;}
-  function labelize(s){if(s.kind==="muscu"){s.abbr=s.code;s.label="Muscu "+s.code;s.icon="💪";s.done=sess(s.block,s.w,s.code).done;}else{var r=state.tri[s.w+"_"+s.disc];s.abbr=triLabel(s.disc);s.label=triLabel(s.disc);s.icon=triIcon(s.disc);s.done=!!(r&&r.done);}return s;}
+  function labelize(s){if(s.kind==="muscu"){var m=sess(s.block,s.w,s.code);s.abbr=s.code;s.label="Muscu "+s.code;s.icon="💪";s.done=m.done;s.date=m.date||null;}else{var r=state.tri[s.w+"_"+s.disc];s.abbr=triLabel(s.disc);s.label=triLabel(s.disc);s.icon=triIcon(s.disc);s.done=!!(r&&r.done);s.date=(r&&r.date)||null;}return s;}
   function trackOf(iso){if(typeof TRAIN_TEMPLATE==="undefined")return null;var slot=TRAIN_TEMPLATE[DOW_KEYS[new Date(iso+"T00:00:00").getDay()]];return slot?slot.type:null;}
   function buildSchedule(){
     var map={},today=todayStr();
-    var M={done:[],todo:[]},T={done:[],todo:[]};
-    muscuSeqAll().forEach(function(s){labelize(s);(s.done?M.done:M.todo).push(s);});
-    triSeqAll().forEach(function(s){labelize(s);(s.done?T.done:T.todo).push(s);});
+    var M={done:[],nodate:[],todo:[]},T={done:[],nodate:[],todo:[]};
+    muscuSeqAll().forEach(function(s){labelize(s);if(s.done){(s.date?M.done:M.nodate).push(s);}else M.todo.push(s);});
+    triSeqAll().forEach(function(s){labelize(s);if(s.done){(s.date?T.done:T.nodate).push(s);}else T.todo.push(s);});
     function place(iso,s){if(!map[iso])map[iso]=[];map[iso].push(s);}
+    // 1) Séances faites AVEC date enregistrée → sur leur date réelle
+    M.done.forEach(function(s){place(s.date,s);});
+    T.done.forEach(function(s){place(s.date,s);});
+    // 2) Séances à venir → en avant depuis aujourd'hui, sur les jours d'entraînement libres
     var mi=0,ti=0,cur=today,g=0;
     while((mi<M.todo.length||ti<T.todo.length)&&g<420){g++;
-      if(!dayBlocked(cur)){var tr=trackOf(cur);if(tr==="muscu"&&mi<M.todo.length&&cur>=actStart("muscu"))place(cur,M.todo[mi++]);else if(tr==="tri"&&ti<T.todo.length&&cur>=actStart("tri"))place(cur,T.todo[ti++]);}
+      if(!dayBlocked(cur)&&!map[cur]){var tr=trackOf(cur);if(tr==="muscu"&&mi<M.todo.length&&cur>=actStart("muscu"))place(cur,M.todo[mi++]);else if(tr==="tri"&&ti<T.todo.length&&cur>=actStart("tri"))place(cur,T.todo[ti++]);}
       cur=isoOf(addDays(cur,1));
     }
-    var md=M.done.length-1,tdi=T.done.length-1,back=isoOf(addDays(today,-1));g=0;
+    // 3) Séances faites SANS date (héritage) → à rebours depuis hier, comme repli
+    var md=M.nodate.length-1,tdi=T.nodate.length-1,back=isoOf(addDays(today,-1));g=0;
     while((md>=0||tdi>=0)&&g<420){g++;
-      if(!dayBlocked(back)){var tr2=trackOf(back);if(tr2==="muscu"&&md>=0)place(back,M.done[md--]);else if(tr2==="tri"&&tdi>=0)place(back,T.done[tdi--]);}
+      if(!dayBlocked(back)&&!map[back]){var tr2=trackOf(back);if(tr2==="muscu"&&md>=0)place(back,M.nodate[md--]);else if(tr2==="tri"&&tdi>=0)place(back,T.nodate[tdi--]);}
       back=isoOf(addDays(back,-1));
     }
     return map;
@@ -842,9 +894,9 @@
     if(host._swipeBound)return;host._swipeBound=true;
     var sx=null,sy=null;
     host.addEventListener("touchstart",function(e){var t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
-    host.addEventListener("touchend",function(e){if(sx===null)return;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;sx=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.4)calGoMonth(dx>0?1:-1);},{passive:true});
+    host.addEventListener("touchend",function(e){if(sx===null)return;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;sx=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.4)calGoMonth(dx>0?-1:1);},{passive:true});
   }
-  function renderCalendars(){rebuildSchedule();["homeCal","journalCal"].forEach(function(id){var h=document.getElementById(id);if(h)renderCalendarInto(h);});}
+  function renderCalendars(){rebuildSchedule();var h=document.getElementById("homeCal");if(h)renderCalendarInto(h);}
 
   function openDaySheet(iso){
     var sheet=document.getElementById("calSheet"),bg=document.getElementById("calSheetBg");if(!sheet||!bg)return;
@@ -852,7 +904,7 @@
     var plist=sessionsOn(iso);
     var planTxt=plist.length?plist.map(function(p){return p.icon+" "+p.label+(p.done?" ✓":"");}).join(" · "):"Aucune séance prévue ce jour";
     sheet.innerHTML='<div class="sheet-handle"></div><div class="sheet-title">'+esc(frDateFull(iso))+'</div><div class="sheet-sub">'+esc(planTxt)+'</div>'+
-      '<div class="sheet-states">'+(typeof DAY_STATES!=="undefined"?DAY_STATES:[]).map(function(s){var on=curSt===s.id;return '<button class="st-btn st-'+(s.id||"dispo")+(on?" on":"")+'" data-st="'+s.id+'">'+esc(s.label)+'</button>';}).join("")+'</div>'+
+      '<div class="sheet-states">'+(typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).map(function(s){var on=curSt===s.id;return '<button class="st-btn st-'+(s.id||"normal")+(on?" on":"")+'" data-st="'+s.id+'">'+(s.icon?esc(s.icon)+' ':'')+esc(s.label)+'</button>';}).join("")+'</div>'+
       '<button class="sheet-link" data-go="'+iso+'">Ouvrir ce jour dans le Journal →</button>'+
       '<button class="sheet-close" id="sheetCloseBtn">Fermer</button>';
     bg.hidden=false;sheet.hidden=false;
@@ -927,7 +979,11 @@
     host.innerHTML=acts+'<div class="set-sec"><div class="set-sec-h">Objectifs &amp; échéances</div>'+
       '<p class="set-note">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
       (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock+'</div>'+
-      '<div class="set-sec set-soon"><div class="set-sec-h">Prochaine étape</div><p class="set-note">À venir ici : les types de jour communs avec l\'app de révisions (un seul vocabulaire partagé).</p></div>';
+      '<div class="set-sec"><div class="set-sec-h">Types de jour</div>'+
+      '<p class="set-note">Un seul vocabulaire, partagé avec ton app de révisions DSCG. Touche un jour du calendrier pour lui donner un type ; il s\'applique aux deux apps (entraînement <em>et</em> heures de révision). Le type « normal » se déduit du jour (semaine / week-end).</p>'+
+      (typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).filter(function(t){return t.id;}).map(function(t){
+        return '<div class="dt-row"><span class="dt-ic">'+esc(t.icon||"•")+'</span><span class="dt-lbl">'+esc(t.label)+'</span><span class="dt-eff">'+(t.train===false?'pas d\'entraînement':'entraînement possible')+'</span></div>';
+      }).join("")+'</div>';
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
     host.querySelectorAll("[data-actedit]").forEach(function(b){b.onclick=function(){settingsActEdit=b.getAttribute("data-actedit");renderSettings();};});
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
@@ -966,7 +1022,7 @@
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pEnsureSeed();pMigrateStates();
+    pEnsureSeed();pMigrateStates();pMigrateDayTypes();loadFoodDB();
     activateTab("v-today");
   }
   init();
