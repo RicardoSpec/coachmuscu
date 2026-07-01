@@ -466,3 +466,29 @@ nav.tabs .tab.on{color:var(--primary)}
 .donedate{margin:-2px 0 12px}
 .donedate label{font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px}
 .donedate input{border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff}
+
+/* ---------- En-têtes repliables (accueil : calendrier & prochaine séance) ---------- */
+.hcol{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:14px;-webkit-tap-highlight-color:transparent}
+.hcol-ic{flex:none;font-size:19px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#eef2f6;border-radius:10px}
+.hcol-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.hcol-k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.hcol-v{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcol-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
+.hcol.open .hcol-chev{transform:rotate(180deg)}
+.calwrap.collapsed{display:none}
+
+/* Héro (prochaine séance) : replié = barre, ouvert = barre + détails, sur le dégradé */
+.hero{padding:0;overflow:hidden}
+.hero .hcol{background:transparent;border:none;margin:0;padding:15px 18px}
+.hero .hcol-ic{background:rgba(255,255,255,.16)}
+.hero .hcol-k{color:rgba(255,255,255,.72)}
+.hero .hcol-v{color:#fff}
+.hero .hcol-chev{color:rgba(255,255,255,.85)}
+.hero-body{padding:2px 18px 20px}
+
+/* ---------- Pills du calendrier en icônes ---------- */
+.pill{display:inline-flex;align-items:center;gap:1px;font-size:9.5px;font-weight:800;line-height:1;border-radius:6px;padding:2px 4px;white-space:nowrap;max-width:100%}
+.pill-ic{font-size:12px;line-height:1}
+.pill-ab{font-size:9px;font-weight:800}
+.pill-ck{font-size:8px;margin-left:1px}
+.cal-book{font-size:10px;line-height:1}
