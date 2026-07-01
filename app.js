@@ -180,6 +180,7 @@
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
+  var homeCalOpen=false, heroOpen=false;  /* accueil : calendrier & prochaine séance repliés par défaut */
   function activateTab(id){
     var t;
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
@@ -210,26 +211,54 @@
   function renderChip(){var n=nextSession();document.getElementById("wkChip").textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+doneCount()+"/"+totalSessions();}
 
   /* ---------------- Aujourd'hui ---------------- */
+  /* Prochaine séance planifiée, TOUS sports actifs confondus (lue depuis le calendrier). */
+  function nextScheduled(){
+    rebuildSchedule();var cur=todayStr(),g=0;
+    while(g<420){g++;var list=sessionsOn(cur);for(var i=0;i<list.length;i++){if(!list[i].done)return {iso:cur,s:list[i]};}cur=isoOf(addDays(cur,1));}
+    return null;
+  }
+  /* Heures de révision d'un jour (même règle que l'app DSCG) — pour le repère 📚. */
+  function studyHoursOf(iso){var st=getDayState(iso);if(st==="indispo")return 0;if(st==="conge")return 6;if(st==="cours")return 0.5;var wd=new Date(iso+"T00:00:00").getDay();return (wd===0||wd===6)?6:0.5;}
+  function whenLabel(iso){var d=diffDays(iso,todayStr());if(d<=0)return "aujourd'hui";if(d===1)return "demain";return frDateShort(iso)+" · J-"+d;}
+
+  function renderHero(){
+    var hero=document.getElementById("heroCard");if(!hero)return;
+    var next=nextScheduled();
+    if(!next){hero.className="hero";hero.innerHTML='<div class="hero-body" style="padding-top:18px"><div class="lbl">Bravo</div><h2>Tout est bouclé 🎉</h2><div class="meta">Plus de séance planifiée pour l\'instant.</div></div>';return;}
+    var s=next.s, muscu=(s.kind==="muscu");
+    var icon=muscu?"🏋️":triIcon(s.disc);
+    var when=whenLabel(next.iso);
+    var body="";
+    if(heroOpen){
+      if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=blk.prog[s.code];
+        body='<div class="stitle">'+esc(blk.name)+' · Semaine '+s.w+' · '+esc(p.sub)+'</div>'+
+             '<h2>'+esc(p.title.split("—")[0].trim())+' <span class="num">'+s.code+'</span></h2>'+
+             '<div class="meta">'+p.exos.length+' exercices · '+when+'</div>'+
+             '<div class="row2"><button class="btn accent" id="goSession">Ouvrir la séance</button><button class="btn ghost" id="quickDone">Marquer faite</button></div>';
+      }else{
+        body='<div class="stitle">'+esc(actName("tri"))+' · Semaine '+s.w+'</div>'+
+             '<h2>'+icon+' '+esc(triLabel(s.disc))+'</h2>'+
+             '<div class="meta">'+when+'</div>'+
+             '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>';
+      }
+    }
+    hero.className="hero"+(heroOpen?" open":" folded");
+    hero.innerHTML='<button class="hcol hero-toggle'+(heroOpen?" open":"")+'"><span class="hcol-ic">'+icon+'</span><span class="hcol-txt"><span class="hcol-k">Prochaine séance</span><span class="hcol-v">'+esc(s.label)+' · '+when+'</span></span><span class="hcol-chev">▾</span></button>'+(heroOpen?'<div class="hero-body">'+body+'</div>':'');
+    hero.querySelector(".hero-toggle").onclick=function(){heroOpen=!heroOpen;renderHero();};
+    if(heroOpen){
+      if(muscu){
+        var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
+        var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderHero();renderCalendars();};
+      }else{
+        var gt=hero.querySelector("#goSessionTri");if(gt)gt.onclick=function(){currentTri={w:s.w,dz:s.disc};goSport("tri");var td=document.getElementById("triDetail");if(td&&td.scrollIntoView)td.scrollIntoView({behavior:"smooth",block:"start"});};
+        var qt=hero.querySelector("#quickDoneTri");if(qt)qt.onclick=function(){var k=s.w+"_"+s.disc;var r=state.tri[k]||(state.tri[k]={});r.done=true;if(!r.date)r.date=todayStr();save();renderHero();renderCalendars();};
+      }
+    }
+  }
+
   function renderToday(){
     renderChip();
-    var n=nextSession();var hero=document.getElementById("heroCard");
-    var tip=phaseTip(todayStr());
-    var tipHTML='<div class="tip"><div class="t">'+tip.t+'</div><p>'+tip.p+'</p></div>';
-    if(n){
-      var blk=PROGRAM_BLOCKS[n.block];var p=blk.prog[n.c];
-      hero.innerHTML=
-        '<div class="lbl">Prochaine séance muscu</div>'+
-        '<div class="stitle">'+blk.name+' · Semaine '+n.w+' · '+p.sub+'</div>'+
-        '<h2>'+p.title.split("—")[0].trim()+' <span class="num">'+n.c+'</span></h2>'+
-        '<div class="meta">'+p.exos.length+' exercices · semaine '+n.w+'/'+blk.weeks+'</div>'+
-        '<div class="row2"><button class="btn accent" id="goSession">Ouvrir la séance</button>'+
-        '<button class="btn ghost" id="quickDone">Marquer faite</button></div>'+
-        tipHTML;
-      document.getElementById("goSession").addEventListener("click",function(){currentSel={block:n.block,w:n.w,c:n.c};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});});
-      document.getElementById("quickDone").addEventListener("click",function(){var s=sess(n.block,n.w,n.c);s.done=true;if(!s.date)s.date=todayStr();save();renderToday();});
-    }else{
-      hero.innerHTML='<div class="lbl">Bravo</div><h2>Programme muscu terminé 🎉</h2><div class="meta">'+totalSessions()+' séances bouclées. Relance un cycle en augmentant les charges.</div>'+tipHTML;
-    }
+    renderHero();
     var nut=document.getElementById("todayNutri");
     if(nut){
       var tot=dayTotals(todayStr());
@@ -844,7 +873,7 @@
     return '<div class="cd-row">'+up.map(function(it){var lbl=it.d===0?"Jour J":("J-"+it.d);return '<div class="cd-card"><div class="cd-j">'+lbl+'</div><div class="cd-l">'+(it.dl.icon||"🎯")+' '+esc(it.dl.label)+'</div><div class="cd-d">'+frDateShort(it.dl.date)+'</div></div>';}).join("")+'</div>';
   }
   function legendHTML(){
-    return '<div class="cal-leg"><span><i class="lg p-muscu"></i>'+esc(actName("muscu"))+'</span><span><i class="lg p-tri"></i>'+esc(actName("tri"))+'</span><span><i class="lg done"></i>Faite</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">Les séances à venir se calent sur ce que tu as fait · touche un jour pour changer son état</span></div>';
+    return '<div class="cal-leg"><span>🏋️ '+esc(actName("muscu"))+'</span><span>🏊🚴🏃 '+esc(actName("tri"))+'</span><span>📚 Révision</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">Séance faite = grisée + ✓ · touche un jour pour changer son état</span></div>';
   }
   function monthGridHTML(y,m){
     var first=new Date(y,m,1),last=new Date(y,m+1,0);
@@ -861,8 +890,9 @@
         var dd=new Date(cur);dd.setDate(cur.getDate()+i);var iso=isoOf(dd);
         var o=new Date(iso+"T00:00:00"),inMonth=(o.getMonth()===m),st=getDayState(iso),dl=dlMap[iso],evs=eventsOn(iso);
         var cls="cal-day";if(!inMonth)cls+=" off";if(iso===today)cls+=" today";if(st)cls+=" st-"+st;if(dl)cls+=" deadline";
-        var pills=sessionsOn(iso).map(function(p){return '<span class="pill '+(p.kind==="muscu"?"p-muscu":"p-tri")+(p.done?" done":"")+'">'+esc(p.abbr)+(p.done?' ✓':'')+'</span>';}).join("");
-        var marks=(dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+(dl.icon||"🎯")+'</span>':'')+(evs.length?'<span class="ev-dot" title="'+esc(evs.map(function(e){return e.label;}).join(" · "))+'"></span>':'');
+        var pills=sessionsOn(iso).map(function(p){var ic=(p.kind==="muscu")?"🏋️":triIcon(p.disc);var ab=(p.kind==="muscu")?p.abbr:"";return '<span class="pill '+(p.kind==="muscu"?"p-muscu":"p-tri")+(p.done?" done":"")+'"><span class="pill-ic">'+ic+'</span>'+(ab?'<span class="pill-ab">'+esc(ab)+'</span>':'')+(p.done?'<span class="pill-ck">✓</span>':'')+'</span>';}).join("");
+        var book=studyHoursOf(iso)>=6?'<span class="cal-book" title="Grosse journée de révision">📚</span>':'';
+        var marks=(dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+(dl.icon||"🎯")+'</span>':'')+(evs.length?'<span class="ev-dot" title="'+esc(evs.map(function(e){return e.label;}).join(" · "))+'"></span>':'')+book;
         html+='<button class="'+cls+'" data-iso="'+iso+'"><span class="cal-n">'+o.getDate()+(marks?'<span class="cal-marks">'+marks+'</span>':'')+'</span><span class="cal-pills">'+pills+'</span></button>';
       }
       html+='</div>';
@@ -878,7 +908,7 @@
   }
   function renderCalendarInto(host){
     if(!host)return;
-    host.innerHTML='<div class="calwrap-inner">'+countdownHTML()+
+    host.innerHTML='<div class="calwrap-inner">'+
       '<div class="calbar"><button class="navbtn calPrev" aria-label="Mois précédent">‹</button><div class="calmonth">'+MOIS_LONG[calRef.m]+' '+calRef.y+'</div><button class="navbtn calNext" aria-label="Mois suivant">›</button></div>'+
       '<div class="calhead"><button class="btn ghost calToday">Aujourd\'hui</button></div>'+
       monthGridHTML(calRef.y,calRef.m)+monthEventsHTML(calRef.y,calRef.m)+legendHTML()+'</div>';
@@ -896,7 +926,18 @@
     host.addEventListener("touchstart",function(e){var t=e.changedTouches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
     host.addEventListener("touchend",function(e){if(sx===null)return;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;sx=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.4)calGoMonth(dx>0?-1:1);},{passive:true});
   }
-  function renderCalendars(){rebuildSchedule();var h=document.getElementById("homeCal");if(h)renderCalendarInto(h);}
+  function calSummary(){
+    var list=sessionsOn(todayStr());
+    var plan=list.length?list.map(function(p){return (p.kind==="muscu"?"🏋️":triIcon(p.disc))+(p.kind==="muscu"?" "+p.abbr:"");}).join(" · "):"rien de prévu";
+    return "aujourd'hui : "+plan;
+  }
+  function renderCalendars(){
+    rebuildSchedule();
+    var cd=document.getElementById("homeCountdown");if(cd)cd.innerHTML=countdownHTML();
+    var h=document.getElementById("homeCal");if(h){renderCalendarInto(h);h.classList.toggle("collapsed",!homeCalOpen);}
+    var tg=document.getElementById("homeCalToggle");if(tg)tg.classList.toggle("open",homeCalOpen);
+    var sum=document.getElementById("homeCalSummary");if(sum)sum.textContent=calSummary();
+  }
 
   function openDaySheet(iso){
     var sheet=document.getElementById("calSheet"),bg=document.getElementById("calSheetBg");if(!sheet||!bg)return;
@@ -1005,6 +1046,7 @@
     var sc=document.getElementById("settingsClose");if(sc)sc.addEventListener("click",closeSettings);
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});
+    var hct=document.getElementById("homeCalToggle");if(hct)hct.addEventListener("click",function(){homeCalOpen=!homeCalOpen;renderCalendars();});
     var dp=document.getElementById("dayPrev"),dn=document.getElementById("dayNext");
     if(dp)dp.addEventListener("click",function(){journalDate=isoOf(addDays(journalDate,-1));renderJournal();});
     if(dn)dn.addEventListener("click",function(){var c=isoOf(addDays(journalDate,1));if(c<=todayStr()){journalDate=c;renderJournal();}});
