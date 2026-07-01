@@ -67,7 +67,7 @@ var PROGRAM = {
     {id:"d1",name:"Rowing haltère 1 bras",target:"3 × 10-12",sets:3,unit:"reps",help:"Un genou sur le banc, tirer l'haltère vers la hanche. <b>Cible :</b> dos."},
     {id:"d2",name:"Écarté poulie / pec deck",target:"3 × 12-15",sets:3,unit:"reps",help:"Rapprocher les bras devant soi en arc de cercle. <b>Cible :</b> pectoraux (étirement)."},
     {id:"d3",name:"Élévations latérales",target:"4 × 15",sets:4,unit:"reps",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales."},
-    {id:"d4",name:"Oiseau / face pull (épaules arr.)",target:"3 × 15",sets:3,unit:"reps",help:"Buste penché, écarter les bras / tirer la corde. <b>Cible :</b> épaules arrière."},
+    {id:"d4",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",help:"Coudes fixes le long du corps, tendre les bras vers le bas puis écarter la corde en fin de course. <b>Cible :</b> triceps (les épaules arrière sont déjà couvertes en séance C)."},
     {id:"d5",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
     {id:"d6",name:"Roue abdos / planche dynamique",target:"3 × 10-12",sets:3,unit:"reps",help:"Roue abdominale ou planche dynamique. <b>Cible :</b> sangle abdominale (avancé)."}
   ]}
