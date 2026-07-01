@@ -504,3 +504,21 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Portion affichée sur l'étiquette d'aliment */
 .tag-q{margin-left:5px;font-size:11px;font-weight:700;opacity:.72}
+
+/* ---------- Blocs de séance repliables (Sport) ---------- */
+.card.pad.blockcard{padding:0;overflow:hidden}
+.blk-toggle{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:14px 16px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+.blk-ttl{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--ink)}
+.blk-meta{flex:none;font-size:12px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono)}
+.blk-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
+.card.pad.blockcard.open .blk-chev{transform:rotate(180deg)}
+.blk-body{padding:0 16px 16px}
+.blk-body.collapsed{display:none}
+
+/* ---------- Exercices ajoutés à la volée (dans une séance) ---------- */
+.extra-sep{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 10px;padding-top:14px;border-top:1px dashed var(--line)}
+.exo-extra .exo-top{display:flex;align-items:center;gap:8px}
+.exo-name-in{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-weight:700;font-family:inherit;color:var(--ink);background:#fff}
+.exo-del{flex:none;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:19px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.add-set{margin-top:8px;background:transparent;border:1px dashed var(--line);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;font-family:inherit}
+.add-extra{margin-top:14px;width:100%}
