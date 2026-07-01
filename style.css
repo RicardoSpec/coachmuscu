@@ -362,3 +362,76 @@ nav.tabs .tab.on{color:var(--primary)}
 .calev-row:first-of-type{border-top:none}
 .calev-d{flex:0 0 auto;color:var(--muted);font-weight:600;min-width:78px}
 .calev-l{font-weight:600;color:var(--ink)}
+
+/* ---------- Engrenage en bas du menu ---------- */
+.drawer-foot{border-top:1px solid var(--line);padding:8px}
+.drawer-gear{display:flex;align-items:center;gap:12px;width:100%;border:none;background:transparent;padding:13px 12px;border-radius:12px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit}
+.drawer-gear:active{background:#eef2f6}
+.gear-ic{width:36px;height:36px;border-radius:10px;background:#eef2f6;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+
+/* ---------- Panneau Réglages (plein écran) ---------- */
+.settings{position:fixed;inset:0;z-index:80;background:var(--bg);transform:translateX(100%);transition:transform .26s ease;display:flex;flex-direction:column;overflow:hidden}
+.settings.open{transform:translateX(0)}
+.settings-head{display:flex;align-items:center;gap:8px;background:var(--primary);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 14px 14px}
+.settings-close{border:none;background:transparent;color:#fff;font-size:30px;line-height:1;cursor:pointer;padding:0 6px 0 0;font-weight:700}
+.settings-title{font-size:18px;font-weight:800}
+.settings-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(env(safe-area-inset-bottom) + 24px)}
+
+.set-sec{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+.set-sec-h{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.set-note{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+.set-soon{background:#fafbfc}
+.set-soon .set-note{margin:0}
+
+.set-row{display:flex;align-items:center;gap:11px;padding:11px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px}
+.set-ic{font-size:20px;flex:none}
+.set-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.set-lbl{font-size:14.5px;font-weight:700;color:var(--ink)}
+.set-sub{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.set-edit,.set-del{flex:none;width:38px;height:38px;border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:16px;cursor:pointer;line-height:1}
+.set-edit:active,.set-del:active{background:#eef2f6}
+.set-add{margin-top:4px}
+
+.set-form{border:1.5px solid var(--primary);border-radius:12px;padding:12px;margin-bottom:9px;background:#f8fbfd}
+.set-form-row{display:flex;gap:8px;margin-bottom:9px}
+.set-f-icon{width:54px;flex:none;text-align:center;border:1.5px solid var(--line);border-radius:10px;padding:11px 4px;font-size:18px;font-family:inherit;background:#fff}
+.set-f-label{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+.set-f-date{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink);margin-bottom:10px}
+.set-form-btns{display:flex;gap:8px}
+.set-form-btns .btn{flex:1;width:auto;margin:0}
+
+/* ---------- Activités (Réglages phase 2) ---------- */
+.act-card{border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:11px;background:#fff}
+.act-card.off{background:#fafbfc}
+.act-head{display:flex;align-items:center;gap:11px}
+.act-ic{font-size:22px;flex:none;width:40px;height:40px;border-radius:11px;background:#eef2f6;display:flex;align-items:center;justify-content:center}
+.act-card.off .act-ic{filter:grayscale(1);opacity:.55}
+.act-name{flex:1;min-width:0;font-size:15.5px;font-weight:800;color:var(--ink)}
+.act-card.off .act-name{color:var(--muted)}
+.act-body{margin-top:12px}
+.act-line{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:2px 0}
+.act-k{color:var(--muted);font-weight:600}
+.act-v{color:var(--ink);font-weight:700;font-family:var(--mono)}
+.act-desc{font-size:12.5px;color:var(--muted);margin:6px 0 0;line-height:1.45;background:#f6f8fa;border-radius:9px;padding:9px 11px}
+.act-edit{margin-top:11px}
+.act-form{margin-top:2px}
+.act-flabel{display:block;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 5px}
+.act-flabel:first-child{margin-top:0}
+.act-f-name,.act-f-start,.act-f-desc{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+.act-f-desc{resize:vertical;min-height:52px}
+
+/* Interrupteur on/off */
+.tgl{flex:none;width:48px;height:28px;border-radius:999px;border:none;background:#cfd8e0;position:relative;cursor:pointer;padding:0;transition:background .18s;-webkit-tap-highlight-color:transparent}
+.tgl.on{background:var(--accent)}
+.tgl-dot{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s}
+.tgl.on .tgl-dot{left:23px}
+
+/* ---------- Compléments repliables ---------- */
+.supps-field{padding:0}
+.supps-toggle{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:2px 0;cursor:pointer;font-family:inherit;text-align:left}
+.supps-ttl{flex:1;min-width:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.supps-meta{flex:none;font-size:11.5px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono)}
+.supps-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
+.supps-toggle.open .supps-chev{transform:rotate(180deg)}
+.supps-body{margin-top:12px}
+.supps-body.collapsed{display:none}
