@@ -136,15 +136,18 @@ var TRAIN_TEMPLATE = {
 };
 
 /* ---------- États possibles d'un jour (couleurs gérées dans le CSS) ---------- */
-var DAY_STATES = [
-  {id:"",        label:"Dispo"},
-  {id:"cours",   label:"Cours"},
-  {id:"occupe",  label:"Occupé"},
-  {id:"repos",   label:"Repos"},
-  {id:"vacances",label:"Vacances"}
+/* Vocabulaire de jours COMMUN à toutes les apps (musculation, révisions DSCG…).
+   Le type de base (semaine / week-end) se déduit du jour de la semaine ;
+   ces types sont les SURCHARGES manuelles, partagées entre apps. train:false => bloque l'entraînement. */
+var DAY_TYPES = [
+  {id:"",        label:"Normal",          icon:"",   train:true },
+  {id:"cours",   label:"Cours / travail", icon:"📚", train:false},
+  {id:"conge",   label:"Congé",           icon:"🏖️", train:true },
+  {id:"repos",   label:"Repos",           icon:"😴", train:false},
+  {id:"indispo", label:"Indisponible",    icon:"🚫", train:false}
 ];
-/* Jours qui bloquent l'entraînement (la séance prévue se décale) */
-var DAY_BLOCKED = ["cours","occupe","repos","vacances"];
+/* Rétro-compatibilité : anciennes clés Coach Muscu → vocabulaire commun */
+var DAY_TYPE_MIGRATE = { occupe:"indispo", vacances:"conge" };
 
 /* ---------- Échéances marquées sur le calendrier ---------- */
 var DEADLINES = [
