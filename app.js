@@ -73,6 +73,7 @@
     pMutate(function(o){Object.keys(state.days).forEach(function(iso){var st=state.days[iso].status;if(st&&!o.states[iso])o.states[iso]=st;});});
   }
   function pMigrateDayTypes(){if(typeof DAY_TYPE_MIGRATE==="undefined")return;pMutate(function(o){var s=o.states||{};Object.keys(s).forEach(function(iso){var nv=DAY_TYPE_MIGRATE[s[iso]];if(nv)s[iso]=nv;});});}
+  function seedPlanOnce(){if(typeof PLAN_SEED==="undefined")return;pMutate(function(o){if(!o.seeds)o.seeds={};if(o.seeds.planGsheetJuil26)return;Object.keys(PLAN_SEED).forEach(function(iso){if(!o.states[iso])o.states[iso]=PLAN_SEED[iso];});o.seeds.planGsheetJuil26=true;});}
   if(!state.sessions)state.sessions={};
   if(!state.days)state.days={};
   if(!state.tri)state.tri={};
@@ -134,6 +135,12 @@
   /* ---------------- Séances (multi-blocs) ---------------- */
   function sessKey(b,w,c){return b==="b1"?(w+"_"+c):(b+"_"+w+"_"+c);}
   function sess(b,w,c){var k=sessKey(b,w,c);if(!state.sessions[k])state.sessions[k]={done:false,sets:{}};return state.sessions[k];}
+  /* ---------- Personnalisation durable des séances (override dans state.config) ---------- */
+  function progCfg(){if(!state.config)state.config={};if(!state.config.program)state.config.program={};return state.config.program;}
+  function progOf(b,c){return progCfg()[b+"_"+c]||PROGRAM_BLOCKS[b].prog[c];}
+  function progIsCustom(b,c){return !!progCfg()[b+"_"+c];}
+  function progOverride(b,c){var key=b+"_"+c,pc=progCfg();if(!pc[key])pc[key]=JSON.parse(JSON.stringify(PROGRAM_BLOCKS[b].prog[c]));return pc[key];}
+  function progReset(b,c){delete progCfg()[b+"_"+c];save();}
   function nextSession(){for(var bi=0;bi<BLOCK_ORDER.length;bi++){var b=BLOCK_ORDER[bi];var wk=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wk;w++){for(var i=0;i<CODES.length;i++){if(!sess(b,w,CODES[i]).done)return{block:b,w:w,c:CODES[i]};}}}return null;}
   function doneCount(){var n=0;BLOCK_ORDER.forEach(function(b){var wk=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wk;w++)for(var i=0;i<CODES.length;i++)if(sess(b,w,CODES[i]).done)n++;});return n;}
   function totalSessions(){var n=0;BLOCK_ORDER.forEach(function(b){n+=PROGRAM_BLOCKS[b].weeks*CODES.length;});return n;}
@@ -235,18 +242,20 @@
     var s=next.s, muscu=(s.kind==="muscu");
     var icon=muscu?"🏋️":triIcon(s.disc);
     var when=whenLabel(next.iso);
+    var tip=phaseTip(todayStr());
+    var tipHTML='<div class="tip"><div class="t">'+tip.t+'</div><p>'+tip.p+'</p></div>';
     var body="";
     if(heroOpen){
-      if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=blk.prog[s.code];
+      if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=progOf(s.block,s.code);
         body='<div class="stitle">'+esc(blk.name)+' · Semaine '+s.w+' · '+esc(p.sub)+'</div>'+
              '<h2>'+esc(p.title.split("—")[0].trim())+' <span class="num">'+s.code+'</span></h2>'+
              '<div class="meta">'+p.exos.length+' exercices · '+when+'</div>'+
-             '<div class="row2"><button class="btn accent" id="goSession">Ouvrir la séance</button><button class="btn ghost" id="quickDone">Marquer faite</button></div>';
+             '<div class="row2"><button class="btn accent" id="goSession">Ouvrir la séance</button><button class="btn ghost" id="quickDone">Marquer faite</button></div>'+tipHTML;
       }else{
         body='<div class="stitle">'+esc(actName("tri"))+' · Semaine '+s.w+'</div>'+
              '<h2>'+icon+' '+esc(triLabel(s.disc))+'</h2>'+
              '<div class="meta">'+when+'</div>'+
-             '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>';
+             '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>'+tipHTML;
       }
     }
     hero.className="hero"+(heroOpen?" open":" folded");
@@ -255,10 +264,10 @@
     if(heroOpen){
       if(muscu){
         var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
-        var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderHero();renderCalendars();};
+        var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
       }else{
         var gt=hero.querySelector("#goSessionTri");if(gt)gt.onclick=function(){currentTri={w:s.w,dz:s.disc};goSport("tri");var td=document.getElementById("triDetail");if(td&&td.scrollIntoView)td.scrollIntoView({behavior:"smooth",block:"start"});};
-        var qt=hero.querySelector("#quickDoneTri");if(qt)qt.onclick=function(){var k=s.w+"_"+s.disc;var r=state.tri[k]||(state.tri[k]={});r.done=true;if(!r.date)r.date=todayStr();save();renderHero();renderCalendars();};
+        var qt=hero.querySelector("#quickDoneTri");if(qt)qt.onclick=function(){var k=s.w+"_"+s.disc;var r=state.tri[k]||(state.tri[k]={});r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
       }
     }
   }
@@ -340,7 +349,7 @@
   function renderSessionDetail(){
     if(!currentSel)return;
     var b=currentSel.block,w=currentSel.w,c=currentSel.c;
-    var p=PROGRAM_BLOCKS[b].prog[c];var s=sess(b,w,c);
+    var p=progOf(b,c);var s=sess(b,w,c);
     var head=
       '<div class="eyebrow">Séance ouverte</div>'+
       '<div class="card pad">'+
@@ -1049,8 +1058,34 @@
       setAct(k,{name:name,start:start,desc:desc});settingsActEdit=null;renderSettings();renderCalendars();
     };
   }
+  var settingsSessSel=null;  /* "b1_A" en édition, ou null */
+  function sessExoRow(ex,i){
+    return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
+      '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
+  }
+  function renderSessEditor(host){
+    var parts=settingsSessSel.split("_"),b=parts[0],c=parts[1];
+    var p=progOf(b,c),custom=progIsCustom(b,c),exos=p.exos||[];
+    host.innerHTML='<button class="btn ghost sess-back" id="sessBack">‹ Toutes les séances</button>'+
+      '<div class="set-sec"><div class="set-sec-h">'+esc(PROGRAM_BLOCKS[b].short)+' · Séance '+c+(custom?' <span class="sess-badge">modifiée</span>':'')+'</div>'+
+      '<label class="act-flabel">Nom de la séance</label><input class="sess-title" value="'+esc(p.title||"")+'">'+
+      '<div class="act-flabel" style="margin-top:16px">Exercices</div>'+
+      '<div class="sess-exos">'+exos.map(sessExoRow).join("")+'</div>'+
+      '<button class="btn ghost sess-add" id="sessAddExo">+ Ajouter un exercice</button>'+
+      '<button class="btn ghost sess-reset" id="sessReset">↺ Rétablir le contenu par défaut</button>'+
+      '</div>';
+    document.getElementById("sessBack").onclick=function(){settingsSessSel=null;renderSettings();};
+    var ti=host.querySelector(".sess-title");if(ti)ti.addEventListener("input",function(){progOverride(b,c).title=ti.value;save();});
+    host.querySelectorAll(".sx-name").forEach(function(inp){inp.addEventListener("input",function(){progOverride(b,c).exos[+inp.getAttribute("data-i")].name=inp.value;save();});});
+    host.querySelectorAll(".sx-target").forEach(function(inp){inp.addEventListener("input",function(){progOverride(b,c).exos[+inp.getAttribute("data-i")].target=inp.value;save();});});
+    host.querySelectorAll(".sx-sets").forEach(function(inp){inp.addEventListener("input",function(){var n=parseInt(inp.value,10);if(isNaN(n)||n<1)n=1;if(n>12)n=12;progOverride(b,c).exos[+inp.getAttribute("data-i")].sets=n;save();});});
+    host.querySelectorAll(".sx-del").forEach(function(bt){bt.addEventListener("click",function(){progOverride(b,c).exos.splice(+bt.getAttribute("data-i"),1);save();renderSettings();});});
+    document.getElementById("sessAddExo").onclick=function(){progOverride(b,c).exos.push({id:"u"+Date.now().toString(36),name:"",target:"3 × 10",sets:3,unit:"reps",help:""});save();renderSettings();var ni=host.querySelector(".sx-row:last-of-type .sx-name");if(ni)ni.focus();};
+    var sr=document.getElementById("sessReset");if(sr)sr.onclick=function(){if(confirm("Rétablir la séance par défaut ? Les modifications de cette séance seront perdues.")){progReset(b,c);renderSettings();}};
+  }
   function renderSettings(){
     var host=document.getElementById("settingsBody");if(!host)return;
+    if(settingsSessSel){renderSessEditor(host);return;}
     var acts='<div class="set-sec"><div class="set-sec-h">Activités préparées</div>'+
       '<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
       actCard("muscu")+actCard("tri")+'</div>';
@@ -1059,14 +1094,23 @@
       return '<div class="set-row"><span class="set-ic">'+esc(d.icon||"🎯")+'</span><span class="set-main"><span class="set-lbl">'+esc(d.label)+'</span><span class="set-sub">'+esc(frDateShort(d.date))+' '+dlYear(d.date)+' · J-'+Math.max(0,diffDays(d.date,todayStr()))+'</span></span><button class="set-edit" data-edit="'+d.id+'" aria-label="Modifier">✎</button><button class="set-del" data-del="'+d.id+'" aria-label="Supprimer">🗑</button></div>';
     }).join("");
     var addBlock=settingsEdit==="new"?deadlineForm(null):'<button class="btn ghost set-add" id="setAdd">+ Ajouter une échéance</button>';
+    var sessSec='<div class="set-sec"><div class="set-sec-h">Séances (personnalisation)</div>'+
+      '<p class="set-note">Modifie durablement tes séances : renomme, ajoute, retire ou ajuste les exercices et les séries. (Différent de l\'ajout à la volée dans une séance, qui reste ponctuel.)</p>'+
+      BLOCK_ORDER.map(function(b){return '<div class="sess-blk">'+esc(PROGRAM_BLOCKS[b].name)+'</div>'+
+        CODES.map(function(c){var p=progOf(b,c);var cust=progIsCustom(b,c);
+          return '<div class="set-row sess-pick" data-sess="'+b+'_'+c+'"><span class="set-ic">💪</span><span class="set-main"><span class="set-lbl">Séance '+c+(cust?' <span class="sess-badge">modifiée</span>':'')+'</span><span class="set-sub">'+esc(p.title.replace(/^S[eé]ance [A-D]\s*—\s*/,""))+' · '+(p.exos?p.exos.length:0)+' exos</span></span><span class="sess-arrow">›</span></div>';
+        }).join("");
+      }).join("")+'</div>';
     host.innerHTML=acts+'<div class="set-sec"><div class="set-sec-h">Objectifs &amp; échéances</div>'+
       '<p class="set-note">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
       (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock+'</div>'+
+      sessSec+
       '<div class="set-sec"><div class="set-sec-h">Types de jour</div>'+
       '<p class="set-note">Un seul vocabulaire, partagé avec ton app de révisions DSCG. Touche un jour du calendrier pour lui donner un type ; il s\'applique aux deux apps (entraînement <em>et</em> heures de révision). Le type « normal » se déduit du jour (semaine / week-end).</p>'+
       (typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).filter(function(t){return t.id;}).map(function(t){
         return '<div class="dt-row"><span class="dt-ic">'+esc(t.icon||"•")+'</span><span class="dt-lbl">'+esc(t.label)+'</span><span class="dt-eff">'+(t.train===false?'pas d\'entraînement':'entraînement possible')+'</span></div>';
       }).join("")+'</div>';
+    host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
     host.querySelectorAll("[data-actedit]").forEach(function(b){b.onclick=function(){settingsActEdit=b.getAttribute("data-actedit");renderSettings();};});
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
@@ -1074,7 +1118,7 @@
     var sa=document.getElementById("setAdd");if(sa)sa.onclick=function(){settingsEdit="new";renderSettings();};
     wireActForm();wireDeadlineForm();
   }
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
@@ -1111,7 +1155,7 @@
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pEnsureSeed();pMigrateStates();pMigrateDayTypes();loadFoodDB();
+    pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();
     activateTab("v-today");
   }
   init();
