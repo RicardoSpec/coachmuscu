@@ -522,3 +522,23 @@ nav.tabs .tab.on{color:var(--primary)}
 .exo-del{flex:none;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:19px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .add-set{margin-top:8px;background:transparent;border:1px dashed var(--line);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--primary);cursor:pointer;font-family:inherit}
 .add-extra{margin-top:14px;width:100%}
+
+/* ---------- Personnalisation des séances (Réglages) ---------- */
+.sess-blk{font-size:12px;font-weight:800;color:var(--primary);margin:14px 0 6px;padding-top:6px}
+.sess-blk:first-child{margin-top:2px;padding-top:0}
+.sess-pick{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sess-arrow{flex:none;color:var(--muted);font-size:20px;font-weight:400}
+.sess-badge{display:inline-block;font-size:10px;font-weight:800;color:#9a5a16;background:#fdeede;border:1px solid #f0d9c2;border-radius:999px;padding:1px 7px;vertical-align:middle;margin-left:4px}
+.sess-back{margin-bottom:12px}
+.sess-title{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;font-weight:700;font-family:inherit;color:var(--ink);background:#fff}
+.sess-exos{margin:4px 0 12px}
+.sx-row{border:1.5px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:9px;background:#fff}
+.sx-line{display:flex;align-items:center;gap:8px}
+.sx-line2{display:flex;align-items:center;gap:10px;margin-top:8px}
+.sx-name{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14.5px;font-weight:700;font-family:inherit;color:var(--ink);background:#fff}
+.sx-del{flex:none;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:19px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sx-target{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13.5px;font-family:var(--mono);color:var(--ink);background:#fbfcfd}
+.sx-setslbl{flex:none;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.sx-sets{width:52px;border:1.5px solid var(--line);border-radius:8px;padding:7px 8px;font-size:14px;font-family:var(--mono);text-align:center;color:var(--ink);background:#fff}
+.sess-add{width:100%;margin-bottom:10px}
+.sess-reset{width:100%;color:#c2691f}
