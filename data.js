@@ -37,6 +37,16 @@ var SUPPS = [
   {id:"magnesium", name:"Magnésium bisglycinate",   when:"soir",   dose:"selon l'étiquette"}
 ];
 
+/* Routines bien-être — cochées dans le journal du jour (même principe que les compléments).
+   La zone libre du journal permet d'ajouter une activité ponctuelle. */
+var ROUTINES = [
+  {id:"medit",    name:"Méditation",           icon:"🧘"},
+  {id:"journal",  name:"Écriture (journal)",   icon:"✍️"},
+  {id:"lecture",  name:"Lecture",              icon:"📖"},
+  {id:"manuel",   name:"Activité manuelle",    icon:"🛠️"},
+  {id:"etire",    name:"Étirements",           icon:"🤸"}
+];
+
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
 var PROGRAM = {
   A:{title:"Séance A — Haut (force) + abdos", sub:"Haut · force", exos:[
@@ -183,6 +193,8 @@ var TRI = [
  {w:10, nat:{t:"1000 m", d:"400 m (crawl/dos/crawl/brasse) · 4×100 m allure course (r 30″) · 200 m au choix.", taper:true}, velo:{t:"1h00 +20′", d:"Parcours vallonné léger. Puis enchaîne 20′ de footing."}, course:{t:"30′", d:"15′ footing · 5′ allure course · 10′ footing. Dernière semaine !"}}
 ];
 var TRI_DISC = [["nat","Natation"],["velo","Vélo"],["course","Course"]];
+/* Cibles distance olympique (Dinard) — pour la barre de progression du suivi */
+var TRI_TARGETS = { nat:{v:1500,u:"m",icon:"🏊"}, velo:{v:40,u:"km",icon:"🚴"}, course:{v:10,u:"km",icon:"🏃"} };
 
 /* ---------- Échelle de Bristol (état des selles) ---------- */
 var BRISTOL = [
