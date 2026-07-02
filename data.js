@@ -32,7 +32,7 @@ var SUPPS = [
   {id:"spiruline", name:"Spiruline (Hainan)",       when:"repas",  dose:"selon l'étiquette"},
   {id:"oyster",    name:"Poudre d'huître",          when:"repas",  dose:"selon l'étiquette"},
   {id:"omega3",    name:"Oméga 3",                  when:"repas",  dose:"3 capsules pendant le repas"},
-  {id:"whey",      name:"Whey Isolate Native",      when:"seance", dose:"30 g (≈ 2 dosettes)", prot:28},
+  {id:"whey",      name:"Whey Isolate Native",      when:"seance", dose:"30 g (≈ 2 dosettes)", prot:28, kcal:115},
   {id:"fenugrec",  name:"Fenugrec",                 when:"soir",   dose:"4 gélules après le repas"},
   {id:"magnesium", name:"Magnésium bisglycinate",   when:"soir",   dose:"selon l'étiquette"}
 ];
@@ -141,13 +141,25 @@ var TRAIN_TEMPLATE = {
    ces types sont les SURCHARGES manuelles, partagées entre apps. train:false => bloque l'entraînement. */
 var DAY_TYPES = [
   {id:"",        label:"Normal",          icon:"",   train:true },
-  {id:"cours",   label:"Cours / travail", icon:"📚", train:false},
+  {id:"cours",   label:"Cours / travail", icon:"📚", train:true },
   {id:"conge",   label:"Congé",           icon:"🏖️", train:true },
   {id:"repos",   label:"Repos",           icon:"😴", train:false},
   {id:"indispo", label:"Indisponible",    icon:"🚫", train:false}
 ];
 /* Rétro-compatibilité : anciennes clés Coach Muscu → vocabulaire commun */
 var DAY_TYPE_MIGRATE = { occupe:"indispo", vacances:"conge" };
+
+/* Planning importé du Gsheet « Avancement » (projection des jours dispo jusqu'au 31/08).
+   Semé UNE FOIS dans le store partagé (sans écraser un jour déjà défini) — modifiable ensuite
+   jour par jour depuis le calendrier. conge = jour libre (révision 6 h, entraînement ok) ;
+   indispo = ni révision ni entraînement. */
+var PLAN_SEED = {
+  "2026-07-13":"conge","2026-07-14":"conge",
+  "2026-07-27":"conge","2026-07-28":"conge","2026-07-29":"conge","2026-07-30":"conge","2026-07-31":"conge",
+  "2026-08-03":"conge","2026-08-04":"conge",
+  "2026-08-08":"indispo","2026-08-09":"indispo",
+  "2026-08-13":"conge","2026-08-14":"conge","2026-08-17":"conge"
+};
 
 /* ---------- Échéances marquées sur le calendrier ---------- */
 var DEADLINES = [
