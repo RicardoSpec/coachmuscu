@@ -233,6 +233,15 @@
   }
   /* Heures de révision d'un jour (même règle que l'app DSCG) — pour le repère 📚. */
   function studyHoursOf(iso){var st=getDayState(iso);if(st==="indispo")return 0;if(st==="conge")return 6;if(st==="cours")return 0.5;var wd=new Date(iso+"T00:00:00").getDay();return (wd===0||wd===6)?6:0.5;}
+  /* Heures de révision RÉELLES saisies dans Mouche-Université (clé memoDSCG_v1 — LECTURE SEULE, jamais d'écriture). */
+  function dscgDone(){
+    try{
+      var o=JSON.parse(localStorage.getItem("memoDSCG_v1")||"{}");var d=o&&o.done;
+      if(!d||typeof d!=="object")return {};
+      var out={};Object.keys(d).forEach(function(k){var v=d[k];if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&typeof v==="number"&&isFinite(v)&&v>=0)out[k]=v;});
+      return out;
+    }catch(e){return {};}
+  }
   function whenLabel(iso){var d=diffDays(iso,todayStr());if(d<=0)return "aujourd'hui";if(d===1)return "demain";return frDateShort(iso)+" · J-"+d;}
 
   function renderHero(){
@@ -995,6 +1004,7 @@
   }
   function monthGridHTML(y,m){
     var first=new Date(y,m,1),last=new Date(y,m+1,0);
+    var _rd=dscgDone(),_rdToday=todayStr();
     var cur=startOfWeekMonday(first);
     var lastEnd=startOfWeekMonday(last);lastEnd.setDate(lastEnd.getDate()+6);
     var today=todayStr();
@@ -1009,7 +1019,9 @@
         var o=new Date(iso+"T00:00:00"),inMonth=(o.getMonth()===m),st=getDayState(iso),dl=dlMap[iso],evs=eventsOn(iso);
         var cls="cal-day";if(!inMonth)cls+=" off";if(iso===today)cls+=" today";if(st)cls+=" st-"+st;if(dl)cls+=" deadline";
         var pills=sessionsOn(iso).map(function(p){var ic=(p.kind==="muscu")?"🏋️":triIcon(p.disc);var ab=(p.kind==="muscu")?p.abbr:"";return '<span class="pill '+(p.kind==="muscu"?"p-muscu":"p-tri")+(p.done?" done":"")+'"><span class="pill-ic">'+ic+'</span>'+(ab?'<span class="pill-ab">'+esc(ab)+'</span>':'')+(p.done?'<span class="pill-ck">✓</span>':'')+'</span>';}).join("");
-        var book=studyHoursOf(iso)>=6?'<span class="cal-book" title="Grosse journée de révision">📚</span>':'';
+        var book="";
+        if(dateMs(iso)<=dateMs(_rdToday)){var _rh=_rd.hasOwnProperty(iso)?_rd[iso]:null;if(_rh>0)book='<span class="cal-book" title="'+nFmt(_rh)+' h révisées">📚</span>';}
+        else if(studyHoursOf(iso)>=6)book='<span class="cal-book" title="Grosse journée de révision (prévu)">📚</span>';
         var marks=(dl?'<span class="cal-dl" title="'+esc(dl.label)+'">'+(dl.icon||"🎯")+'</span>':'')+(evs.length?'<span class="ev-dot" title="'+esc(evs.map(function(e){return e.label;}).join(" · "))+'"></span>':'')+book;
         html+='<button class="'+cls+'" data-iso="'+iso+'"><span class="cal-n">'+o.getDate()+(marks?'<span class="cal-marks">'+marks+'</span>':'')+'</span><span class="cal-pills">'+pills+'</span></button>';
       }
@@ -1061,7 +1073,9 @@
     var curSt=getDayState(iso);
     var plist=sessionsOn(iso);
     var planTxt=plist.length?plist.map(function(p){return p.icon+" "+p.label+(p.done?" ✓":"");}).join(" · "):"Aucune séance prévue ce jour";
-    sheet.innerHTML='<div class="sheet-handle"></div><div class="sheet-title">'+esc(frDateFull(iso))+'</div><div class="sheet-sub">'+esc(planTxt)+'</div>'+
+    var revTxt="";
+    if(dateMs(iso)<=dateMs(todayStr())){var _rd2=dscgDone();if(_rd2.hasOwnProperty(iso)){var _h=_rd2[iso];revTxt=' · 📚 '+nFmt(_h)+' h révisée'+(_h>=2?'s':'');}}
+    sheet.innerHTML='<div class="sheet-handle"></div><div class="sheet-title">'+esc(frDateFull(iso))+'</div><div class="sheet-sub">'+esc(planTxt)+revTxt+'</div>'+
       '<div class="sheet-states">'+(typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).map(function(s){var on=curSt===s.id;return '<button class="st-btn st-'+(s.id||"normal")+(on?" on":"")+'" data-st="'+s.id+'">'+(s.icon?esc(s.icon)+' ':'')+esc(s.label)+'</button>';}).join("")+'</div>'+
       '<button class="sheet-link" data-go="'+iso+'">Ouvrir ce jour dans le Journal →</button>'+
       '<button class="sheet-close" id="sheetCloseBtn">Fermer</button>';
@@ -1212,7 +1226,7 @@
     /* Au retour sur l'app (ou si l'autre app a modifié le store partagé), on relit et on rafraîchit. */
     document.addEventListener("visibilitychange",function(){if(!document.hidden)renderCalendars();});
     window.addEventListener("focus",function(){renderCalendars();});
-    window.addEventListener("storage",function(e){if(e.key===PKEY)renderCalendars();});
+    window.addEventListener("storage",function(e){if(e.key===PKEY||e.key==="memoDSCG_v1")renderCalendars();});
     var be=document.getElementById("btnExport");if(be)be.addEventListener("click",exportData);
     var fi=document.getElementById("fileImport");if(fi)fi.addEventListener("change",function(){if(this.files&&this.files[0])importData(this.files[0]);this.value="";});
     var br=document.getElementById("btnReset");if(br)br.addEventListener("click",function(){if(confirm("Tout effacer ? Action irréversible (pense à exporter avant).")){state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;activateTab("v-today");}});
