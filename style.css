@@ -14,6 +14,7 @@
 }
 
 *{box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
 
 body{
   margin:0;
@@ -280,7 +281,7 @@ input[type=checkbox]{accent-color:var(--primary)}
 
 /* ---------- Barre de navigation ---------- */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav.tabs .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;border:none;background:transparent;color:var(--muted);font-size:9.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;letter-spacing:-.01em}
+nav.tabs .tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;border:none;background:transparent;color:var(--muted);font-size:9.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;letter-spacing:-.01em}
 nav.tabs .tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs .tab.on{color:var(--primary)}
 
@@ -581,3 +582,16 @@ nav.tabs .tab.on{color:var(--primary)}
 .to-n{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .to-p{flex:none;font-size:13px;font-weight:900;color:var(--primary);font-family:var(--mono)}
 .to-b{flex:none;font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+/* ---------- 7 derniers jours (mini-graphes) ---------- */
+.wv-block{margin-bottom:14px}
+.wv-block:last-of-type{margin-bottom:4px}
+.wv-t{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:7px}
+.wv-target{font-weight:600;color:var(--muted);font-size:11px;margin-left:4px}
+.wv-bars{display:flex;align-items:flex-end;gap:7px;height:62px}
+.wv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0}
+.wv-bar{display:block;width:100%;max-width:34px;border-radius:5px 5px 2px 2px;background:#c8d6e2}
+.wv-bar.ok{background:linear-gradient(180deg,#2f8a4e,#3aa663)}
+.wv-bar.nv{background:#eceff3}
+.wv-d{font-size:9.5px;font-weight:700;color:var(--muted)}
+.wv-note{margin-top:9px;font-size:11px;color:var(--muted)}
