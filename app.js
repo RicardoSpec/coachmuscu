@@ -808,15 +808,34 @@
         '<div class="goal-meta"><b>'+pct+'%</b> · '+done+'/'+total+' séances · '+remain+' restante'+(remain>1?"s":"")+'</div>'+
       '</div>';
     }
-    host.innerHTML=countdownHTML()+'<div class="card pad"><div class="sec-title">Objectifs</div>'+
+    host.innerHTML='<div class="card pad"><div class="sec-title">Objectifs</div>'+
       goal("💪 Muscu — Bloc 1","obj. 27 juil.",blockDone("b1"),PROGRAM_BLOCKS.b1.weeks*CODES.length,daysUntil(MUSCU_DEADLINE),"muscu")+
       goal("🏊 Triathlon — Dinard","course 11-13 sept.",triDoneCount(),30,daysUntil(RACE_DATE),"tri")+
     '</div>';
     host.querySelectorAll("[data-goto]").forEach(function(el){el.onclick=function(){var g=el.getAttribute("data-goto");if(g)goSport(g);};});
   }
 
+  function weekVizHTML(){
+    var days=[];for(var i=6;i>=0;i--)days.push(isoOf(addDays(todayStr(),-i)));
+    var DL=["D","L","M","M","J","V","S"];
+    function chart(title,icon,vals,target,unit){
+      var max=target;vals.forEach(function(v){if(v.v!=null&&v.v>max)max=v.v;});
+      var bars=vals.map(function(v){var h=v.v==null?4:Math.max(6,Math.round(v.v/max*46));var cls=v.v==null?" nv":(v.v>=target?" ok":"");return '<div class="wv-col"><i class="wv-bar'+cls+'" style="height:'+h+'px"></i><span class="wv-d">'+v.d+'</span></div>';}).join("");
+      return '<div class="wv-block"><div class="wv-t">'+icon+' '+title+' <span class="wv-target">cible '+target+' '+unit+'</span></div><div class="wv-bars">'+bars+'</div></div>';
+    }
+    var prot=[],eau=[],som=[];
+    days.forEach(function(d){var lab=DL[new Date(d+"T00:00:00").getDay()];var x=state.days[d];
+      var t=dayTotals(d);prot.push({d:lab,v:t?Math.round(t.prot):null});
+      eau.push({d:lab,v:(x&&x.water)?x.water:null});
+      var sl=x?num(x.sleep):NaN;som.push({d:lab,v:isNaN(sl)?null:sl});
+    });
+    return '<div class="card pad"><div class="sec-title">7 derniers jours</div>'+
+      chart("Protéines","🥩",prot,130,"g")+chart("Eau","💧",eau,8,"verres")+chart("Sommeil","😴",som,8,"h")+
+      '<div class="wv-note">Barre pleine couleur = cible atteinte · gris clair = pas de donnée.</div></div>';
+  }
   function renderProgress(){
     renderGoals();
+    var wv=document.getElementById("weekViz");if(wv)wv.innerHTML=weekVizHTML();
     var dc=doneCount();
     var sleeps=[],meditDays=0,sportTally={},progFollow=0,progTot=0,stoolDays=0,stoolTotal=0,typeCount={},waters=[];
     Object.keys(state.days).forEach(function(d){
@@ -992,13 +1011,6 @@
 
   function startOfWeekMonday(d){var dow=d.getDay();var diff=(dow===0?-6:1-dow);var n=new Date(d);n.setDate(d.getDate()+diff);return n;}
 
-  function countdownHTML(){
-    var today=todayStr();
-    var up=pDeadlines().map(function(dl){return {dl:dl,d:diffDays(dl.date,today)};}).filter(function(it){return it.d>=0;}).sort(function(a,b){return a.d-b.d;});
-    if(!up.length)return "";
-    function gotoOf(lbl){lbl=(lbl||"").toLowerCase();if(/triathlon|dinard/.test(lbl))return "tri";if(/plage|forme|muscu/.test(lbl))return "muscu";return "";}
-    return '<div class="cd-row">'+up.map(function(it){var lbl=it.d===0?"Jour J":("J-"+it.d);var go=gotoOf(it.dl.label);return '<div class="cd-card'+(go?" cd-click":"")+'"'+(go?' data-goto="'+go+'"':'')+'><div class="cd-j">'+lbl+'</div><div class="cd-l">'+(it.dl.icon||"🎯")+' '+esc(it.dl.label)+'</div><div class="cd-d">'+frDateShort(it.dl.date)+(go?' ›':'')+'</div></div>';}).join("")+'</div>';
-  }
   function legendHTML(){
     return '<div class="cal-leg"><span>🏋️ '+esc(actName("muscu"))+'</span><span>🏊🚴🏃 '+esc(actName("tri"))+'</span><span>📚 Révision</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">Séance faite = grisée + ✓ · touche un jour pour changer son état</span></div>';
   }
