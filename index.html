@@ -4,15 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#12466B">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Coach Muscu">
   <title>Coach Muscu</title>
   <link rel="icon" href="favicon.ico">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="apple-touch-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=32">
+  <link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -51,6 +52,7 @@
       <div id="todayNutri"></div>
       <h2 class="page">Journal du jour</h2>
       <div id="todayLog"></div>
+      <div id="backupNudge"></div>
     </section>
 
     <!-- ====================== SPORT (muscu + triathlon) ====================== -->
@@ -161,7 +163,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=32"></script>
-  <script src="app.js?v=32"></script>
+  <script src="data.js?v=36"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>
