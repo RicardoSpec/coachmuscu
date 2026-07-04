@@ -1,238 +1,212 @@
 /* =========================================================
-   Suivi mémoire & révisions DSCG — data.js
-   Données uniquement (aucune logique). Chargé AVANT app.js.
-   Source : Google Sheet "Récap / Calendrier / Notation".
+   Coach Muscu — data.js
+   Données uniquement (aucune logique).
+   Doit être chargé AVANT app.js.
    ========================================================= */
 
 /* ---------- Mes autres apps (menu lanceur ☰) ----------
-   here:true = app courante · ready:true + url = cliquable · ready:false = "bientôt". */
+   Pour activer une app à venir : passe ready:true et ajoute son url.
+   --------------------------------------------------------- */
 var APPS = [
-  {name:"Musculation",               icon:"💪", ready:true,  url:"https://ricardospec.github.io/coachmuscu/"},
-  {name:"Français — L'Atelier",      icon:"✏️", ready:true,  url:"https://ricardospec.github.io/Lateliergram/"},
-  {name:"Anglais — English Fly",     icon:"🇬🇧", ready:true,  url:"https://ricardospec.github.io/English-Fly/"},
-  {name:"Budget — Grand livre",      icon:"💶", ready:true,  url:"https://ricardospec.github.io/Budgetisation/"},
-  {name:"Suivi mémoire & révisions", icon:"📚", here:true},
-  {name:"Espagnol",                  icon:"🇪🇸", ready:false}
+  {name:"Suivi muscu",                icon:"💪", here:true},
+  {name:"L'Atelier — orthographe",    icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
+  {name:"The Workbook — anglais",     icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
+  {name:"Mémoire & révisions — DSCG", icon:"📚", ready:true, url:"https://ricardospec.github.io/Mouche-Universit-/"},
+  {name:"Grand livre — budget",       icon:"💶", ready:true, url:"https://ricardospec.github.io/Budgetisation/"},
+  {name:"Espagnol",                   icon:"🇪🇸", ready:false}
 ];
 
-/* ---------- Échéances & constantes ---------- */
-var MEMO_TARGET = "2026-07-27";   // objectif perso de rendu
-var MEMO_LIMIT  = "2026-08-31";   // limite de dépôt (feuille)
-var SNAPSHOT    = "2026-06-20";   // date de la photo du tableur
-
-/* Matrice de conversion : type de jour -> heures dispo (feuille "Calendrier") */
-var HOURS = { semaine:0.5, weekend:6, "congé":6, indispo:0 };
-
-/* =========================================================
-   1) AVANCEMENT DU MÉMOIRE
-   Chaque partie : poids d'effort (w) + % d'avancement (pct).
-   % global = Σ(w × pct) / Σ(w).   (pages = info secondaire)
-
-   NB cohérence : l'en-tête de la feuille affiche "32,06 %"
-   (dernier relevé MANUEL du 15/06). Les cases par partie
-   ci-dessous calculent ≈ 42 %, ce qui correspond au point
-   du 20/06 sur la courbe de progression. Tout est modifiable.
-   ========================================================= */
-var MEMO_GROUPS = [
-  {id:"lim",     label:"Éléments liminaires"},
-  {id:"intro",   label:"Introduction"},
-  {id:"p1",      label:"Partie 1"},
-  {id:"p2",      label:"Partie 2"},
-  {id:"concl",   label:"Conclusion"},
-  {id:"ann",     label:"Annexes & bibliographie"},
-  {id:"terrain", label:"Études terrain"},
-  {id:"corr",    label:"Corrections"}
+/* ---------- Compléments : routine quotidienne (groupée par moment) ----------
+   when  : créneau de prise (voir SUPP_SLOTS ci-dessous).
+   prot  : g de protéines ajoutés au total du jour quand le complément est coché (whey).
+   Retirer un complément : supprime sa ligne. En ajouter : copie une ligne.
+   ---------------------------------------------------------------------------- */
+var SUPP_SLOTS = [
+  {id:"matin",  label:"Matin, à jeun"},
+  {id:"repas",  label:"À un repas (matin ou midi)"},
+  {id:"seance", label:"Après la séance (ou en collation)"},
+  {id:"soir",   label:"Le soir, après le dîner"}
+];
+var SUPPS = [
+  {id:"probio",    name:"Pure Bio² (probiotiques)", when:"matin",  dose:"1 à 2 gélules, avant le petit-déj"},
+  {id:"spiruline", name:"Spiruline (Hainan)",       when:"repas",  dose:"selon l'étiquette"},
+  {id:"oyster",    name:"Poudre d'huître",          when:"repas",  dose:"selon l'étiquette"},
+  {id:"omega3",    name:"Oméga 3",                  when:"repas",  dose:"3 capsules pendant le repas"},
+  {id:"whey",      name:"Whey Isolate Native",      when:"seance", dose:"30 g (≈ 2 dosettes)", prot:28, kcal:115},
+  {id:"fenugrec",  name:"Fenugrec",                 when:"soir",   dose:"4 gélules après le repas"},
+  {id:"magnesium", name:"Magnésium bisglycinate",   when:"soir",   dose:"selon l'étiquette"}
 ];
 
-var MEMO_PARTS = [
-  {id:"miseenpage", g:"lim", name:"Mise en page du mémoire",     w:0.1, pct:60},
-  {id:"garde",      g:"lim", name:"Page de garde, glossaire",    w:0.2, pct:90},
-  {id:"confid",     g:"lim", name:"Note de confidentialité",     w:0.1, pct:90},
-  {id:"remer",      g:"lim", name:"Remerciements",               w:0.5, pct:90},
-  {id:"tdm",        g:"lim", name:"Table des matières",          w:0.5, pct:30},
-  {id:"tdi",        g:"lim", name:"Table des illustrations",     w:0.5, pct:10},
-  {id:"tableaux",   g:"lim", name:"Tableaux",                    w:0.5, pct:10},
-  {id:"avpropos",   g:"lim", name:"Avant-propos",                w:1.0, pct:90},
-  {id:"attest",     g:"lim", name:"Attestation de l'employeur",  w:0.5, pct:60},
-  {id:"agrement",   g:"lim", name:"Fiche d'agrément",            w:2.0, pct:80},
-  {id:"missions",   g:"lim", name:"Missions cabinet",            w:1.0, pct:30},
-
-  {id:"intro",      g:"intro", name:"Introduction",              w:2.0, pct:90, pages:{done:3.5, target:4}},
-
-  {id:"p1c1", g:"p1", name:"Chap. I — Une fondation solide pour des informations fiables et régulières", w:10, pct:70, pages:{done:8, target:8}},
-  {id:"p1c2", g:"p1", name:"Chap. II — L'harmonisation des procédures (efficience & pérennisation)",      w:10, pct:70, pages:{done:6, target:7}},
-  {id:"p1c3", g:"p1", name:"Chap. III — De la mesure à la valorisation (image fidèle, pilotage)",         w:10, pct:70, pages:{done:5, target:7}},
-
-  {id:"p2c1", g:"p2", name:"Chap. I — Méthodologie de la recherche & collecte des données", w:10, pct:30, pages:{done:5, target:5}},
-  {id:"p2c2", g:"p2", name:"Chap. II — Analyse des résultats & vérification des hypothèses", w:10, pct:30, pages:{done:9, target:9}},
-  {id:"p2c3", g:"p2", name:"Chap. III — Optimisations opérationnelles & perspectives",       w:10, pct:30, pages:{done:7, target:7}},
-
-  {id:"concl",   g:"concl", name:"Conclusion",                   w:5.0, pct:10, pages:{done:0, target:1}},
-
-  {id:"annexes", g:"ann", name:"Table des annexes",              w:5.0, pct:20, pages:{done:43.5, target:48}},
-  {id:"biblio",  g:"ann", name:"Bibliographie",                  w:1.0, pct:20},
-
-  {id:"sondage", g:"terrain", name:"Sondage",                    w:10, pct:10, resp:22},
-  {id:"itw",     g:"terrain", name:"Enquête / entretiens",       w:10, pct:40, resp:16.67},
-
-  {id:"corr",    g:"corr", name:"Traiter les prochaines corrections", w:2.0, pct:10}
+/* Routines bien-être — cochées dans le journal du jour (même principe que les compléments).
+   La zone libre du journal permet d'ajouter une activité ponctuelle. */
+var ROUTINES = [
+  {id:"medit",    name:"Méditation",           icon:"🧘"},
+  {id:"journal",  name:"Écriture (journal)",   icon:"✍️"},
+  {id:"lecture",  name:"Lecture",              icon:"📖"},
+  {id:"manuel",   name:"Activité manuelle",    icon:"🛠️"},
+  {id:"etire",    name:"Étirements",           icon:"🤸"}
 ];
 
-/* ---------- Corrections à traiter (checklist "Prochaines corrections") ---------- */
-var CORRECTIONS = [
-  "Faire des phrases courtes",
-  "Reprendre tous les commentaires → version finale intégrant les commentaires",
-  "Vérifier la retranscription des entretiens (itw)",
-  "Vérifier la suppression des sources .com (BCG)",
-  "Conserver les échanges avec l'IA",
-  "Faire des phrases de transition avant les hypothèses de recherche (HR)",
-  "Mettre à jour le numéro des tableaux, figures et annexes",
-  "Vérifier que les locutions latines et les citations sont en italique (et les vérifier)"
-];
-
-/* ---------- Historique d'avancement (relevés réels de la feuille) ---------- */
-var HISTORY = [
-  {d:"2026-04-26", p:3.88},
-  {d:"2026-04-27", p:4.00},
-  {d:"2026-05-14", p:11.25},
-  {d:"2026-05-15", p:12.37},
-  {d:"2026-05-16", p:16.90},
-  {d:"2026-05-18", p:18.02},
-  {d:"2026-05-23", p:19.15},
-  {d:"2026-05-24", p:19.15},
-  {d:"2026-05-25", p:27.74},
-  {d:"2026-05-30", p:27.74},
-  {d:"2026-05-31", p:27.74},
-  {d:"2026-06-07", p:28.14},
-  {d:"2026-06-15", p:32.06}
-];
-
-/* =========================================================
-   2) EXAMENS DSCG — session 2026 (BO n°1 du 01/01/2026)
-   Écrits 27–29 oct. · oraux (anglais & soutenance) dès le 02 nov.
-   ========================================================= */
-var EXAMS = [
-  {id:"ue1", code:"UE1", short:"Droit", name:"Gestion juridique, fiscale et sociale", date:"2026-10-28", time:"14h–18h",     duration:"4h", coef:1.5, ects:20},
-  {id:"ue5", code:"UE5", short:"MSI",   name:"Management des systèmes d'information", date:"2026-10-29", time:"9h30–12h30", duration:"3h", coef:1,   ects:15},
-  {id:"ue3", code:"UE3", short:"MCG",   name:"Management & contrôle de gestion",      date:"2026-10-29", time:"14h–18h",     duration:"4h", coef:1.5, ects:20}
-];
-var MEMO_EXAM = {code:"UE7", name:"Mémoire — soutenance orale", date:"2026-11-02", duration:"1h max", coef:1, ects:15};
-
-/* Validation du diplôme : moyenne générale ≥ 10/20 · note éliminatoire < 6/20. */
-var DSCG_RULES = {moyenne:10, eliminatoire:6};
-
-/* ---------- Révisions : thèmes de départ par UE (programme DSCG, modifiables) ---------- */
-var EXAM_REVISIONS = {
-  ue1: [
-    "L'entreprise & son environnement juridique (contrats, responsabilité)",
-    "Droit des sociétés (constitution, fonctionnement, restructurations)",
-    "Pérennité de l'entreprise (difficultés, transmission)",
-    "Associations & autres groupements",
-    "Droit fiscal (IS, IR, TVA, intégration, fiscalité internationale)",
-    "Droit social (relations individuelles & collectives, protection sociale)"
-  ],
-  ue5: [
-    "Gouvernance & alignement stratégique des SI",
-    "Gestion de projet SI",
-    "Architecture, réseaux & ERP",
-    "Sécurité des SI",
-    "Données, dématérialisation & RGPD",
-    "Audit & contrôle des SI"
-  ],
-  ue3: [
-    "Diagnostic & analyse stratégique",
-    "Choix stratégiques & gouvernance",
-    "Pilotage de la performance (coûts, budgets)",
-    "Tableaux de bord & reporting",
-    "Conduite du changement & structures",
-    "Management des activités & des processus"
-  ]
+/* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
+var PROGRAM = {
+  A:{title:"Séance A — Haut (force) + abdos", sub:"Haut · force", exos:[
+    {id:"a1",name:"Développé couché (haltères/barre)",target:"4 × 6-8",sets:4,unit:"reps",help:"Allongé, pousser la charge du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
+    {id:"a2",name:"Tractions pronation",target:"4 × max",sets:4,unit:"reps",help:"Paumes vers l'avant, se tirer jusqu'au menton au-dessus de la barre. <b>Cible :</b> dos (largeur), biceps."},
+    {id:"a3",name:"Développé militaire (debout/assis)",target:"3 × 8-10",sets:3,unit:"reps",help:"Pousser la barre au-dessus de la tête, dos gainé. <b>Cible :</b> épaules."},
+    {id:"a4",name:"Rowing barre / machine",target:"3 × 8-10",sets:3,unit:"reps",help:"Buste penché, tirer la barre vers le ventre. <b>Cible :</b> dos (épaisseur)."},
+    {id:"a5",name:"Élévations latérales",target:"3 × 12-15",sets:3,unit:"reps",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
+    {id:"a6",name:"Relevés de jambes suspendus",target:"3 × 12-15",sets:3,unit:"reps",help:"Suspendu, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
+  ]},
+  B:{title:"Séance B — Bas (allégé) + core", sub:"Bas · core", exos:[
+    {id:"b1",name:"Squat barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Barre sur le haut du dos, descendre fesses en arrière jusqu'aux cuisses parallèles. <b>Cible :</b> cuisses, fessiers."},
+    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos, fessiers."},
+    {id:"b3",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
+    {id:"b4",name:"Crunch à la poulie (lesté)",target:"3 × 12-15",sets:3,unit:"reps",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux."},
+    {id:"b5",name:"Gainage planche",target:"3 × 45 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."},
+    {id:"b6",name:"Gainage latéral",target:"3 × 30 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui sur un avant-bras, hanches hautes. <b>Cible :</b> obliques."}
+  ]},
+  C:{title:"Séance C — Haut (volume) + abdos", sub:"Haut · volume", exos:[
+    {id:"c1",name:"Développé incliné haltères",target:"4 × 8-10",sets:4,unit:"reps",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
+    {id:"c2",name:"Tirage vertical poulie",target:"4 × 10-12",sets:4,unit:"reps",help:"Tirer la barre vers le haut de la poitrine, coudes vers le bas. <b>Cible :</b> dos (largeur)."},
+    {id:"c3",name:"Dips / développé machine",target:"3 × 10-12",sets:3,unit:"reps",help:"Descendre coudes pliés puis remonter (barres parallèles ou machine). <b>Cible :</b> bas des pectoraux, triceps."},
+    {id:"c4",name:"Face pull (poulie)",target:"3 × 15",sets:3,unit:"reps",help:"Tirer la corde vers le visage, coudes hauts. <b>Cible :</b> épaules arrière, posture."},
+    {id:"c5",name:"Curl + extension triceps",target:"3 × 12",sets:3,unit:"reps",help:"En superset : curl biceps puis extension triceps. <b>Cible :</b> bras (biceps + triceps)."},
+    {id:"c6",name:"Crunch lesté / relevés de jambes",target:"3 × 15",sets:3,unit:"reps",help:"Travail abdominal lesté ou relevés de jambes. <b>Cible :</b> abdominaux."}
+  ]},
+  D:{title:"Séance D — Haut (accessoire) + abdos", sub:"Haut · accessoire", exos:[
+    {id:"d1",name:"Rowing haltère 1 bras",target:"3 × 10-12",sets:3,unit:"reps",help:"Un genou sur le banc, tirer l'haltère vers la hanche. <b>Cible :</b> dos."},
+    {id:"d2",name:"Écarté poulie / pec deck",target:"3 × 12-15",sets:3,unit:"reps",help:"Rapprocher les bras devant soi en arc de cercle. <b>Cible :</b> pectoraux (étirement)."},
+    {id:"d3",name:"Élévations latérales",target:"4 × 15",sets:4,unit:"reps",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales."},
+    {id:"d4",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",help:"Coudes fixes le long du corps, tendre les bras vers le bas puis écarter la corde en fin de course. <b>Cible :</b> triceps (les épaules arrière sont déjà couvertes en séance C)."},
+    {id:"d5",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+    {id:"d6",name:"Roue abdos / planche dynamique",target:"3 × 10-12",sets:3,unit:"reps",help:"Roue abdominale ou planche dynamique. <b>Cible :</b> sangle abdominale (avancé)."}
+  ]}
 };
 
-/* =========================================================
-   3) PLANNING — jours & heures dispo (feuille "Calendrier")
-   Type par défaut : lun–ven = semaine, sam–dim = weekend.
-   DAY_EXCEPTIONS surcharge le défaut (congé / indispo).
-   COMMON_DAYS = jours "ok" communs avec Tina (repère 🟢).
-   ========================================================= */
-var DAY_EXCEPTIONS = {
-  "2026-05-01":"congé","2026-05-03":"indispo","2026-05-08":"indispo","2026-05-09":"indispo","2026-05-10":"indispo",
-  "2026-05-14":"congé","2026-05-15":"congé","2026-05-25":"congé",
-  "2026-06-06":"indispo","2026-06-22":"congé",
-  "2026-06-23":"indispo","2026-06-24":"indispo","2026-06-25":"indispo","2026-06-26":"indispo","2026-06-27":"indispo","2026-06-28":"indispo",
-  "2026-07-04":"indispo","2026-07-05":"indispo","2026-07-13":"congé","2026-07-14":"congé",
-  "2026-07-27":"congé","2026-07-28":"congé","2026-07-29":"congé","2026-07-30":"congé","2026-07-31":"congé",
-  "2026-08-01":"congé","2026-08-02":"congé","2026-08-03":"congé","2026-08-04":"congé",
-  "2026-08-05":"indispo","2026-08-06":"indispo","2026-08-07":"indispo","2026-08-08":"indispo",
-  "2026-08-09":"indispo","2026-08-10":"indispo","2026-08-11":"indispo","2026-08-12":"indispo",
-  "2026-08-13":"congé","2026-08-14":"congé","2026-08-15":"congé","2026-08-16":"congé","2026-08-17":"congé"
+/* ---------- BLOC 2 — Août (focus plage) ---------- */
+var PROGRAM2 = {
+  A:{title:"Séance A — Pecs & épaules (force)", sub:"Pousser", exos:[
+    {id:"a1",name:"Développé couché barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Pousser la barre du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
+    {id:"a2",name:"Développé militaire barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Barre poussée au-dessus de la tête, debout, dos gainé. <b>Cible :</b> épaules (force)."},
+    {id:"a3",name:"Développé incliné haltères",target:"3 × 8-10",sets:3,unit:"reps",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
+    {id:"a4",name:"Élévations latérales",target:"4 × 12-15",sets:4,unit:"reps",help:"Lever les bras sur les côtés à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
+    {id:"a5",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, posture."},
+    {id:"a6",name:"Relevés de jambes lestés",target:"3 × 12",sets:3,unit:"reps",help:"Suspendu ou allongé, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
+  ]},
+  B:{title:"Séance B — Bas & gainage", sub:"Jambes", exos:[
+    {id:"b1",name:"Presse à cuisses",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser la charge avec les jambes, amplitude contrôlée. <b>Cible :</b> cuisses, fessiers."},
+    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos."},
+    {id:"b3",name:"Fentes marchées haltères",target:"3 × 12/jambe",sets:3,unit:"reps",help:"Grands pas en fente, genou vers le sol. <b>Cible :</b> cuisses, fessiers, équilibre."},
+    {id:"b4",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
+    {id:"b5",name:"Roue abdos",target:"3 × 10-12",sets:3,unit:"reps",help:"À genoux, rouler vers l'avant dos droit, revenir. <b>Cible :</b> abdominaux (avancé)."},
+    {id:"b6",name:"Gainage planche",target:"3 × 60 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."}
+  ]},
+  C:{title:"Séance C — Dos & bras", sub:"Tirer", exos:[
+    {id:"c1",name:"Tractions lestées",target:"4 × 6-8",sets:4,unit:"reps",help:"Se tirer menton au-dessus de la barre, lest si besoin. <b>Cible :</b> dos (largeur), biceps."},
+    {id:"c2",name:"Tirage horizontal poulie",target:"4 × 10-12",sets:4,unit:"reps",help:"Tirer la poignée vers le ventre, serrer les omoplates. <b>Cible :</b> dos (épaisseur)."},
+    {id:"c3",name:"Pull-over haltère",target:"3 × 12",sets:3,unit:"reps",help:"Allongé, descendre l'haltère derrière la tête bras semi-tendus. <b>Cible :</b> dorsaux, pectoraux, cage."},
+    {id:"c4",name:"Curl barre",target:"3 × 8-10",sets:3,unit:"reps",help:"Fléchir les coudes, barre vers les épaules, sans balancer. <b>Cible :</b> biceps."},
+    {id:"c5",name:"Extension triceps poulie",target:"3 × 10-12",sets:3,unit:"reps",help:"Tendre les bras vers le bas contre la poulie. <b>Cible :</b> triceps."},
+    {id:"c6",name:"Crunch à la poulie",target:"3 × 15",sets:3,unit:"reps",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux (lesté = progression)."}
+  ]},
+  D:{title:"Séance D — Épaules & finition", sub:"Détails", exos:[
+    {id:"d1",name:"Développé épaules haltères",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser les haltères au-dessus de la tête, assis. <b>Cible :</b> épaules."},
+    {id:"d2",name:"Élévations latérales (drop set)",target:"4 × 15",sets:4,unit:"reps",help:"Séries longues, baisse la charge sans repos en fin de série. <b>Cible :</b> épaules latérales."},
+    {id:"d3",name:"Élévations frontales",target:"3 × 12",sets:3,unit:"reps",help:"Lever les bras devant soi jusqu'à l'horizontale. <b>Cible :</b> épaules avant."},
+    {id:"d4",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+    {id:"d5",name:"Dips lestés",target:"3 × 8-10",sets:3,unit:"reps",help:"Sur barres parallèles, descendre coudes pliés, remonter. <b>Cible :</b> bas des pectoraux, triceps."},
+    {id:"d6",name:"Gainage latéral",target:"3 × 40 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui sur un avant-bras, hanches hautes. <b>Cible :</b> obliques."}
+  ]}
 };
 
-var COMMON_DAYS = [
-  "2026-04-25","2026-04-26","2026-05-01","2026-05-02","2026-05-14","2026-05-15","2026-05-16","2026-05-17",
-  "2026-05-30","2026-05-31","2026-06-07","2026-06-20","2026-06-21",
-  "2026-07-11","2026-07-12","2026-07-13","2026-07-14","2026-07-18","2026-07-19",
-  "2026-07-25","2026-07-26","2026-07-27","2026-07-28","2026-07-29","2026-07-30","2026-07-31",
-  "2026-08-01","2026-08-02","2026-08-03","2026-08-22","2026-08-23","2026-08-29","2026-08-30"
-];
-
-/* ---------- Événements & jalons ---------- */
-var EVENTS = [
-  {start:"2026-05-01", label:"Férié — 1er mai", type:"ferie"},
-  {start:"2026-05-03", label:"Triathlon", type:"perso"},
-  {start:"2026-05-08", end:"2026-05-10", label:"WK Surf", type:"perso"},
-  {start:"2026-05-14", label:"Férié — Ascension", type:"ferie"},
-  {start:"2026-05-25", label:"Férié — Pentecôte", type:"ferie"},
-  {start:"2026-06-06", label:"Gala Tina", type:"perso"},
-  {start:"2026-06-23", end:"2026-06-28", label:"Escalade", type:"perso"},
-  {start:"2026-07-04", label:"Théâtre Nico", type:"perso"},
-  {start:"2026-07-05", label:"Vide-maison maman", type:"perso"},
-  {start:"2026-07-14", label:"Férié — 14 juillet", type:"ferie"},
-  {start:"2026-07-27", label:"🎯 Rendu mémoire (objectif)", type:"deadline"},
-  {start:"2026-08-05", end:"2026-08-08", label:"Vacances (sans révision)", type:"perso"},
-  {start:"2026-08-09", end:"2026-08-12", label:"Révisions exams", type:"revision"},
-  {start:"2026-08-31", label:"⏳ Limite dépôt mémoire", type:"deadline"},
-  {start:"2026-10-28", label:"Examen Droit — UE1", type:"exam"},
-  {start:"2026-10-29", label:"Examens MSI (UE5) & MCG (UE3)", type:"exam"},
-  {start:"2026-11-02", label:"Soutenance mémoire", type:"exam"}
-];
-
-/* =========================================================
-   4) NOTATION — simulateur /20 (feuille "Notation")
-   Note /10 = moyenne des niveaux notés × 10.
-   Écrit = forme + fond  ·  Soutenance = 4 critères.
-   Globale = écrit + soutenance.
-   État actuel de la feuille : 6,2 (écrit) + 6,0 (soutenance) = 12,2/20.
-   ========================================================= */
-var NOTE_LEVELS = [
-  {v:0,   label:"—"},
-  {v:0.2, label:"Très insuffisant"},
-  {v:0.4, label:"Insuffisant"},
-  {v:0.6, label:"Satisfaisant"},
-  {v:0.8, label:"Bien"},
-  {v:1.0, label:"Très bien"}
-];
-
-var NOTE_CRITERIA = {
-  forme: [
-    {id:"f1", label:"Respect des normes de communication (bibliographie APA, sommaire & table paginés)", level:0.8},
-    {id:"f2", label:"Qualité de la présentation écrite (lisibilité, illustrations, structure, annexes)", level:0.8},
-    {id:"f3", label:"Qualité de l'expression écrite (orthographe, syntaxe, clarté)", level:0.8}
-  ],
-  fond: [
-    {id:"d1", label:"Présentation des missions réalisées dans la structure d'accueil", level:0},
-    {id:"d2", label:"Traitement du sujet", level:0.8},
-    {id:"d3", label:"Formuler une problématique pertinente", level:0.6},
-    {id:"d4", label:"Choisir des références bibliographiques pertinentes", level:0.4},
-    {id:"d5", label:"Méthodologie & qualité de l'approche scientifique", level:0.6},
-    {id:"d6", label:"Analyser les résultats au regard de la problématique", level:0.4},
-    {id:"d7", label:"Capacité de synthèse — limites & prolongements", level:0.4},
-    {id:"d8", label:"Mettre en avant les apports managériaux", level:0.6}
-  ],
-  soutenance: [
-    {id:"s1", label:"Construire un exposé & mettre en valeur le travail", level:0.6},
-    {id:"s2", label:"S'exprimer à l'oral (aisance, fluidité, niveau de langage)", level:0.6},
-    {id:"s3", label:"Écouter & comprendre les questions du jury", level:0.6},
-    {id:"s4", label:"Apporter des réponses pertinentes aux questions", level:0.6}
-  ]
+/* ---------- Blocs & codes ---------- */
+var PROGRAM_BLOCKS = {
+  b1:{name:"Bloc 1 — Construction", short:"B1", weeks:5, prog:PROGRAM},
+  b2:{name:"Bloc 2 — Août (plage)", short:"B2", weeks:4, prog:PROGRAM2}
 };
+var BLOCK_ORDER = ["b1","b2"];
+var CODES = ["A","B","C","D"];
+
+/* ---------- Dates d'ancrage ---------- */
+var MUSCU_START = "2026-06-27";  /* Bloc 1, semaine 1 */
+var TRI_START   = "2026-07-06";  /* Triathlon, semaine 1 (semaine 10 = course 11-13 sept) */
+
+/* ---------- Agenda : modèle de semaine ----------
+   Pour chaque jour : {type:"muscu", code:"A"} (A/B/C/D) ou {type:"tri", disc:"nat"} (nat/velo/course),
+   ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
+   Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
+var TRAIN_TEMPLATE = {
+  lun:{type:"muscu", code:"A"},
+  mar:{type:"tri",   disc:"nat"},
+  mer:{type:"muscu", code:"B"},
+  jeu:{type:"tri",   disc:"velo"},
+  ven:{type:"muscu", code:"C"},
+  sam:{type:"tri",   disc:"course"},
+  dim:{type:"muscu", code:"D"}
+};
+
+/* ---------- États possibles d'un jour (couleurs gérées dans le CSS) ---------- */
+/* Vocabulaire de jours COMMUN à toutes les apps (musculation, révisions DSCG…).
+   Le type de base (semaine / week-end) se déduit du jour de la semaine ;
+   ces types sont les SURCHARGES manuelles, partagées entre apps. train:false => bloque l'entraînement. */
+var DAY_TYPES = [
+  {id:"",        label:"Normal",          icon:"",   train:true },
+  {id:"cours",   label:"Cours / travail", icon:"📚", train:true },
+  {id:"conge",   label:"Congé",           icon:"🏖️", train:true },
+  {id:"repos",   label:"Repos",           icon:"😴", train:false},
+  {id:"indispo", label:"Indisponible",    icon:"🚫", train:false}
+];
+/* Rétro-compatibilité : anciennes clés Coach Muscu → vocabulaire commun */
+var DAY_TYPE_MIGRATE = { occupe:"indispo", vacances:"conge" };
+
+/* Planning importé du Gsheet « Avancement » (projection des jours dispo jusqu'au 31/08).
+   Semé UNE FOIS dans le store partagé (sans écraser un jour déjà défini) — modifiable ensuite
+   jour par jour depuis le calendrier. conge = jour libre (révision 6 h, entraînement ok) ;
+   indispo = ni révision ni entraînement. */
+var PLAN_SEED = {
+  "2026-07-13":"conge","2026-07-14":"conge",
+  "2026-07-27":"conge","2026-07-28":"conge","2026-07-29":"conge","2026-07-30":"conge","2026-07-31":"conge",
+  "2026-08-03":"conge","2026-08-04":"conge",
+  "2026-08-08":"indispo","2026-08-09":"indispo",
+  "2026-08-13":"conge","2026-08-14":"conge","2026-08-17":"conge"
+};
+
+/* ---------- Échéances marquées sur le calendrier ---------- */
+var DEADLINES = [
+  {date:"2026-07-25", label:"Départ Vercors",          icon:"🚆", short:"Départ"},
+  {date:"2026-07-27", label:"Objectif forme / plage",  icon:"🏖️", short:"Forme"},
+  {date:"2026-09-11", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
+];
+
+/* ---------- Plan Triathlon Dinard — Distance Olympique, 10 semaines, 3 séances/sem.
+   Résumé des volumes/séances (détails complets dans le Drive). ---------- */
+var TRI = [
+ {w:1, nat:{t:"1200 m", d:"8×50 m (alterné amplitude/vélocité) · 4×100 m pull buoy (resp. 3 temps) · 200 m au choix."}, velo:{t:"1h15", d:"Petit plateau, travail de vélocité (~90 tr/min)."}, course:{t:"40′", d:"20′ footing · 10′ éducatifs (montées de genoux, talons-fesses) · 10′ footing."}},
+ {w:2, nat:{t:"1400 m", d:"300 m (crawl/dos/brasse) · 6×100 m technique · 300 m pull buoy · 200 m (50 crawl/50 dos)."}, velo:{t:"1h30", d:"Petit plateau, vélocité ; danseuse/debout dans les bosses."}, course:{t:"45′", d:"25′ footing · éducatifs · footing."}},
+ {w:3, nat:{t:"1600 m", d:"6×100 m (crawl/pull buoy) · 8×50 m (15 m sprint/35 m lent) · 2×200 m resp. frontale · 200 m."}, velo:{t:"1h45", d:"2 blocs de 10′ en force (grand plateau/petit pignon), r 5′ en vélocité."}, course:{t:"50′", d:"20′ footing · 20′ avec sprint 15 s toutes les 2′ · 10′ footing."}},
+ {w:4, nat:{t:"1800 m", d:"400 m pull buoy · 8×50 m (battements/amplitude) · 6×100 m (25 vite/75 lent) · 300 m resp. frontale · 100 m."}, velo:{t:"2h00", d:"Grand plateau : bloc 12′ force + 6 sprints 15 s toutes les 4′, fin en endurance."}, course:{t:"50′", d:"20′ footing · 8 accélérations en côte (~100 m), récup en descente · footing."}},
+ {w:5, nat:{t:"2000 m", d:"4×150 m · 8×50 m vite · 400 m pull buoy (resp. 3/5 temps) · 200 m resp. frontale · 200 m."}, velo:{t:"2h00 +15′", d:"6 bosses de 500-800 m (petit plateau), récup en descente. Puis enchaîne 15′ de course."}, course:{t:"50′", d:"20′ footing · 2×8′ (30 s vite/30 s lentes) · footings entre les blocs."}},
+ {w:6, nat:{t:"2000 m", d:"400 m alterné · 6×50 m amplitude · 800 m en pyramide (25→100→25, vite/lent) · 300 m pull buoy · 200 m."}, velo:{t:"2h00 +20′", d:"Parcours vallonné, braquet selon le relief. Puis enchaîne 20′ de footing."}, course:{t:"50′", d:"2×10′ (1 min vite/1 min lente) · footings entre."}},
+ {w:7, nat:{t:"2000 m", d:"12×50 m variés · 300 m pull buoy resp. frontale · 5×200 m allure course (r 30″) · 100 m."}, velo:{t:"2h00 +20′", d:"Parcours vallonné. Puis enchaîne 20′ de footing."}, course:{t:"50′", d:"3×10′ allure course (r 10′) · 3×5′ allure 10 km (r 2′) · footing."}},
+ {w:8, nat:{t:"2000 m", d:"500 m enchaîné (crawl/dos/brasse) · 500 m pull buoy · 500 m allure course · 500 m enchaîné."}, velo:{t:"2h00 +30′", d:"Parcours vallonné souple. Puis enchaîne 30′ (15′ allure course/15′ footing)."}, course:{t:"50′", d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
+ {w:9, nat:{t:"1500 m", d:"300 m au choix · 1000 m pull buoy · 200 m au choix.", taper:true}, velo:{t:"1h30 +20′", d:"Vallonné souple, accélérations dans les bosses. Puis 20′ (10′ allure/10′ footing)."}, course:{t:"50′", d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
+ {w:10, nat:{t:"1000 m", d:"400 m (crawl/dos/crawl/brasse) · 4×100 m allure course (r 30″) · 200 m au choix.", taper:true}, velo:{t:"1h00 +20′", d:"Parcours vallonné léger. Puis enchaîne 20′ de footing."}, course:{t:"30′", d:"15′ footing · 5′ allure course · 10′ footing. Dernière semaine !"}}
+];
+var TRI_DISC = [["nat","Natation"],["velo","Vélo"],["course","Course"]];
+/* Cibles distance olympique (Dinard) — pour la barre de progression du suivi */
+var TRI_TARGETS = { nat:{v:1500,u:"m",icon:"🏊"}, velo:{v:40,u:"km",icon:"🚴"}, course:{v:10,u:"km",icon:"🏃"} };
+
+/* ---------- Échelle de Bristol (état des selles) ---------- */
+var BRISTOL = [
+  {v:"1", label:"Type 1 — billes dures séparées (constipation)"},
+  {v:"2", label:"Type 2 — en saucisse, grumeleuse"},
+  {v:"3", label:"Type 3 — en saucisse, craquelée"},
+  {v:"4", label:"Type 4 — lisse et molle (idéal)"},
+  {v:"5", label:"Type 5 — morceaux mous, bords nets"},
+  {v:"6", label:"Type 6 — pâteux, bords irréguliers"},
+  {v:"7", label:"Type 7 — liquide (diarrhée)"}
+];
+
+/* ---------- Journal : options ---------- */
+var SPORTS    = ["Course","Vélo","Natation","Escalade","Muscu","Repos","Autre"];
+var PROG_OPTS = ["","Oui","Partiellement","Non","Jour de repos"];
