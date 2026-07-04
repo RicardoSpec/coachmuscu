@@ -105,7 +105,7 @@
   /* ---------- Base d'aliments de référence (fichier base_aliments.json, enrichissable) ---------- */
   var FOOD_DB=[];
   function normFood(f,cat){if(!f||!f.name)return null;function s(v){return v==null?"":(""+v).trim();}var u=s(f.unit)||"g";
-    return {name:s(f.name),unit:u,cat:cat,nut:{base:s(f.base),baseUnit:u,kcal:s(f.kcal),prot:s(f.prot),gluc:s(f.gluc),lip:s(f.lip)}};}
+    return {name:s(f.name),unit:u,cat:cat,nut:{base:s(f.base),baseUnit:u,kcal:s(f.kcal),prot:s(f.prot),gluc:s(f.gluc),lip:s(f.lip),portion:s(f.portion)}};}
   function loadFoodDB(){
     try{
       if(typeof fetch!=="function")return;
@@ -576,7 +576,7 @@
             (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
               var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
               if(!items.length)return "";
-              return '<div class="supp-slot"><div class="supp-slot-h">'+esc(slot.label)+'</div>'+items.map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'<button type="button" class="supp-x2'+((x.supps2&&x.supps2[sp.id])?" on":"")+'" data-x2="'+sp.id+'" title="Pris 2 fois aujourd\'hui">×2</button></span>';}).join("")+'</div>';
+              return '<div class="supp-slot"><div class="supp-slot-h">'+esc(slot.label)+'</div>'+items.map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'<button type="button" class="supp-x2'+((x.supps2&&x.supps2[sp.id])?" on":"")+'" data-x2="'+sp.id+'" title="Pris 2 fois aujourd\'hui">×2</button></label>';}).join("")+'</div>';
             }).join("")+
             '<div class="supp-hint">Le whey coché s\'ajoute à tes protéines du jour.</div>'+
             '<div class="xtras supps-x">'+((x.suppsX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="supps" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
@@ -698,7 +698,7 @@
       function addFood(v){
         v=(""+v).trim();if(!v)return;
         var nit={name:v,qty:"",unit:"g",nut:null};var hit=foodCatalog()[v.toLowerCase()];
-        if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";if(num(nit.nut.base)>0)nit.qty=""+nit.nut.base;}
+        if(hit&&hit.nut){nit.nut=JSON.parse(JSON.stringify(hit.nut));nit.unit=hit.unit||"g";var pq=num(nit.nut.portion)>0?nit.nut.portion:nit.nut.base;if(num(pq)>0)nit.qty=""+pq;}
         day(d).mealItems[mk].push(nit);save();renderMeal(mk);recalcTotals();
         var ni=host.querySelector(".tag-input");if(ni)ni.focus();
       }
