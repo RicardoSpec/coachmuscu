@@ -40,7 +40,7 @@ var SUPPS = [
 /* Routines bien-être — cochées dans le journal du jour (même principe que les compléments).
    La zone libre du journal permet d'ajouter une activité ponctuelle. */
 var ROUTINES = [
-  {id:"medit",    name:"Méditation",           icon:"🧘"},
+  {id:"medit",    name:"Méditation",           icon:"🧘", link:"https://www.youtube.com/results?search_query=c%C3%A9dric+michel+m%C3%A9ditation+affirmations+positives", linkLabel:"Méditations & affirmations positives de Cédric Michel (YouTube)"},
   {id:"journal",  name:"Écriture (journal)",   icon:"✍️"},
   {id:"lecture",  name:"Lecture",              icon:"📖"},
   {id:"manuel",   name:"Activité manuelle",    icon:"🛠️"},
