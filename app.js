@@ -1271,6 +1271,8 @@
   }
   var settingsSessSel=null;  /* "b1_A" en édition, ou null */
   var settingsFoodSel=null;  /* clé (nom minuscule) d'aliment en correction, ou null */
+  var settingsFoodOpen=false; /* section Aliments & unités repliée par défaut */
+  var settingsFoodQuery=""; /* filtre de recherche de la liste d'aliments */
   function sessExoRow(ex,i){
     return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
       '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
@@ -1299,13 +1301,12 @@
     var host=document.getElementById("settingsBody");if(!host)return;
     if(settingsSessSel){renderSessEditor(host);return;}
     var _cat=foodCatalog(),_lf=loggedFoods();
-    var fixSec='<div class="set-sec"><div class="set-sec-h">Aliments &amp; unités</div>'+
-      '<p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme). La correction s\'applique à tes prochains ajouts et aux totaux du jour ; « Rétablir » l\'annule. Les repas déjà notés ne changent pas.</p>'+
-      (_lf.length?_lf.map(function(nm){var k=nm.toLowerCase();var c=_cat[k]||{};var n=c.nut||{};var fixed=!!(state.foodFix&&state.foodFix[k]);
+    var ffOpen=settingsFoodOpen||!!settingsFoodSel;
+    var ffRows=_lf.map(function(nm){var k=nm.toLowerCase();var c=_cat[k]||{};var n=c.nut||{};var fixed=!!(state.foodFix&&state.foodFix[k]);
         var pu=(n.baseUnit==="g"||n.baseUnit==="ml")?((n.base||"?")+" "+n.baseUnit):("×"+(n.base||"1")+" "+(n.baseUnit||"unité"));
         var sub=(n.prot!==""&&n.prot!=null&&!isNaN(num(n.prot)))?(fr1(num(n.prot))+" g prot / "+pu):"valeurs à renseigner";
         if(settingsFoodSel===k){
-          return '<div class="ff-edit">'+
+          return '<div class="ff-edit" data-nm="'+esc(k)+'">'+
             '<div class="ff-name">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</div>'+
             '<div class="ff-grid">'+
               '<label>Unité<select class="ff-unit">'+unitOptions(c.unit||n.baseUnit||"g")+'</select></label>'+
@@ -1317,8 +1318,13 @@
             (fixed?(function(){var mc=countLoggedFood(k);return mc>0?'<div class="ff-mig"><button class="btn ghost ff-migrate" data-k="'+esc(k)+'" data-n="'+mc+'">↻ Corriger aussi les '+mc+' repas déjà notés</button><div class="ff-mig-note">Réécrit l\'historique de cet aliment avec ces valeurs (quantités conservées). Une sauvegarde est téléchargée avant.</div></div>':'';})():'')+
           '</div>';
         }
-        return '<div class="set-row ff-pick" data-k="'+esc(k)+'"><span class="set-ic">🍽</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</span><span class="set-sub">'+esc(sub)+'</span></span><span class="sess-arrow">›</span></div>';
-      }).join(""):'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
+        return '<div class="set-row ff-pick" data-k="'+esc(k)+'" data-nm="'+esc(k)+'"><span class="set-ic">🍽</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</span><span class="set-sub">'+esc(sub)+'</span></span><span class="sess-arrow">›</span></div>';
+      });
+    var fixSec='<div class="set-sec">'+
+      '<button type="button" class="ff-sectog'+(ffOpen?" open":"")+'"><span class="set-sec-h">Aliments &amp; unités</span>'+(_lf.length?'<span class="ff-count">'+_lf.length+'</span>':"")+'<span class="hcol-chev">▾</span></button>'+
+      (ffOpen?'<div class="ff-secbody"><p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme). La correction s\'applique à tes prochains ajouts et aux totaux du jour ; « Rétablir » l\'annule. Les repas déjà notés ne changent pas.</p>'+
+        (_lf.length?'<input type="text" class="ff-search" placeholder="Rechercher un aliment…" value="'+esc(settingsFoodQuery||"")+'"><div class="ff-scroll">'+ffRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
+      '</div>':"")+
     '</div>';
     var acts='<div class="set-sec"><div class="set-sec-h">Activités préparées</div>'+
       '<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
@@ -1358,6 +1364,9 @@
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
     host.querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-del");if(confirm("Supprimer cette échéance ?")){pRemoveDeadline(id);settingsEdit=null;renderSettings();renderCalendars();}};});
     var sa=document.getElementById("setAdd");if(sa)sa.onclick=function(){settingsEdit="new";renderSettings();};
+    var ffTog=host.querySelector(".ff-sectog");if(ffTog)ffTog.onclick=function(){settingsFoodOpen=!settingsFoodOpen;if(!settingsFoodOpen)settingsFoodSel=null;renderSettings();};
+    function ffFilter(){var q=(settingsFoodQuery||"").trim().toLowerCase();host.querySelectorAll(".ff-scroll .ff-pick").forEach(function(r){var nm=r.getAttribute("data-nm")||"";r.style.display=(!q||nm.indexOf(q)>=0)?"":"none";});}
+    var ffSearch=host.querySelector(".ff-search");if(ffSearch){ffSearch.addEventListener("input",function(){settingsFoodQuery=ffSearch.value;ffFilter();});ffFilter();}
     host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();};});
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
     host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
@@ -1403,7 +1412,7 @@
     inp.click();
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
