@@ -648,3 +648,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .rx-help{display:none;margin:7px 2px 0;font-size:12.5px;line-height:1.45}
 .rx-help.open{display:block}
 .rx-help a{color:var(--primary);font-weight:700;text-decoration:underline}
+
+/* Correcteur d'aliments (Réglages) */
+.ff-edit{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:#f6f9fb}
+.ff-name{font-weight:800;margin-bottom:8px}
+.ff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ff-grid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+.ff-grid input,.ff-grid select{border:1.5px solid var(--line);border-radius:8px;padding:8px 9px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff}
+.ff-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.ff-actions .btn{flex:1;min-width:120px}
