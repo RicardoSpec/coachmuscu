@@ -660,3 +660,26 @@ nav.tabs .tab.on{color:var(--primary)}
 .ff-mig{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
 .ff-mig .ff-migrate{width:100%}
 .ff-mig-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
+
+/* Volet Courses (accueil) */
+.crs-body{padding:12px;border:1px solid var(--line);border-top:none;border-radius:0 0 14px 14px;background:#fff;margin-bottom:14px}
+.crs-add{display:flex;gap:8px;margin-bottom:12px}
+.crs-add .crs-name{flex:1;min-width:0}
+.crs-add .crs-prix{width:60px;flex:none}
+.crs-add input{border:1.5px solid var(--line);border-radius:8px;padding:9px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff}
+.crs-add .btn{white-space:nowrap;flex:none}
+.crs-sugtitle{font-size:12px;color:var(--muted);font-weight:600;margin:2px 0 6px}
+.crs-sug{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.crs-sugbtn{border:1.5px solid var(--line);background:var(--none-bg);border-radius:999px;padding:6px 11px;font-size:13px;font-family:inherit;color:var(--ink);font-weight:600}
+.crs-sugbtn span{color:var(--muted);font-size:11px}
+.crs-list{display:flex;flex-direction:column;gap:6px}
+.crs-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--line);border-radius:10px}
+.crs-item.bought{background:var(--done-bg);border-color:var(--done-line)}
+.crs-check{width:26px;height:26px;flex:none;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-weight:800;color:#34a96a;font-size:15px;line-height:1;cursor:pointer}
+.crs-item.bought .crs-check{border-color:#34a96a;background:#34a96a;color:#fff}
+.crs-nm{flex:1;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.crs-item.bought .crs-nm{text-decoration:line-through;color:var(--muted)}
+.crs-prix-v{font-family:var(--mono);font-size:13px;color:var(--ink);flex:none}
+.crs-del{width:26px;height:26px;flex:none;border:none;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.crs-empty{font-size:13px;color:var(--muted);padding:6px 2px}
+.crs-total{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;text-align:right}
