@@ -657,3 +657,6 @@ nav.tabs .tab.on{color:var(--primary)}
 .ff-grid input,.ff-grid select{border:1.5px solid var(--line);border-radius:8px;padding:8px 9px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff}
 .ff-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .ff-actions .btn{flex:1;min-width:120px}
+.ff-mig{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.ff-mig .ff-migrate{width:100%}
+.ff-mig-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
