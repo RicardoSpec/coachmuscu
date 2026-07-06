@@ -214,7 +214,7 @@
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance & protéines repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false, coursesOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
@@ -330,6 +330,37 @@
         save();if(afterAdd)afterAdd();};});
     });
   }
+  function coursesList(){if(!Array.isArray(state.courses))state.courses=[];return state.courses;}
+  function renderCourses(){
+    var host=document.getElementById("todayCourses");if(!host)return;
+    var list=coursesList();
+    var total=list.reduce(function(s,it){var p=parseFloat(String(it.prix).replace(",","."));return s+((it.bought&&!isNaN(p))?p:0);},0);
+    var boughtCount=list.filter(function(it){return it.bought;}).length;
+    var vtxt=list.length?(boughtCount+"/"+list.length+" acheté"+(total>0?" · "+nFmt(total)+" €":"")):"liste vide";
+    var head='<button type="button" class="hcol courses-toggle'+(coursesOpen?" open":"")+'"><span class="hcol-ic">🛒</span><span class="hcol-txt"><span class="hcol-k">Courses</span><span class="hcol-v">'+esc(vtxt)+'</span></span><span class="hcol-chev">▾</span></button>';
+    var body="";
+    if(coursesOpen){
+      var cat=foodCatalog();var have={};list.forEach(function(it){have[(""+it.name).trim().toLowerCase()]=1;});
+      var sug=[];Object.keys(cat).forEach(function(k){var c=cat[k];if(!c.nut||c.cat!=="staples"||have[k])return;var p=num(c.nut.prot);if(isNaN(p)||p<8)return;sug.push({name:c.name,p:p});});
+      sug.sort(function(a,b){return b.p-a.p;});sug=sug.slice(0,6);
+      var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à acheter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
+      var addRow='<div class="crs-add"><input type="text" class="crs-name" placeholder="Article (ex. Skyr ×2)"><input type="text" inputmode="decimal" class="crs-prix" placeholder="€"><button type="button" class="btn accent crs-addbtn">Ajouter</button></div>';
+      var rows=list.length?list.map(function(it,i){var p=parseFloat(String(it.prix).replace(",","."));return '<div class="crs-item'+(it.bought?" bought":"")+'" data-i="'+i+'"><button type="button" class="crs-check" data-i="'+i+'" aria-label="Acheté">'+(it.bought?"✓":"")+'</button><span class="crs-nm">'+esc(it.name)+'</span>'+(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"")+'<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>';}).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute des articles à acheter, ou pioche dans les suggestions.</div>';
+      var totalRow=total>0?'<div class="crs-total">Total acheté : <b>'+nFmt(total)+' €</b></div>':"";
+      body='<div class="crs-body">'+addRow+sugHTML+'<div class="crs-list">'+rows+'</div>'+totalRow+'</div>';
+    }
+    host.innerHTML=head+body;
+    host.querySelector(".courses-toggle").onclick=function(){coursesOpen=!coursesOpen;renderCourses();};
+    if(coursesOpen){
+      var nameEl=host.querySelector(".crs-name"),prixEl=host.querySelector(".crs-prix");
+      function addItem(nm,prix){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,ts:Date.now()});save();renderCourses();}
+      var ab=host.querySelector(".crs-addbtn");if(ab)ab.onclick=function(){addItem(nameEl.value,prixEl.value);};
+      if(nameEl)nameEl.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addItem(nameEl.value,prixEl.value);}});
+      host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){addItem(b.getAttribute("data-n"),"");};});
+      host.querySelectorAll(".crs-check").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(l[i]){l[i].bought=!l[i].bought;save();renderCourses();}};});
+      host.querySelectorAll(".crs-del").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(i>=0&&i<l.length){l.splice(i,1);save();renderCourses();}};});
+    }
+  }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
     var nut=document.getElementById("todayNutri");
@@ -363,6 +394,7 @@
     renderChip();
     renderHero();
     renderTodayNutri();
+    renderCourses();
     buildDayForm(document.getElementById("todayLog"),todayStr());
     var bn=document.getElementById("backupNudge");
     if(bn){var st=backupStaleDays();var stale=(st===null||st>=10);
