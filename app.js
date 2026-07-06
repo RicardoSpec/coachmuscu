@@ -305,6 +305,25 @@
     var r=Math.round(130-tot.prot);
     return 'Encore ~'+r+' g. Panier TGTG plutôt sucré/gras ? Complète avec un bloc protéiné (skyr, 2 œufs, whey) — bouton 🥡 ci-dessous.';
   }
+  function wireTgtg(bt,pn,d,afterAdd){
+    if(!bt||!pn)return;
+    bt.addEventListener("click",function(){
+      if(!pn.hidden){pn.hidden=true;return;}
+      var tot=dayTotals(d),reste=Math.round(130-((tot&&tot.prot)||0));
+      if(reste<=0){pn.innerHTML='<div class="tgtg-ok">✓ Cible protéines atteinte — rien à rattraper aujourd\'hui.</div>';pn.hidden=false;return;}
+      var cat=foodCatalog(),opts=[];
+      Object.keys(cat).forEach(function(k){var it=cat[k];if(!it.nut)return;var p=num(it.nut.prot);if(isNaN(p)||p<8)return;opts.push({name:it.name,unit:it.unit,nut:it.nut,p:p,st:it.cat==="staples"?1:0});});
+      opts.sort(function(a,b){return (b.st-a.st)||(b.p-a.p);});opts=opts.slice(0,4);
+      if(!opts.length){pn.innerHTML='<div class="tgtg-ok">Aucun aliment protéiné dans ta base — enrichis base_aliments.json.</div>';pn.hidden=false;return;}
+      pn.innerHTML='<div class="tgtg-head">Il te reste ~'+reste+' g de protéines — ajoute en un tap :</div>'+
+        opts.map(function(o,i){return '<button type="button" class="tgtg-opt" data-i="'+i+'"><span class="to-n">'+esc(o.name)+'</span><span class="to-p">+'+nFmt(o.p)+' g</span><span class="to-b">'+esc(o.nut.base)+' '+esc(o.nut.baseUnit||o.unit||"g")+'</span></button>';}).join("");
+      pn.hidden=false;
+      pn.querySelectorAll(".tgtg-opt").forEach(function(b){b.onclick=function(){var o=opts[+b.getAttribute("data-i")];
+        var xx=day(d);if(!xx.mealItems)xx.mealItems={pd:[],dj:[],dn:[],co:[]};if(!xx.mealItems.co)xx.mealItems.co=[];
+        xx.mealItems.co.push({name:o.name,qty:""+o.nut.base,unit:o.nut.baseUnit||o.unit||"g",nut:JSON.parse(JSON.stringify(o.nut))});
+        save();if(afterAdd)afterAdd();};});
+    });
+  }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
     var nut=document.getElementById("todayNutri");
@@ -318,14 +337,14 @@
         var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
         if(tot){
           var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button></div>';
+          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }else{
-          body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div></div>';
+          body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }
       }
       nut.innerHTML=head+body;
       nut.querySelector(".nutri-toggle").onclick=function(){nutriOpen=!nutriOpen;renderTodayNutri();};
-      var tg=nut.querySelector(".nutri-tgtg");if(tg)tg.onclick=function(){var b=document.querySelector("#todayLog .tgtg-btn");if(b){b.click();if(b.scrollIntoView)b.scrollIntoView({behavior:"smooth",block:"center"});}};
+      var tg=nut.querySelector(".nutri-tgtg"),tp=nut.querySelector(".tgtg-panel");if(tg&&tp)wireTgtg(tg,tp,todayStr(),function(){renderTodayNutri();buildDayForm(document.getElementById("todayLog"),todayStr());});
     }
     var sp=document.getElementById("stickyProt");
     if(sp){
@@ -613,8 +632,7 @@
         '<div class="field"><label>Repas</label>'+
           MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           '<div class="meal-total"></div>'+
-          '<button type="button" class="btn ghost tgtg-btn">🥡 J\'ai mangé un TGTG — complète en protéines</button>'+
-          '<div class="tgtg-panel" hidden></div>'+
+          (d!==todayStr()?'<button type="button" class="btn ghost tgtg-btn">🥡 J\'ai mangé un TGTG — complète en protéines</button><div class="tgtg-panel" hidden></div>':'')+
         '</div>'+
         '<div class="field supps-field">'+
           '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
@@ -691,24 +709,7 @@
 
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
     function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(t.prot)+" g protéines";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}if(d===todayStr())renderTodayNutri();}
-    (function(){var bt=container.querySelector(".tgtg-btn"),pn=container.querySelector(".tgtg-panel");if(!bt||!pn)return;
-      bt.addEventListener("click",function(){
-        if(!pn.hidden){pn.hidden=true;return;}
-        var tot=dayTotals(d),reste=Math.round(130-((tot&&tot.prot)||0));
-        if(reste<=0){pn.innerHTML='<div class="tgtg-ok">✓ Cible protéines atteinte — rien à rattraper aujourd\'hui.</div>';pn.hidden=false;return;}
-        var cat=foodCatalog(),opts=[];
-        Object.keys(cat).forEach(function(k){var it=cat[k];if(!it.nut)return;var p=num(it.nut.prot);if(isNaN(p)||p<8)return;opts.push({name:it.name,unit:it.unit,nut:it.nut,p:p,st:it.cat==="staples"?1:0});});
-        opts.sort(function(a,b){return (b.st-a.st)||(b.p-a.p);});opts=opts.slice(0,4);
-        if(!opts.length){pn.innerHTML='<div class="tgtg-ok">Aucun aliment protéiné dans ta base — enrichis base_aliments.json.</div>';pn.hidden=false;return;}
-        pn.innerHTML='<div class="tgtg-head">Il te reste ~'+reste+' g de protéines — ajoute en un tap :</div>'+
-          opts.map(function(o,i){return '<button type="button" class="tgtg-opt" data-i="'+i+'"><span class="to-n">'+esc(o.name)+'</span><span class="to-p">+'+nFmt(o.p)+' g</span><span class="to-b">'+esc(o.nut.base)+' '+esc(o.nut.baseUnit||o.unit||"g")+'</span></button>';}).join("");
-        pn.hidden=false;
-        pn.querySelectorAll(".tgtg-opt").forEach(function(b){b.onclick=function(){var o=opts[+b.getAttribute("data-i")];
-          if(!x.mealItems)x.mealItems={pd:[],dj:[],dn:[],co:[]};if(!x.mealItems.co)x.mealItems.co=[];
-          x.mealItems.co.push({name:o.name,qty:""+o.nut.base,unit:o.nut.baseUnit||o.unit||"g",nut:JSON.parse(JSON.stringify(o.nut))});
-          save();buildDayForm(container,d);};});
-      });
-    })();
+    wireTgtg(container.querySelector(".tgtg-btn"),container.querySelector(".tgtg-panel"),d,function(){buildDayForm(container,d);});
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1};
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
