@@ -208,7 +208,7 @@
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
-  var homeCalOpen=false, heroOpen=false;  /* accueil : calendrier & prochaine séance repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance & protéines repliés par défaut */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
@@ -298,17 +298,34 @@
     }
   }
 
+  function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=t.prot;n++;}}return n?{avg:s/n,n:n}:null;}
+  function nutriTip(tot){
+    if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
+    if(tot.prot>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
+    var r=Math.round(130-tot.prot);
+    return 'Encore ~'+r+' g. Panier TGTG plutôt sucré/gras ? Complète avec un bloc protéiné (skyr, 2 œufs, whey) — bouton 🥡 ci-dessous.';
+  }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
     var nut=document.getElementById("todayNutri");
     if(nut){
-      if(tot){
-        var reste=Math.round(130-tot.prot);
-        var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-        nut.innerHTML='<div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>';
-      }else{
-        nut.innerHTML='<div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>';
+      var reste=tot?Math.round(130-tot.prot):130;
+      var vtxt=(tot?fr1(tot.prot):"0")+' g'+(tot?(tot.prot>=130?' · ✓ cible':' · encore '+reste+' g'):' · à noter');
+      var head='<button type="button" class="hcol nutri-toggle'+(nutriOpen?' open':'')+'"><span class="hcol-ic">🥩</span><span class="hcol-txt"><span class="hcol-k">Protéines du jour</span><span class="hcol-v">'+vtxt+'</span></span><span class="hcol-chev">▾</span></button>';
+      var body="";
+      if(nutriOpen){
+        var a7=protAvg7();
+        var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
+        if(tot){
+          var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
+          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button></div>';
+        }else{
+          body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div></div>';
+        }
       }
+      nut.innerHTML=head+body;
+      nut.querySelector(".nutri-toggle").onclick=function(){nutriOpen=!nutriOpen;renderTodayNutri();};
+      var tg=nut.querySelector(".nutri-tgtg");if(tg)tg.onclick=function(){var b=document.querySelector("#todayLog .tgtg-btn");if(b){b.click();if(b.scrollIntoView)b.scrollIntoView({behavior:"smooth",block:"center"});}};
     }
     var sp=document.getElementById("stickyProt");
     if(sp){
@@ -550,10 +567,11 @@
     host.querySelectorAll(".st-type").forEach(function(sel){sel.addEventListener("change",function(){var i=parseInt(sel.closest(".stool-row").getAttribute("data-i"),10);day(d).stools[i].type=sel.value;save();});});
     host.querySelectorAll(".st-del").forEach(function(b){b.addEventListener("click",function(){var i=parseInt(b.getAttribute("data-i"),10);day(d).stools.splice(i,1);save();renderStools(host,d);});});
     host.querySelector(".st-add").addEventListener("click",function(){day(d).stools.push({type:""});save();renderStools(host,d);});
+    var wrap=host.closest&&host.closest(".supps-field");if(wrap){var m=wrap.querySelector(".tr-meta");if(m)m.textContent=arr.length?arr.length:"";}
   }
 
   /* ---------------- Formulaire de journée ---------------- */
-  var suppsOpen=false, routinesOpen=false;  /* blocs Compléments & Routines repliés par défaut */
+  var suppsOpen=false, routinesOpen=false, transitOpen=false;  /* blocs Compléments / Routines / Transit repliés par défaut */
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
@@ -586,13 +604,16 @@
         '<div class="field supps-field">'+
           '<button type="button" class="rx-toggle supps-toggle'+(routinesOpen?' open':'')+'"><span class="supps-ttl">Routines — ce qui te fait du bien</span><span class="supps-meta rx-meta"></span><span class="supps-chev">▾</span></button>'+
           '<div class="rx-body supps-body'+(routinesOpen?'':' collapsed')+'">'+
-            (typeof ROUTINES!=="undefined"?ROUTINES:[]).map(function(r){return '<label class="supp"><input type="checkbox" class="f-rx" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span></label>';}).join("")+
+            (typeof ROUTINES!=="undefined"?ROUTINES:[]).map(function(r){var info=r.link?'<button type="button" class="rx-info" data-rx="'+r.id+'" aria-label="Infos">i</button>':'';var help=r.link?'<div class="rx-help" id="rxhelp-'+r.id+'"><a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.linkLabel||"Ouvrir")+' ↗</a></div>':'';return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-rx" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span>'+info+'</label>'+help+'</div>';}).join("")+
             '<div class="xtras rx-x">'+((x.routinesX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="rx" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
             '<input class="x-in rx-xin" placeholder="Autre activité puis Entrée…">'+
             '<div class="supp-hint">Coche ce que tu as fait aujourd\'hui — la régularité compte plus que la quantité.</div>'+
           '</div>'+
         '</div>'+
-        '<div class="field"><label>Transit — passages à la selle</label><div class="stools f-stools"></div></div>'+
+        '<div class="field supps-field">'+
+          '<button type="button" class="tr-toggle supps-toggle'+(transitOpen?' open':'')+'"><span class="supps-ttl">Transit — passages à la selle</span><span class="supps-meta tr-meta"></span><span class="supps-chev">▾</span></button>'+
+          '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
+        '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
       '</div>';
 
@@ -611,6 +632,8 @@
       cb.addEventListener("change",function(){if(!x.routines)x.routines={};x.routines[id]=cb.checked;if(id==="medit")x.meditation=cb.checked;save();updRxMeta();});
     });
     (function(){var tg=container.querySelector(".rx-toggle");if(!tg)return;tg.addEventListener("click",function(){routinesOpen=!routinesOpen;tg.classList.toggle("open",routinesOpen);var body=container.querySelector(".rx-body");if(body)body.classList.toggle("collapsed",!routinesOpen);});})();
+    container.querySelectorAll(".rx-info").forEach(function(bt){bt.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();var h=container.querySelector("#rxhelp-"+bt.getAttribute("data-rx"));if(h)h.classList.toggle("open");});});
+    (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
     (function(){var si=container.querySelector(".supps-xin");if(si)si.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(si.value||"").trim();if(!v)return;if(!x.suppsX)x.suppsX=[];x.suppsX.push(v);save();buildDayForm(container,d);}});
       var ri=container.querySelector(".rx-xin");if(ri)ri.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(ri.value||"").trim();if(!v)return;if(!x.routinesX)x.routinesX=[];x.routinesX.push(v);save();buildDayForm(container,d);}});
       container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
