@@ -116,6 +116,8 @@
     }catch(e){}
   }
   function foodFixMap(){if(!state.foodFix||typeof state.foodFix!=="object")state.foodFix={};return state.foodFix;}
+  function countLoggedFood(k){var n=0;Object.keys(state.days).forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim().toLowerCase()===k)n++;});});});return n;}
+  function migrateFood(k){var def=foodCatalog()[k];if(!def||!def.nut)return 0;var n=def.nut,c=0;Object.keys(state.days).forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim().toLowerCase()===k){it.unit=def.unit;it.nut={base:n.base,baseUnit:n.baseUnit,kcal:n.kcal,prot:n.prot,gluc:n.gluc,lip:n.lip,portion:n.portion};c++;}});});});return c;}
   function loggedFoods(){var seen={},out=[];Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name){var nm=(""+it.name).trim(),k=nm.toLowerCase();if(k&&!seen[k]){seen[k]=1;out.push(nm);}}});});});out.sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});return out;}
   function foodCatalog(){var cat={};
     (FOOD_DB||[]).forEach(function(f){var k=(""+f.name).trim().toLowerCase();if(k)cat[k]={name:(""+f.name).trim(),unit:f.unit||"g",nut:f.nut||null,ref:true,cat:f.cat};});
@@ -1280,6 +1282,7 @@
               '<label>Protéines g (cette base)<input type="number" inputmode="decimal" step="any" class="ff-prot" value="'+esc(n.prot||"")+'"></label>'+
             '</div>'+
             '<div class="ff-actions"><button class="btn accent ff-save" data-k="'+esc(k)+'">Enregistrer</button>'+(fixed?'<button class="btn ghost ff-reset" data-k="'+esc(k)+'">Rétablir</button>':'')+'<button class="btn ghost ff-cancel">Annuler</button></div>'+
+            (fixed?(function(){var mc=countLoggedFood(k);return mc>0?'<div class="ff-mig"><button class="btn ghost ff-migrate" data-k="'+esc(k)+'" data-n="'+mc+'">↻ Corriger aussi les '+mc+' repas déjà notés</button><div class="ff-mig-note">Réécrit l\'historique de cet aliment avec ces valeurs (quantités conservées). Une sauvegarde est téléchargée avant.</div></div>':'';})():'')+
           '</div>';
         }
         return '<div class="set-row ff-pick" data-k="'+esc(k)+'"><span class="set-ic">🍽</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</span><span class="set-sub">'+esc(sub)+'</span></span><span class="sess-arrow">›</span></div>';
@@ -1327,6 +1330,12 @@
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
     host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     host.querySelectorAll(".ff-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodFix)delete state.foodFix[k];save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+    host.querySelectorAll(".ff-migrate").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k"),cnt=b.getAttribute("data-n");
+      if(!confirm("Réécrire "+cnt+" repas déjà notés de « "+k+" » avec les valeurs corrigées ?\n\nLes quantités sont conservées (comptées dans la nouvelle unité). Une sauvegarde va d'abord être téléchargée — réversible en la réimportant."))return;
+      try{exportBackup();}catch(e){}
+      var done=migrateFood(k);save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();
+      try{alert(done+" repas mis à jour. Vérifie tes totaux ; en cas de souci, réimporte la sauvegarde téléchargée.");}catch(e){}
+    };});
     wireActForm();wireDeadlineForm();
   }
   /* ---------------- Sauvegarde / restauration ---------------- */
