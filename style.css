@@ -683,3 +683,17 @@ nav.tabs .tab.on{color:var(--primary)}
 .crs-del{width:26px;height:26px;flex:none;border:none;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
 .crs-empty{font-size:13px;color:var(--muted);padding:6px 2px}
 .crs-total{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;text-align:right}
+
+/* Réglages — section aliments repliable + recherche figée + liste bornée */
+.ff-sectog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.ff-sectog .set-sec-h{flex:1;margin:0}
+.ff-count{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--muted);background:var(--none-bg);border-radius:999px;padding:2px 8px;flex:none}
+.ff-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
+.ff-sectog.open .hcol-chev{transform:rotate(180deg)}
+.ff-secbody{margin-top:12px}
+.ff-search{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;margin-bottom:8px}
+.ff-scroll{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px}
+
+/* Courses — correctif largeur bouton Ajouter (le .btn est en width:100%) */
+.crs-add .btn{width:auto;flex:none;padding:11px 16px}
+.crs-add .crs-name{flex:1;min-width:0}
