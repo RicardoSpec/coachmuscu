@@ -442,19 +442,26 @@
         if(isSec){lastTxt=prev.map(function(x){var v=(x&&x.r!=="")?x.r:"–";return v+" "+secLbl;}).join(" · ");}
         else{lastTxt=prev.map(function(x){var kg=(x&&x.kg!=="")?x.kg:"–";var r=(x&&x.r!=="")?x.r:"–";return kg+"×"+r;}).join(" · ");}
       }
+      var _a=s.sets[ex.id]||[],filled=0;
+      for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
+      var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
-          '<div class="exo-top"><div class="nm">'+ex.name+'</div>'+
-            '<div style="display:flex;align-items:center;gap:8px"><span class="tg">'+ex.target+'</span>'+
-            '<button class="info-btn" data-help="'+ex.id+'" aria-label="Aide">i</button></div></div>'+
-          (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
-          '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
-          '<div class="help" id="help-'+ex.id+'">'+ex.help+
-            '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
+          '<div class="exo-band" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="false">'+
+            '<span class="nm">'+ex.name+'</span>'+
+            '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
-          '<div class="sets">'+setsHTML+'</div>'+
-          progHTML(b,c,ex.id)+
-          '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
+          '<div class="exo-body collapsed" id="body-'+ex.id+'">'+
+            '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Explication">i&nbsp;Explication</button></div>'+
+            (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
+            '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
+            '<div class="help" id="help-'+ex.id+'">'+ex.help+
+              '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
+            '</div>'+
+            '<div class="sets">'+setsHTML+'</div>'+
+            progHTML(b,c,ex.id)+
+            '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
+          '</div>'+
         '</div>';
     });
     if(!s.extra)s.extra=[];
@@ -483,6 +490,13 @@
       if(rEl)rEl.addEventListener("input",upd);
     });
     wrap.querySelectorAll(".info-btn").forEach(function(btn){btn.addEventListener("click",function(){document.getElementById("help-"+btn.getAttribute("data-help")).classList.toggle("open");});});
+    function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
+    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var arr=s.sets[id]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
+    wrap.querySelectorAll(".exo-band").forEach(function(band){
+      function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");refreshChip(id);}
+      band.addEventListener("click",tog);
+      band.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog();}});
+    });
     wrap.querySelectorAll(".rest-chip").forEach(function(ch){ch.addEventListener("click",function(){startRest(parseInt(ch.getAttribute("data-sec"),10));});});
     wrap.querySelectorAll(".rest-btns button[data-sec]").forEach(function(bt){bt.addEventListener("click",function(){startRest(parseInt(bt.getAttribute("data-sec"),10));});});
     var rs=wrap.querySelector("#restStop");if(rs)rs.addEventListener("click",stopRest);
