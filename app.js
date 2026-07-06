@@ -409,26 +409,39 @@
       '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+(s.done?'✓ Séance faite — annuler':'Marquer la séance comme faite')+'</button></div>'+
       (s.done?'<div class="donedate"><label>Faite le <input type="date" id="doneDate" value="'+esc(s.date||todayStr())+'"></label></div>':'')+
       '<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns">'+
-        '<button data-sec="30">30 s</button><button data-sec="60">1:00</button><button data-sec="90">1:30</button><button data-sec="120">2:00</button><button class="stop" id="restStop">Stop</button>'+
+        '<button data-sec="30">30 s</button><button data-sec="45">45 s</button><button data-sec="60">1:00</button><button data-sec="90">1:30</button><button data-sec="120">2:00</button><button class="stop" id="restStop">Stop</button>'+
       '</div></div>';
     var exosHTML="";
     p.exos.forEach(function(ex){
       if(!s.sets[ex.id])s.sets[ex.id]=[];
       var prev=prevSets(b,w,c,ex.id);
-      var u=ex.unit==="sec"?"sec":"reps";
+      var isSec=ex.unit==="sec";
+      var perSide=/\/côté/.test(ex.target||"");
+      var secLbl=perSide?"s/côté":"s";
+      var secTgt=(String(ex.target).match(/(\d+)\s*s/)||[])[1]||"s";
       var rest=restFor(ex.target);
       var setsHTML="";
       for(var i=0;i<ex.sets;i++){
-        var pk=(prev&&prev[i]&&prev[i].kg!=="")?prev[i].kg:"kg";
-        var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:u;
-        setsHTML+='<div class="set" data-exo="'+ex.id+'" data-set="'+i+'">'+
-          '<span class="sn">Série '+(i+1)+'</span>'+
-          '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>kg</b></span>'+
-          '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps</b></span>'+
-        '</div>';
+        var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:(isSec?secTgt:"reps");
+        if(isSec){
+          setsHTML+='<div class="set sec" data-exo="'+ex.id+'" data-set="'+i+'">'+
+            '<span class="sn">Série '+(i+1)+'</span>'+
+            '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>'+secLbl+'</b></span>'+
+          '</div>';
+        }else{
+          var pk=(prev&&prev[i]&&prev[i].kg!=="")?prev[i].kg:"kg";
+          setsHTML+='<div class="set" data-exo="'+ex.id+'" data-set="'+i+'">'+
+            '<span class="sn">Série '+(i+1)+'</span>'+
+            '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>kg</b></span>'+
+            '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps</b></span>'+
+          '</div>';
+        }
       }
       var lastTxt="";
-      if(prev){lastTxt=prev.map(function(x){var kg=(x&&x.kg!=="")?x.kg:"–";var r=(x&&x.r!=="")?x.r:"–";return kg+"×"+r;}).join(" · ");}
+      if(prev){
+        if(isSec){lastTxt=prev.map(function(x){var v=(x&&x.r!=="")?x.r:"–";return v+" "+secLbl;}).join(" · ");}
+        else{lastTxt=prev.map(function(x){var kg=(x&&x.kg!=="")?x.kg:"–";var r=(x&&x.r!=="")?x.r:"–";return kg+"×"+r;}).join(" · ");}
+      }
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
           '<div class="exo-top"><div class="nm">'+ex.name+'</div>'+
@@ -462,11 +475,12 @@
     wrap.querySelectorAll(".set").forEach(function(row){
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
       var rec=(s.sets[exo]&&s.sets[exo][idx])||{kg:"",r:""};
-      row.querySelector(".in-kg").value=rec.kg||"";
-      row.querySelector(".in-r").value=rec.r||"";
-      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:row.querySelector(".in-kg").value,r:row.querySelector(".in-r").value};save();}
-      row.querySelector(".in-kg").addEventListener("input",upd);
-      row.querySelector(".in-r").addEventListener("input",upd);
+      var kgEl=row.querySelector(".in-kg"),rEl=row.querySelector(".in-r");
+      if(kgEl)kgEl.value=rec.kg||"";
+      if(rEl)rEl.value=rec.r||"";
+      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};save();}
+      if(kgEl)kgEl.addEventListener("input",upd);
+      if(rEl)rEl.addEventListener("input",upd);
     });
     wrap.querySelectorAll(".info-btn").forEach(function(btn){btn.addEventListener("click",function(){document.getElementById("help-"+btn.getAttribute("data-help")).classList.toggle("open");});});
     wrap.querySelectorAll(".rest-chip").forEach(function(ch){ch.addEventListener("click",function(){startRest(parseInt(ch.getAttribute("data-sec"),10));});});
