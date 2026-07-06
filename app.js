@@ -115,9 +115,13 @@
       }).catch(function(){});
     }catch(e){}
   }
+  function foodFixMap(){if(!state.foodFix||typeof state.foodFix!=="object")state.foodFix={};return state.foodFix;}
+  function loggedFoods(){var seen={},out=[];Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name){var nm=(""+it.name).trim(),k=nm.toLowerCase();if(k&&!seen[k]){seen[k]=1;out.push(nm);}}});});});out.sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});return out;}
   function foodCatalog(){var cat={};
     (FOOD_DB||[]).forEach(function(f){var k=(""+f.name).trim().toLowerCase();if(k)cat[k]={name:(""+f.name).trim(),unit:f.unit||"g",nut:f.nut||null,ref:true,cat:f.cat};});
-    Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){cat[(""+it.name).trim().toLowerCase()]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});
+    Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){var k=(""+it.name).trim().toLowerCase();var ex=cat[k];if(!ex||!ex.ref)cat[k]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});
+    var fx=state.foodFix||{};Object.keys(fx).forEach(function(k){if(!cat[k])return;var f=fx[k]||{};var bn=cat[k].nut||{};function pick(v,dv){return (v!=null&&v!=="")?v:dv;}var u=pick(f.unit,bn.baseUnit||cat[k].unit||"g");
+      cat[k]={name:cat[k].name,unit:u,nut:{base:pick(f.base,bn.base||"1"),baseUnit:u,kcal:pick(f.kcal,bn.kcal||""),prot:pick(f.prot,bn.prot||""),gluc:pick(f.gluc,bn.gluc||""),lip:pick(f.lip,bn.lip||""),portion:bn.portion||""},ref:cat[k].ref,cat:cat[k].cat,fixed:true};});
     return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
   function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base);var q=num(it.qty);var f;
@@ -1232,6 +1236,7 @@
     };
   }
   var settingsSessSel=null;  /* "b1_A" en édition, ou null */
+  var settingsFoodSel=null;  /* clé (nom minuscule) d'aliment en correction, ou null */
   function sessExoRow(ex,i){
     return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
       '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
@@ -1259,6 +1264,27 @@
   function renderSettings(){
     var host=document.getElementById("settingsBody");if(!host)return;
     if(settingsSessSel){renderSessEditor(host);return;}
+    var _cat=foodCatalog(),_lf=loggedFoods();
+    var fixSec='<div class="set-sec"><div class="set-sec-h">Aliments &amp; unités</div>'+
+      '<p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme). La correction s\'applique à tes prochains ajouts et aux totaux du jour ; « Rétablir » l\'annule. Les repas déjà notés ne changent pas.</p>'+
+      (_lf.length?_lf.map(function(nm){var k=nm.toLowerCase();var c=_cat[k]||{};var n=c.nut||{};var fixed=!!(state.foodFix&&state.foodFix[k]);
+        var pu=(n.baseUnit==="g"||n.baseUnit==="ml")?((n.base||"?")+" "+n.baseUnit):("×"+(n.base||"1")+" "+(n.baseUnit||"unité"));
+        var sub=(n.prot!==""&&n.prot!=null&&!isNaN(num(n.prot)))?(fr1(num(n.prot))+" g prot / "+pu):"valeurs à renseigner";
+        if(settingsFoodSel===k){
+          return '<div class="ff-edit">'+
+            '<div class="ff-name">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</div>'+
+            '<div class="ff-grid">'+
+              '<label>Unité<select class="ff-unit">'+unitOptions(c.unit||n.baseUnit||"g")+'</select></label>'+
+              '<label>Quantité de base<input type="number" inputmode="decimal" step="any" class="ff-base" value="'+esc(n.base||"1")+'"></label>'+
+              '<label>kcal (cette base)<input type="number" inputmode="decimal" step="any" class="ff-kcal" value="'+esc(n.kcal||"")+'"></label>'+
+              '<label>Protéines g (cette base)<input type="number" inputmode="decimal" step="any" class="ff-prot" value="'+esc(n.prot||"")+'"></label>'+
+            '</div>'+
+            '<div class="ff-actions"><button class="btn accent ff-save" data-k="'+esc(k)+'">Enregistrer</button>'+(fixed?'<button class="btn ghost ff-reset" data-k="'+esc(k)+'">Rétablir</button>':'')+'<button class="btn ghost ff-cancel">Annuler</button></div>'+
+          '</div>';
+        }
+        return '<div class="set-row ff-pick" data-k="'+esc(k)+'"><span class="set-ic">🍽</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</span><span class="set-sub">'+esc(sub)+'</span></span><span class="sess-arrow">›</span></div>';
+      }).join(""):'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
+    '</div>';
     var acts='<div class="set-sec"><div class="set-sec-h">Activités préparées</div>'+
       '<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
       actCard("muscu")+actCard("tri")+'</div>';
@@ -1282,7 +1308,7 @@
       '<p class="set-note">Un seul vocabulaire, partagé avec ton app de révisions DSCG. Touche un jour du calendrier pour lui donner un type ; il s\'applique aux deux apps (entraînement <em>et</em> heures de révision). Le type « normal » se déduit du jour (semaine / week-end).</p>'+
       (typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).filter(function(t){return t.id;}).map(function(t){
         return '<div class="dt-row"><span class="dt-ic">'+esc(t.icon||"•")+'</span><span class="dt-lbl">'+esc(t.label)+'</span><span class="dt-eff">'+(t.train===false?'pas d\'entraînement':'entraînement possible')+'</span></div>';
-      }).join("")+'</div>'+
+      }).join("")+'</div>'+fixSec+
       '<div class="set-sec"><div class="set-sec-h">Sauvegarde</div>'+
       '<p class="set-note">Tes données vivent dans ce navigateur. Exporte-les de temps en temps : si tu changes de téléphone ou vides le cache, tu pourras tout réimporter.</p>'+
       '<button class="btn accent bkp-btn" id="bkpExport">⬇️ Exporter mes données</button>'+
@@ -1297,6 +1323,10 @@
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
     host.querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-del");if(confirm("Supprimer cette échéance ?")){pRemoveDeadline(id);settingsEdit=null;renderSettings();renderCalendars();}};});
     var sa=document.getElementById("setAdd");if(sa)sa.onclick=function(){settingsEdit="new";renderSettings();};
+    host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();};});
+    var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
+    host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+    host.querySelectorAll(".ff-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodFix)delete state.foodFix[k];save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     wireActForm();wireDeadlineForm();
   }
   /* ---------------- Sauvegarde / restauration ---------------- */
@@ -1332,7 +1362,7 @@
     inp.click();
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
