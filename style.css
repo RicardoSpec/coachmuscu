@@ -142,6 +142,7 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 
 .sets{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .set{display:grid;grid-template-columns:54px 1fr 1fr;gap:8px;align-items:center}
+.set.sec{grid-template-columns:54px 1fr}
 .set .sn{font-size:12px;color:var(--muted);font-weight:700}
 .set input{width:100%;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:11px 8px;font-size:15px;font-family:inherit;text-align:center;background:#fff;-moz-appearance:textfield}
 .set input::-webkit-outer-spin-button,.set input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
