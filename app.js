@@ -661,16 +661,17 @@
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
     var chips='<div class="chips">'+SPORTS.map(function(sp){return '<button type="button" class="chip'+(x.sports.indexOf(sp)>-1?' on':'')+'" data-sport="'+sp+'">'+sp+'</button>';}).join("")+'</div>';
+    var isJournal=container.id==="journalLog";
     container.innerHTML=
       '<div class="card pad">'+
+        (isJournal?'<div class="meal-total-top"><div class="meal-total"></div></div>':'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
         '<div class="field"><label>Repas</label>'+
           MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
-          '<div class="meal-total"></div>'+
-          (d!==todayStr()?'<button type="button" class="btn ghost tgtg-btn">🥡 J\'ai mangé un TGTG — complète en protéines</button><div class="tgtg-panel" hidden></div>':'')+
+          (isJournal?'':'<div class="meal-total"></div>')+
         '</div>'+
         '<div class="field supps-field">'+
           '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
@@ -747,7 +748,6 @@
 
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
     function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(t.prot)+" g protéines";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}if(d===todayStr())renderTodayNutri();}
-    wireTgtg(container.querySelector(".tgtg-btn"),container.querySelector(".tgtg-panel"),d,function(){buildDayForm(container,d);});
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1};
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
@@ -858,6 +858,28 @@
     var delta=e[n-1].w-e[0].w;
     host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'"><polyline fill="none" stroke="#12466B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>'+dots+'</svg>'+
       '<div class="muted" style="margin-top:8px;font-size:13px">'+fr1(e[0].w)+' kg → '+fr1(e[n-1].w)+' kg · <b>'+(delta>=0?"+":"")+fr1(delta)+' kg</b> sur '+n+' relevés</div>';
+  }
+
+  /* ---------------- Progrès : protéines ---------------- */
+  function proteinEntries(){var arr=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)arr.push({d:d,p:t.prot});});arr.sort(function(a,b){return a.d<b.d?-1:1;});return arr;}
+  function renderProteinChart(){
+    var host=document.getElementById("proteinChart");if(!host)return;var e=proteinEntries();
+    if(e.length<2){host.innerHTML='<div class="empty">Note tes repas au moins 2 jours pour voir la courbe des protéines.</div>';return;}
+    var W=320,H=92,pad=8,TARGET=130;
+    var vals=e.map(function(x){return x.p;});
+    var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+    min=Math.min(min,TARGET);max=Math.max(max,TARGET);
+    if(max-min<10){max+=5;min-=5;}
+    var n=e.length;
+    function X(i){return pad+(i/(n-1))*(W-2*pad);}
+    function Y(p){return pad+(1-(p-min)/(max-min))*(H-2*pad);}
+    var pts=e.map(function(x,i){return X(i).toFixed(1)+","+Y(x.p).toFixed(1);}).join(" ");
+    var dots=e.map(function(x,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(x.p).toFixed(1)+'" r="2.6" fill="'+(x.p>=TARGET?"#34a96a":"#F4622B")+'"/>';}).join("");
+    var ty=Y(TARGET).toFixed(1);
+    var tline='<line x1="'+pad+'" y1="'+ty+'" x2="'+(W-pad)+'" y2="'+ty+'" stroke="#34a96a" stroke-width="1" stroke-dasharray="4 3" opacity="0.75"/>';
+    var avg=vals.reduce(function(s,v){return s+v;},0)/n,hits=vals.filter(function(v){return v>=TARGET;}).length;
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+tline+'<polyline fill="none" stroke="#12466B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>'+dots+'</svg>'+
+      '<div class="muted" style="margin-top:8px;font-size:13px">Moyenne <b>'+Math.round(avg)+' g</b> · cible 130 g atteinte <b>'+hits+'/'+n+'</b> jours · <span style="color:#34a96a">– – cible</span></div>';
   }
 
   /* ---------------- Progrès : régularité (14 j) ---------------- */
@@ -990,6 +1012,7 @@
       '<div class="stat"><div class="v">'+(stoolAvg?fr1(stoolAvg):'—')+'</div><div class="k">Selles / jour'+(domType?' · souvent type '+domType:'')+'</div></div>';
 
     renderWeightChart();
+    renderProteinChart();
     renderActivityGraph();
     document.getElementById("bilanText").value=buildWeeklySummary();
   }
@@ -1273,6 +1296,8 @@
   var settingsFoodSel=null;  /* clé (nom minuscule) d'aliment en correction, ou null */
   var settingsFoodOpen=false; /* section Aliments & unités repliée par défaut */
   var settingsFoodQuery=""; /* filtre de recherche de la liste d'aliments */
+  var settingsSecOpen={};  /* rubriques Réglages repliées par défaut (par id) */
+  function settingsSec(id,title,inner,open){return '<div class="set-sec"><button type="button" class="set-sectog'+(open?" open":"")+'" data-sec="'+id+'"><span class="set-sec-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-secbody">'+inner+'</div>':"")+'</div>';}
   function sessExoRow(ex,i){
     return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
       '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
@@ -1326,36 +1351,37 @@
         (_lf.length?'<input type="text" class="ff-search" placeholder="Rechercher un aliment…" value="'+esc(settingsFoodQuery||"")+'"><div class="ff-scroll">'+ffRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
       '</div>':"")+
     '</div>';
-    var acts='<div class="set-sec"><div class="set-sec-h">Activités préparées</div>'+
-      '<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
-      actCard("muscu")+actCard("tri")+'</div>';
+    var actsInner='<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
+      actCard("muscu")+actCard("tri");
     var rows=pDeadlines().map(function(d){
       if(settingsEdit===d.id)return deadlineForm(d);
       return '<div class="set-row"><span class="set-ic">'+esc(d.icon||"🎯")+'</span><span class="set-main"><span class="set-lbl">'+esc(d.label)+'</span><span class="set-sub">'+esc(frDateShort(d.date))+' '+dlYear(d.date)+' · J-'+Math.max(0,diffDays(d.date,todayStr()))+'</span></span><button class="set-edit" data-edit="'+d.id+'" aria-label="Modifier">✎</button><button class="set-del" data-del="'+d.id+'" aria-label="Supprimer">🗑</button></div>';
     }).join("");
     var addBlock=settingsEdit==="new"?deadlineForm(null):'<button class="btn ghost set-add" id="setAdd">+ Ajouter une échéance</button>';
-    var sessSec='<div class="set-sec"><div class="set-sec-h">Séances (personnalisation)</div>'+
-      '<p class="set-note">Modifie durablement tes séances : renomme, ajoute, retire ou ajuste les exercices et les séries. (Différent de l\'ajout à la volée dans une séance, qui reste ponctuel.)</p>'+
+    var objInner='<p class="set-note">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
+      (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock;
+    var sessInner='<p class="set-note">Modifie durablement tes séances : renomme, ajoute, retire ou ajuste les exercices et les séries. (Différent de l\'ajout à la volée dans une séance, qui reste ponctuel.)</p>'+
       BLOCK_ORDER.map(function(b){return '<div class="sess-blk">'+esc(PROGRAM_BLOCKS[b].name)+'</div>'+
         CODES.map(function(c){var p=progOf(b,c);var cust=progIsCustom(b,c);
           return '<div class="set-row sess-pick" data-sess="'+b+'_'+c+'"><span class="set-ic">💪</span><span class="set-main"><span class="set-lbl">Séance '+c+(cust?' <span class="sess-badge">modifiée</span>':'')+'</span><span class="set-sub">'+esc(p.title.replace(/^S[eé]ance [A-D]\s*—\s*/,""))+' · '+(p.exos?p.exos.length:0)+' exos</span></span><span class="sess-arrow">›</span></div>';
         }).join("");
-      }).join("")+'</div>';
-    host.innerHTML=acts+'<div class="set-sec"><div class="set-sec-h">Objectifs &amp; échéances</div>'+
-      '<p class="set-note">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
-      (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock+'</div>'+
-      sessSec+
-      '<div class="set-sec"><div class="set-sec-h">Types de jour</div>'+
-      '<p class="set-note">Un seul vocabulaire, partagé avec ton app de révisions DSCG. Touche un jour du calendrier pour lui donner un type ; il s\'applique aux deux apps (entraînement <em>et</em> heures de révision). Le type « normal » se déduit du jour (semaine / week-end).</p>'+
+      }).join("");
+    var dtInner='<p class="set-note">Un seul vocabulaire, partagé avec ton app de révisions DSCG. Touche un jour du calendrier pour lui donner un type ; il s\'applique aux deux apps (entraînement <em>et</em> heures de révision). Le type « normal » se déduit du jour (semaine / week-end).</p>'+
       (typeof DAY_TYPES!=="undefined"?DAY_TYPES:[]).filter(function(t){return t.id;}).map(function(t){
         return '<div class="dt-row"><span class="dt-ic">'+esc(t.icon||"•")+'</span><span class="dt-lbl">'+esc(t.label)+'</span><span class="dt-eff">'+(t.train===false?'pas d\'entraînement':'entraînement possible')+'</span></div>';
-      }).join("")+'</div>'+fixSec+
-      '<div class="set-sec"><div class="set-sec-h">Sauvegarde</div>'+
-      '<p class="set-note">Tes données vivent dans ce navigateur. Exporte-les de temps en temps : si tu changes de téléphone ou vides le cache, tu pourras tout réimporter.</p>'+
+      }).join("");
+    var bkpInner='<p class="set-note">Tes données vivent dans ce navigateur. Exporte-les de temps en temps : si tu changes de téléphone ou vides le cache, tu pourras tout réimporter.</p>'+
       '<button class="btn accent bkp-btn" id="bkpExport">⬇️ Exporter mes données</button>'+
       '<button class="btn ghost bkp-btn" id="bkpImport">⬆️ Importer une sauvegarde</button>'+
-      '<div class="bkp-when">'+((state.config&&state.config.lastBackup)?('Dernière sauvegarde : '+esc(frDateShort(state.config.lastBackup))+((backupStaleDays()>=7)?' · <span class="low">pense à en refaire une</span>':'')):'<span class="low">Aucune sauvegarde encore — fais-en une.</span>')+'</div>'+
-      '</div>';
+      '<div class="bkp-when">'+((state.config&&state.config.lastBackup)?('Dernière sauvegarde : '+esc(frDateShort(state.config.lastBackup))+((backupStaleDays()>=7)?' · <span class="low">pense à en refaire une</span>':'')):'<span class="low">Aucune sauvegarde encore — fais-en une.</span>')+'</div>';
+    host.innerHTML=
+      settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
+      settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
+      settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
+      settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
+      fixSec+
+      settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
+    host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
     var bi=document.getElementById("bkpImport");if(bi)bi.onclick=pickImport;
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
@@ -1412,7 +1438,7 @@
     inp.click();
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsSecOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
