@@ -706,3 +706,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .set-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
 .set-sectog.open .hcol-chev{transform:rotate(180deg)}
 .set-secbody{margin-top:12px}
+
+/* Variantes d'exercice (sélecteur dans le corps d'un exo) */
+.exo-var-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.exo-var-row label{font-size:11px;color:var(--muted);font-weight:600}
+.exo-var{border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;width:100%}
