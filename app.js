@@ -153,6 +153,7 @@
   function triDoneCount(){var n=0;TRI.forEach(function(wk){TRI_DISC.forEach(function(p){var r=state.tri[wk.w+"_"+p[0]];if(r&&r.done)n++;});});return n;}
 
   /* Charges de la dernière séance identique (même code, semaine/bloc antérieurs) */
+  function setKey(exId,v){return v?exId+"::"+v:exId;}
   function prevSets(b,w,c,exId){
     function pick(bl,wk){var ss=state.sessions[sessKey(bl,wk,c)];if(ss&&ss.sets&&ss.sets[exId]){var a=ss.sets[exId];for(var i=0;i<a.length;i++){if(a[i]&&(a[i].kg!==""||a[i].r!==""))return a;}}return null;}
     for(var ww=w-1;ww>=1;ww--){var r=pick(b,ww);if(r)return r;}
@@ -214,6 +215,7 @@
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
+  var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var homeCalOpen=false, heroOpen=false, nutriOpen=false, coursesOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -296,7 +298,7 @@
     hero.querySelector(".hero-toggle").onclick=function(){heroOpen=!heroOpen;renderHero();};
     if(heroOpen){
       if(muscu){
-        var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
+        var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
         var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
       }else{
         var gt=hero.querySelector("#goSessionTri");if(gt)gt.onclick=function(){currentTri={w:s.w,dz:s.disc};goSport("tri");var td=document.getElementById("triDetail");if(td&&td.scrollIntoView)td.scrollIntoView({behavior:"smooth",block:"start"});};
@@ -446,6 +448,7 @@
     host.querySelectorAll(".blk-toggle").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-blk");if(blockOpen)blockOpen[k]=!blockOpen[k];renderProgram();};});
     host.querySelectorAll(".cell").forEach(function(cell){
       cell.addEventListener("click",function(){
+        sessExpanded={};
         currentSel={block:cell.getAttribute("data-b"),w:parseInt(cell.getAttribute("data-w"),10),c:cell.getAttribute("data-c")};
         renderProgram();renderSessionDetail();
         var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});
@@ -471,8 +474,10 @@
       '</div></div>';
     var exosHTML="";
     p.exos.forEach(function(ex){
-      if(!s.sets[ex.id])s.sets[ex.id]=[];
-      var prev=prevSets(b,w,c,ex.id);
+      var curV=(s.variant&&s.variant[ex.id])||"";
+      var setK=setKey(ex.id,curV);
+      if(!s.sets[setK])s.sets[setK]=[];
+      var prev=prevSets(b,w,c,setK);
       var isSec=ex.unit==="sec";
       var perSide=/\/côté/.test(ex.target||"");
       var secLbl=perSide?"s/côté":"s";
@@ -482,13 +487,13 @@
       for(var i=0;i<ex.sets;i++){
         var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:(isSec?secTgt:"reps");
         if(isSec){
-          setsHTML+='<div class="set sec" data-exo="'+ex.id+'" data-set="'+i+'">'+
+          setsHTML+='<div class="set sec" data-exo="'+esc(setK)+'" data-set="'+i+'">'+
             '<span class="sn">Série '+(i+1)+'</span>'+
             '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>'+secLbl+'</b></span>'+
           '</div>';
         }else{
           var pk=(prev&&prev[i]&&prev[i].kg!=="")?prev[i].kg:"kg";
-          setsHTML+='<div class="set" data-exo="'+ex.id+'" data-set="'+i+'">'+
+          setsHTML+='<div class="set" data-exo="'+esc(setK)+'" data-set="'+i+'">'+
             '<span class="sn">Série '+(i+1)+'</span>'+
             '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>kg</b></span>'+
             '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps</b></span>'+
@@ -500,19 +505,18 @@
         if(isSec){lastTxt=prev.map(function(x){var v=(x&&x.r!=="")?x.r:"–";return v+" "+secLbl;}).join(" · ");}
         else{lastTxt=prev.map(function(x){var kg=(x&&x.kg!=="")?x.kg:"–";var r=(x&&x.r!=="")?x.r:"–";return kg+"×"+r;}).join(" · ");}
       }
-      var _a=s.sets[ex.id]||[],filled=0;
+      var _a=s.sets[setK]||[],filled=0;
       for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
       var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
-      var curV=(s.variant&&s.variant[ex.id])||"";
       var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
       var varHTML=isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)</label><select class="exo-var" data-exo="'+ex.id+'"><option value=""'+(curV===""?" selected":"")+'>Version standard</option>'+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>');
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
-          '<div class="exo-band" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="false">'+
+          '<div class="exo-band'+(sessExpanded[ex.id]?" open":"")+'" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="'+(sessExpanded[ex.id]?"true":"false")+'">'+
             '<span class="nm">'+ex.name+(curV?" — "+esc(curV):"")+'</span>'+
             '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
-          '<div class="exo-body collapsed" id="body-'+ex.id+'">'+
+          '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
             varHTML+
             '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Explication">i&nbsp;Explication</button></div>'+
             (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
@@ -521,7 +525,7 @@
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
-            progHTML(b,c,ex.id)+
+            progHTML(b,c,setK)+
             '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
           '</div>'+
         '</div>';
@@ -557,15 +561,11 @@
       var exId=sel.getAttribute("data-exo"),val=sel.value;
       if(val==="__autre"){var cst=prompt("Variante (ex. machine convergente, Smith, poulie basse…) :");if(!cst||!cst.trim()){sel.value=(s.variant&&s.variant[exId])||"";return;}val=cst.trim();}
       if(!s.variant)s.variant={};if(val)s.variant[exId]=val;else delete s.variant[exId];save();
-      var m=exoMeta(exId);if(!m)return;
-      var nmEl=wrap.querySelector('.exo-band[data-exo="'+exId+'"] .nm');if(nmEl)nmEl.textContent=m.name+(val?" — "+val:"");
-      var dl=wrap.querySelector("#body-"+exId+" .demo-link");if(dl)dl.href="https://www.youtube.com/results?search_query="+encodeURIComponent(m.name+(val?" "+val:"")+" musculation technique");
-      if(val&&!Array.prototype.some.call(sel.options,function(o){return o.value===val;})){var opt=document.createElement("option");opt.value=val;opt.textContent=val;sel.insertBefore(opt,sel.querySelector('option[value="__autre"]'));}
-      sel.value=val||"";
+      renderSessionDetail();
     };});
-    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var arr=s.sets[id]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
+    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var v=(s.variant&&s.variant[id])||"";var arr=s.sets[setKey(id,v)]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
     wrap.querySelectorAll(".exo-band").forEach(function(band){
-      function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");refreshChip(id);}
+      function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");sessExpanded[id]=!col;refreshChip(id);}
       band.addEventListener("click",tog);
       band.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog();}});
     });
