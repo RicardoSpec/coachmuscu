@@ -334,6 +334,8 @@
     });
   }
   function coursesList(){if(!Array.isArray(state.courses))state.courses=[];return state.courses;}
+  function logEatenToJournal(it){var d=todayStr();var x=day(d);if(!x.mealItems)x.mealItems={pd:[],dj:[],dn:[],co:[]};var mk=it.loggedMeal||"co";if(!x.mealItems[mk])x.mealItems[mk]=[];var nut=it.nut||null;if(!nut){var c=foodCatalog()[(""+it.name).trim().toLowerCase()];if(c&&c.nut)nut=c.nut;}x.mealItems[mk].push({name:it.name,qty:(nut&&nut.base!=null&&nut.base!=="")?(""+nut.base):"",unit:(nut&&nut.baseUnit)||it.unit||"g",nut:nut?JSON.parse(JSON.stringify(nut)):null,_src:it.id});it.loggedDay=d;it.loggedMeal=mk;}
+  function unlogFromJournal(it){var d=it.loggedDay||todayStr();var x=state.days[d];if(x&&x.mealItems){MEALS.forEach(function(m){if(x.mealItems[m.k])x.mealItems[m.k]=x.mealItems[m.k].filter(function(e){return e._src!==it.id;});});}it.loggedDay="";}
   function renderCourses(){
     var host=document.getElementById("todayCourses");if(!host)return;
     var list=coursesList();
@@ -350,9 +352,9 @@
       sug.sort(function(a,b){return b.p-a.p;});sug=sug.slice(0,6);
       var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à ajouter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
       var addRow='<div class="crs-add"><input type="text" class="crs-name" placeholder="Article (ex. Skyr ×2)"><input type="text" inputmode="decimal" class="crs-prix" placeholder="€"><button type="button" class="btn accent crs-addbtn">Ajouter</button></div>';
-      var help='<div class="crs-help">Touche le statut pour avancer : <b>à acheter → au frigo → mangé</b>. Le total dépensé (et le pont vers le budget) suit ce que tu passes « au frigo ».</div>';
+      var help='<div class="crs-help">Touche le statut pour avancer : <b>à acheter → au frigo → mangé</b>. Un article <b>mangé</b> s\'ajoute à tes repas du jour — choisis le repas à droite, les <b>protéines sont comptées</b>. Le repasser « au frigo » le retire du journal. Le total dépensé suit ce que tu passes « au frigo ».</div>';
       var ordered=list.map(function(it,i){return {it:it,i:i,st:stOf(it)};}).sort(function(a,b){return RANK[a.st]-RANK[b.st];});
-      var rows=list.length?ordered.map(function(o){var it=o.it,i=o.i,st=o.st;var p=parseFloat(String(it.prix).replace(",","."));return '<div class="crs-item st-'+st+'" data-i="'+i+'"><button type="button" class="crs-status" data-i="'+i+'">'+LBL[st]+'</button><span class="crs-nm">'+esc(it.name)+'</span>'+(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"")+'<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>';}).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute ce que tu comptes acheter, ou pioche dans les suggestions.</div>';
+      var rows=list.length?ordered.map(function(o){var it=o.it,i=o.i,st=o.st;var p=parseFloat(String(it.prix).replace(",","."));var right=st==="eaten"?'<select class="crs-meal" data-i="'+i+'" aria-label="Repas">'+MEALS.map(function(m){return '<option value="'+m.k+'"'+((it.loggedMeal||"co")===m.k?" selected":"")+'>'+esc(m.label)+'</option>';}).join("")+'</select>':(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"");return '<div class="crs-item st-'+st+'" data-i="'+i+'"><button type="button" class="crs-status" data-i="'+i+'">'+LBL[st]+'</button><span class="crs-nm">'+esc(it.name)+'</span>'+right+'<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>';}).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute ce que tu comptes acheter, ou pioche dans les suggestions.</div>';
       var totalRow=total>0?'<div class="crs-total">Total dépensé (au frigo + mangé) : <b>'+nFmt(total)+' €</b></div>':"";
       body='<div class="crs-body">'+addRow+sugHTML+help+'<div class="crs-list">'+rows+'</div>'+totalRow+'</div>';
     }
@@ -360,11 +362,12 @@
     host.querySelector(".courses-toggle").onclick=function(){coursesOpen=!coursesOpen;renderCourses();};
     if(coursesOpen){
       var nameEl=host.querySelector(".crs-name"),prixEl=host.querySelector(".crs-prix");
-      function addItem(nm,prix){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,eaten:false,ts:""});save();renderCourses();}
+      function addItem(nm,prix,nut,unit){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,eaten:false,ts:"",nut:nut||null,unit:unit||"",logged:false,loggedDay:"",loggedMeal:"co"});save();renderCourses();}
       var ab=host.querySelector(".crs-addbtn");if(ab)ab.onclick=function(){addItem(nameEl.value,prixEl.value);};
       if(nameEl)nameEl.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addItem(nameEl.value,prixEl.value);}});
-      host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){addItem(b.getAttribute("data-n"),"");};});
-      host.querySelectorAll(".crs-status").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();var it=l[i];if(!it)return;if(!it.bought){it.bought=true;it.eaten=false;it.ts=Date.now();}else if(!it.eaten){it.eaten=true;}else{it.bought=false;it.eaten=false;it.ts="";}save();renderCourses();};});
+      host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){var nm=b.getAttribute("data-n");var c=foodCatalog()[(""+nm).trim().toLowerCase()];addItem(nm,"",c&&c.nut,c&&c.unit);};});
+      host.querySelectorAll(".crs-status").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();var it=l[i];if(!it)return;var refresh=false;if(!it.bought){it.bought=true;it.eaten=false;it.ts=Date.now();}else if(!it.eaten){it.eaten=true;if(!it.logged){logEatenToJournal(it);it.logged=true;refresh=true;}}else{it.bought=false;it.eaten=false;it.ts="";if(it.logged){unlogFromJournal(it);it.logged=false;refresh=true;}}save();renderCourses();if(refresh){if(typeof renderTodayNutri==="function")renderTodayNutri();var tl=document.getElementById("todayLog");if(tl)buildDayForm(tl,todayStr());}};});
+      host.querySelectorAll(".crs-meal").forEach(function(sel){sel.onchange=function(){var i=+sel.getAttribute("data-i");var it=coursesList()[i];if(!it)return;if(it.logged)unlogFromJournal(it);it.loggedMeal=sel.value;if(it.eaten){logEatenToJournal(it);it.logged=true;}save();renderCourses();if(typeof renderTodayNutri==="function")renderTodayNutri();var tl=document.getElementById("todayLog");if(tl)buildDayForm(tl,todayStr());};});
       host.querySelectorAll(".crs-del").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(i>=0&&i<l.length){l.splice(i,1);save();renderCourses();}};});
     }
   }
