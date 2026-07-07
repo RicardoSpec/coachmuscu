@@ -720,3 +720,4 @@ nav.tabs .tab.on{color:var(--primary)}
 .crs-item.st-eaten{background:var(--done-bg);border-color:var(--done-line)}
 .crs-item.st-eaten .crs-nm{text-decoration:line-through;color:var(--muted)}
 .crs-help{font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:10px;padding:8px 10px;background:var(--none-bg);border-radius:8px}
+.crs-meal{flex:none;max-width:118px;border:1.5px solid var(--line);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;color:var(--ink);background:#fff}
