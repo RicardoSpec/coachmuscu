@@ -215,6 +215,7 @@
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var homeCalOpen=false, heroOpen=false, nutriOpen=false, coursesOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
@@ -502,18 +503,22 @@
       var _a=s.sets[ex.id]||[],filled=0;
       for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
       var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
+      var curV=(s.variant&&s.variant[ex.id])||"";
+      var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
+      var varHTML=isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)</label><select class="exo-var" data-exo="'+ex.id+'"><option value=""'+(curV===""?" selected":"")+'>Version standard</option>'+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>');
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
           '<div class="exo-band" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="false">'+
-            '<span class="nm">'+ex.name+'</span>'+
+            '<span class="nm">'+ex.name+(curV?" — "+esc(curV):"")+'</span>'+
             '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
           '<div class="exo-body collapsed" id="body-'+ex.id+'">'+
+            varHTML+
             '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Explication">i&nbsp;Explication</button></div>'+
             (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
             '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
-              '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
+              '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
             progHTML(b,c,ex.id)+
@@ -548,6 +553,16 @@
     });
     wrap.querySelectorAll(".info-btn").forEach(function(btn){btn.addEventListener("click",function(){document.getElementById("help-"+btn.getAttribute("data-help")).classList.toggle("open");});});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
+    wrap.querySelectorAll(".exo-var").forEach(function(sel){sel.onchange=function(){
+      var exId=sel.getAttribute("data-exo"),val=sel.value;
+      if(val==="__autre"){var cst=prompt("Variante (ex. machine convergente, Smith, poulie basse…) :");if(!cst||!cst.trim()){sel.value=(s.variant&&s.variant[exId])||"";return;}val=cst.trim();}
+      if(!s.variant)s.variant={};if(val)s.variant[exId]=val;else delete s.variant[exId];save();
+      var m=exoMeta(exId);if(!m)return;
+      var nmEl=wrap.querySelector('.exo-band[data-exo="'+exId+'"] .nm');if(nmEl)nmEl.textContent=m.name+(val?" — "+val:"");
+      var dl=wrap.querySelector("#body-"+exId+" .demo-link");if(dl)dl.href="https://www.youtube.com/results?search_query="+encodeURIComponent(m.name+(val?" "+val:"")+" musculation technique");
+      if(val&&!Array.prototype.some.call(sel.options,function(o){return o.value===val;})){var opt=document.createElement("option");opt.value=val;opt.textContent=val;sel.insertBefore(opt,sel.querySelector('option[value="__autre"]'));}
+      sel.value=val||"";
+    };});
     function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var arr=s.sets[id]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
     wrap.querySelectorAll(".exo-band").forEach(function(band){
       function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");refreshChip(id);}
