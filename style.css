@@ -160,7 +160,7 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .exo-body{margin-top:12px}
 .exo-body.collapsed{display:none}
 .exo-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
-.exo-tools .info-btn{width:auto;height:auto;border-radius:999px;padding:5px 11px;font-size:12px;font-style:normal;font-weight:700}
+.exo-tools .info-btn{width:30px;height:30px;border-radius:50%;padding:0;font-size:19px;font-style:normal;font-weight:700;line-height:1}
 .demo-link{display:inline-block;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none}
 .demo-link:active{opacity:.7}
 
@@ -711,3 +711,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .exo-var-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
 .exo-var-row label{font-size:11px;color:var(--muted);font-weight:600}
 .exo-var{border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;width:100%}
+
+/* Frigo & courses — statut à 3 états */
+.crs-status{flex:none;border:1.5px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;line-height:1;background:var(--none-bg);color:var(--muted)}
+.crs-item.st-fridge .crs-status{background:#e8f0f7;border-color:#12466B;color:#12466B}
+.crs-item.st-eaten .crs-status{background:#e8f6ee;border-color:#34a96a;color:#1f7a4d}
+.crs-item.st-fridge{border-color:#cfe0ee}
+.crs-item.st-eaten{background:var(--done-bg);border-color:var(--done-line)}
+.crs-item.st-eaten .crs-nm{text-decoration:line-through;color:var(--muted)}
+.crs-help{font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:10px;padding:8px 10px;background:var(--none-bg);border-radius:8px}
