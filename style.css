@@ -697,3 +697,12 @@ nav.tabs .tab.on{color:var(--primary)}
 /* Courses — correctif largeur bouton Ajouter (le .btn est en width:100%) */
 .crs-add .btn{width:auto;flex:none;padding:11px 16px}
 .crs-add .crs-name{flex:1;min-width:0}
+.meal-total-top{margin-bottom:14px}
+.meal-total-top .meal-total{margin-top:0}
+
+/* Réglages — rubriques repliables (patron générique, même look qu'Aliments & unités) */
+.set-sectog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.set-sectog .set-sec-h{flex:1;margin:0}
+.set-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
+.set-sectog.open .hcol-chev{transform:rotate(180deg)}
+.set-secbody{margin-top:12px}
