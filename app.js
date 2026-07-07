@@ -337,30 +337,34 @@
   function renderCourses(){
     var host=document.getElementById("todayCourses");if(!host)return;
     var list=coursesList();
+    function stOf(it){return it.eaten?"eaten":(it.bought?"fridge":"buy");}
+    var LBL={buy:"À acheter",fridge:"🧊 Au frigo",eaten:"✅ Mangé"},RANK={buy:0,fridge:1,eaten:2};
     var total=list.reduce(function(s,it){var p=parseFloat(String(it.prix).replace(",","."));return s+((it.bought&&!isNaN(p))?p:0);},0);
-    var boughtCount=list.filter(function(it){return it.bought;}).length;
-    var vtxt=list.length?(boughtCount+"/"+list.length+" acheté"+(total>0?" · "+nFmt(total)+" €":"")):"liste vide";
-    var head='<button type="button" class="hcol courses-toggle'+(coursesOpen?" open":"")+'"><span class="hcol-ic">🛒</span><span class="hcol-txt"><span class="hcol-k">Courses</span><span class="hcol-v">'+esc(vtxt)+'</span></span><span class="hcol-chev">▾</span></button>';
+    var nBuy=0,nFri=0,nEat=0;list.forEach(function(it){var st=stOf(it);if(st==="buy")nBuy++;else if(st==="fridge")nFri++;else nEat++;});
+    var vtxt=list.length?(nBuy+" à acheter · "+nFri+" au frigo"+(total>0?" · "+nFmt(total)+" €":"")):"vide";
+    var head='<button type="button" class="hcol courses-toggle'+(coursesOpen?" open":"")+'"><span class="hcol-ic">🧊</span><span class="hcol-txt"><span class="hcol-k">Frigo &amp; courses</span><span class="hcol-v">'+esc(vtxt)+'</span></span><span class="hcol-chev">▾</span></button>';
     var body="";
     if(coursesOpen){
       var cat=foodCatalog();var have={};list.forEach(function(it){have[(""+it.name).trim().toLowerCase()]=1;});
       var sug=[];Object.keys(cat).forEach(function(k){var c=cat[k];if(!c.nut||c.cat!=="staples"||have[k])return;var p=num(c.nut.prot);if(isNaN(p)||p<8)return;sug.push({name:c.name,p:p});});
       sug.sort(function(a,b){return b.p-a.p;});sug=sug.slice(0,6);
-      var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à acheter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
+      var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à ajouter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
       var addRow='<div class="crs-add"><input type="text" class="crs-name" placeholder="Article (ex. Skyr ×2)"><input type="text" inputmode="decimal" class="crs-prix" placeholder="€"><button type="button" class="btn accent crs-addbtn">Ajouter</button></div>';
-      var rows=list.length?list.map(function(it,i){var p=parseFloat(String(it.prix).replace(",","."));return '<div class="crs-item'+(it.bought?" bought":"")+'" data-i="'+i+'"><button type="button" class="crs-check" data-i="'+i+'" aria-label="Acheté">'+(it.bought?"✓":"")+'</button><span class="crs-nm">'+esc(it.name)+'</span>'+(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"")+'<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>';}).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute des articles à acheter, ou pioche dans les suggestions.</div>';
-      var totalRow=total>0?'<div class="crs-total">Total acheté : <b>'+nFmt(total)+' €</b></div>':"";
-      body='<div class="crs-body">'+addRow+sugHTML+'<div class="crs-list">'+rows+'</div>'+totalRow+'</div>';
+      var help='<div class="crs-help">Touche le statut pour avancer : <b>à acheter → au frigo → mangé</b>. Le total dépensé (et le pont vers le budget) suit ce que tu passes « au frigo ».</div>';
+      var ordered=list.map(function(it,i){return {it:it,i:i,st:stOf(it)};}).sort(function(a,b){return RANK[a.st]-RANK[b.st];});
+      var rows=list.length?ordered.map(function(o){var it=o.it,i=o.i,st=o.st;var p=parseFloat(String(it.prix).replace(",","."));return '<div class="crs-item st-'+st+'" data-i="'+i+'"><button type="button" class="crs-status" data-i="'+i+'">'+LBL[st]+'</button><span class="crs-nm">'+esc(it.name)+'</span>'+(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"")+'<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>';}).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute ce que tu comptes acheter, ou pioche dans les suggestions.</div>';
+      var totalRow=total>0?'<div class="crs-total">Total dépensé (au frigo + mangé) : <b>'+nFmt(total)+' €</b></div>':"";
+      body='<div class="crs-body">'+addRow+sugHTML+help+'<div class="crs-list">'+rows+'</div>'+totalRow+'</div>';
     }
     host.innerHTML=head+body;
     host.querySelector(".courses-toggle").onclick=function(){coursesOpen=!coursesOpen;renderCourses();};
     if(coursesOpen){
       var nameEl=host.querySelector(".crs-name"),prixEl=host.querySelector(".crs-prix");
-      function addItem(nm,prix){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,ts:Date.now()});save();renderCourses();}
+      function addItem(nm,prix){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,eaten:false,ts:""});save();renderCourses();}
       var ab=host.querySelector(".crs-addbtn");if(ab)ab.onclick=function(){addItem(nameEl.value,prixEl.value);};
       if(nameEl)nameEl.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addItem(nameEl.value,prixEl.value);}});
       host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){addItem(b.getAttribute("data-n"),"");};});
-      host.querySelectorAll(".crs-check").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(l[i]){l[i].bought=!l[i].bought;save();renderCourses();}};});
+      host.querySelectorAll(".crs-status").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();var it=l[i];if(!it)return;if(!it.bought){it.bought=true;it.eaten=false;it.ts=Date.now();}else if(!it.eaten){it.eaten=true;}else{it.bought=false;it.eaten=false;it.ts="";}save();renderCourses();};});
       host.querySelectorAll(".crs-del").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(i>=0&&i<l.length){l.splice(i,1);save();renderCourses();}};});
     }
   }
@@ -470,7 +474,7 @@
       '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+(s.done?'✓ Séance faite — annuler':'Marquer la séance comme faite')+'</button></div>'+
       (s.done?'<div class="donedate"><label>Faite le <input type="date" id="doneDate" value="'+esc(s.date||todayStr())+'"></label></div>':'')+
       '<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns">'+
-        '<button data-sec="30">30 s</button><button data-sec="45">45 s</button><button data-sec="60">1:00</button><button data-sec="90">1:30</button><button data-sec="120">2:00</button><button class="stop" id="restStop">Stop</button>'+
+        '<button data-sec="45">45 s</button><button data-sec="60">1:00</button><button data-sec="90">1:30</button><button class="stop" id="restStop">Stop</button>'+
       '</div></div>';
     var exosHTML="";
     p.exos.forEach(function(ex){
@@ -518,7 +522,7 @@
           '</div>'+
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
             varHTML+
-            '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Explication">i&nbsp;Explication</button></div>'+
+            '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Voir la technique">+</button></div>'+
             (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
             '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
