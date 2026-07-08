@@ -734,3 +734,11 @@ nav.tabs .tab.on{color:var(--primary)}
 .crs-barcode-row .btn{flex:none;white-space:nowrap}
 .crs-scan-msg{font-size:12px;color:var(--muted);margin-bottom:10px}
 .crs-qty{width:62px;flex:none;border:1.5px solid var(--line);border-radius:8px;padding:5px 6px;font-size:12px;font-family:inherit;color:var(--ink);background:#fff}
+
+/* Scanner code-barres (caméra) */
+.scan-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px}
+.scan-modal[hidden]{display:none}
+.scan-cam{width:100%;max-width:360px;border-radius:12px;overflow:hidden;background:#000;min-height:120px}
+.scan-msg{color:#fff;font-size:14px;text-align:center;max-width:340px;line-height:1.4}
+.scan-modal .btn{max-width:220px;width:100%}
+.crs-barcode-row .crs-cam,.crs-barcode-row .crs-scan{flex:none;padding:9px 12px}
