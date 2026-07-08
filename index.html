@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=58">
+  <link rel="stylesheet" href="style.css?v=59">
 </head>
 <body>
 
@@ -170,13 +170,14 @@
   <div id="crsScanModal" class="scan-modal" hidden>
     <div id="crsCam" class="scan-cam"></div>
     <div class="scan-msg" id="crsScanStatus"></div>
-    <button type="button" class="btn" id="crsScanClose">Fermer</button>
+    <div id="crsZoomWrap" class="scan-zoom" hidden><span>Zoom</span><input type="range" id="crsZoom" class="scan-range" min="1" max="4" step="0.1" value="2"></div>
+    <div class="scan-btns"><button type="button" class="scan-tbtn" id="crsTorch" hidden>🔦 Torche</button><button type="button" class="btn" id="crsScanClose">Fermer</button></div>
   </div>
 
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=58"></script>
-  <script src="app.js?v=58"></script>
+  <script src="data.js?v=59"></script>
+  <script src="app.js?v=59"></script>
 </body>
 </html>
