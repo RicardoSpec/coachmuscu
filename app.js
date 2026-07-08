@@ -336,6 +336,27 @@
   function coursesList(){if(!Array.isArray(state.courses))state.courses=[];return state.courses;}
   function logEatenToJournal(it){var d=it.loggedDay||todayStr();var x=day(d);if(!x.mealItems)x.mealItems={pd:[],dj:[],dn:[],co:[]};var mk=it.loggedMeal||"co";if(!x.mealItems[mk])x.mealItems[mk]=[];var nut=it.nut||null;if(!nut){var c=foodCatalog()[(""+it.name).trim().toLowerCase()];if(c&&c.nut)nut=c.nut;}x.mealItems[mk].push({name:it.name,qty:(it.eatenQty!=null&&it.eatenQty!=="")?(""+it.eatenQty):((nut&&nut.base!=null&&nut.base!=="")?(""+nut.base):""),unit:(nut&&nut.baseUnit)||it.unit||"g",nut:nut?JSON.parse(JSON.stringify(nut)):null,_src:it.id});it.loggedDay=d;it.loggedMeal=mk;}
   function unlogFromJournal(it){var d=it.loggedDay||todayStr();var x=state.days[d];if(x&&x.mealItems){MEALS.forEach(function(m){if(x.mealItems[m.k])x.mealItems[m.k]=x.mealItems[m.k].filter(function(e){return e._src!==it.id;});});}it.loggedDay="";}
+  function lookupBarcodeAndAdd(code,setMsg){code=(""+(code||"")).replace(/\D/g,"");if(!code){if(setMsg)setMsg("Entre un code-barres.");return;}if(typeof fetch==="undefined"){if(setMsg)setMsg("Recherche indisponible sur ce navigateur.");return;}if(setMsg)setMsg("Recherche du produit…");
+    fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,product_name_fr,nutriments").then(function(r){return r.json();}).then(function(data){
+      if(data&&data.status===1&&data.product){var pr=data.product,n=pr.nutriments||{};var nm=((pr.product_name_fr||pr.product_name||"")+"").trim()||("Produit "+code);
+        var nut={base:"100",baseUnit:"g",kcal:(n["energy-kcal_100g"]!=null?Math.round(n["energy-kcal_100g"]):""),prot:(n.proteins_100g!=null?n.proteins_100g:""),gluc:(n.carbohydrates_100g!=null?n.carbohydrates_100g:""),lip:(n.fat_100g!=null?n.fat_100g:""),portion:""};
+        coursesList().push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:"",bought:false,eaten:false,wasted:false,ts:"",nut:nut,unit:"g",logged:false,loggedDay:"",loggedMeal:"co",eatenQty:""});save();coursesOpen=true;renderCourses();
+      }else{if(setMsg)setMsg("Produit non trouvé — ajoute-le à la main.");}
+    }).catch(function(){if(setMsg)setMsg("Pas de connexion — réessaie, ou ajoute à la main.");});
+  }
+  var crsScanner=null;
+  function loadScanLib(cb){if(window.Html5Qrcode){cb(true);return;}var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";s.onload=function(){cb(!!window.Html5Qrcode);};s.onerror=function(){cb(false);};document.head.appendChild(s);}
+  function scanStatus(m){var e=document.getElementById("crsScanStatus");if(e)e.textContent=m||"";}
+  function closeScanner(){var modal=document.getElementById("crsScanModal");if(crsScanner){try{crsScanner.stop().then(function(){try{crsScanner.clear();}catch(e){}}).catch(function(){});}catch(e){}crsScanner=null;}if(modal)modal.hidden=true;}
+  function openScanner(){var modal=document.getElementById("crsScanModal");if(!modal)return;modal.hidden=false;scanStatus("Chargement du scanner…");
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus("Caméra non disponible ici — tape le numéro à la main.");return;}
+    loadScanLib(function(ok){if(!ok||!window.Html5Qrcode){scanStatus("Scanner non chargé (connexion ?) — tape le numéro.");return;}
+      try{crsScanner=new window.Html5Qrcode("crsCam");
+        var fmts;try{var F=window.Html5QrcodeSupportedFormats;fmts=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];}catch(e){fmts=undefined;}
+        crsScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:150},formatsToSupport:fmts},function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Vise le code-barres du produit…");}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
+      }catch(e){scanStatus("Scanner indisponible — tape le numéro.");}
+    });
+  }
   function renderCourses(){
     var host=document.getElementById("todayCourses");if(!host)return;
     var list=coursesList();
@@ -352,7 +373,7 @@
       sug.sort(function(a,b){return b.p-a.p;});sug=sug.slice(0,6);
       var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à ajouter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
       var addRow='<div class="crs-add"><input type="text" class="crs-name" placeholder="Article (ex. Skyr ×2)"><input type="text" inputmode="decimal" class="crs-prix" placeholder="€"><button type="button" class="btn accent crs-addbtn">Ajouter</button></div>';
-      var barcodeRow='<div class="crs-barcode-row"><input type="text" inputmode="numeric" class="crs-barcode" placeholder="Code-barres (chiffres)"><button type="button" class="btn ghost crs-scan">🔍 Chercher</button></div><div class="crs-scan-msg" id="crsScanMsg"></div>';
+      var barcodeRow='<div class="crs-barcode-row"><input type="text" inputmode="numeric" class="crs-barcode" placeholder="Code-barres"><button type="button" class="btn ghost crs-cam" aria-label="Scanner à la caméra">📷</button><button type="button" class="btn ghost crs-scan" aria-label="Chercher">🔍</button></div><div class="crs-scan-msg" id="crsScanMsg"></div>';
       var help='<div class="crs-help"><b>Code-barres</b> → macros récupérées automatiquement (Open Food Facts). Statut : <b>à acheter → au frigo → mangé</b>. Un <b>mangé</b> s\'ajoute à tes repas — choisis le <b>repas</b>, le <b>jour</b> et la <b>quantité</b> (ex. 300 g), les protéines sont comptées. Gâché → <b>« 🗑 jeté »</b> (hors journal, mais compté en dépense).</div>';
       var ordered=list.map(function(it,i){return {it:it,i:i,st:stOf(it)};}).sort(function(a,b){return RANK[a.st]-RANK[b.st];});
       var rows=list.length?ordered.map(function(o){var it=o.it,i=o.i,st=o.st;var p=parseFloat(String(it.prix).replace(",","."));
@@ -379,15 +400,11 @@
       var ab=host.querySelector(".crs-addbtn");if(ab)ab.onclick=function(){addItem(nameEl.value,prixEl.value);};
       if(nameEl)nameEl.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addItem(nameEl.value,prixEl.value);}});
       host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){var nm=b.getAttribute("data-n");var c=foodCatalog()[(""+nm).trim().toLowerCase()];addItem(nm,"",c&&c.nut,c&&c.unit);};});
-      var scanBtn=host.querySelector(".crs-scan"),bcEl=host.querySelector(".crs-barcode"),msgEl=host.querySelector("#crsScanMsg");
-      if(scanBtn)scanBtn.onclick=function(){var code=((bcEl&&bcEl.value)||"").replace(/\D/g,"");if(!code){if(msgEl)msgEl.textContent="Entre un code-barres.";return;}if(typeof fetch==="undefined"){if(msgEl)msgEl.textContent="Recherche indisponible sur ce navigateur.";return;}if(msgEl)msgEl.textContent="Recherche du produit…";
-        fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,product_name_fr,nutriments").then(function(r){return r.json();}).then(function(data){
-          if(data&&data.status===1&&data.product){var pr=data.product,n=pr.nutriments||{};var nm=((pr.product_name_fr||pr.product_name||"")+"").trim()||("Produit "+code);
-            var nut={base:"100",baseUnit:"g",kcal:(n["energy-kcal_100g"]!=null?Math.round(n["energy-kcal_100g"]):""),prot:(n.proteins_100g!=null?n.proteins_100g:""),gluc:(n.carbohydrates_100g!=null?n.carbohydrates_100g:""),lip:(n.fat_100g!=null?n.fat_100g:""),portion:""};
-            addItem(nm,"",nut,"g");
-          }else{if(msgEl)msgEl.textContent="Produit non trouvé — ajoute-le à la main.";}
-        }).catch(function(){if(msgEl)msgEl.textContent="Pas de connexion — réessaie, ou ajoute à la main.";});
-      };
+      var scanBtn=host.querySelector(".crs-scan"),camBtn=host.querySelector(".crs-cam"),bcEl=host.querySelector(".crs-barcode"),msgEl=host.querySelector("#crsScanMsg");
+      function setScanMsg(m){if(msgEl)msgEl.textContent=m;}
+      if(scanBtn)scanBtn.onclick=function(){lookupBarcodeAndAdd(bcEl?bcEl.value:"",setScanMsg);};
+      if(camBtn)camBtn.onclick=function(){openScanner();};
+      var closeBtn=document.getElementById("crsScanClose");if(closeBtn)closeBtn.onclick=function(){closeScanner();};
       host.querySelectorAll(".crs-qty").forEach(function(inp){inp.onchange=function(){var i=+inp.getAttribute("data-i");var it=coursesList()[i];if(!it)return;it.eatenQty=inp.value;if(it.logged){unlogFromJournal(it);logEatenToJournal(it);it.logged=true;}save();renderCourses();bumpNutri();};});
       function bumpNutri(){if(typeof renderTodayNutri==="function")renderTodayNutri();var tl=document.getElementById("todayLog");if(tl)buildDayForm(tl,todayStr());}
       host.querySelectorAll(".crs-status").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();var it=l[i];if(!it)return;var refresh=false;
