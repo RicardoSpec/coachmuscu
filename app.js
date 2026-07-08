@@ -218,6 +218,7 @@
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var homeCalOpen=false, heroOpen=false, nutriOpen=false, coursesOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
+  var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
@@ -748,7 +749,7 @@
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
         '<div class="field"><label>Repas</label>'+
-          MEALS.map(function(m){return '<div class="meal"><div class="meal-h">'+m.label+'</div><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
+          MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           (isJournal?'':'<div class="meal-total"></div>')+
         '</div>'+
         '<div class="field supps-field">'+
@@ -855,6 +856,7 @@
         '</div>';
       }
       host.innerHTML=h;
+      var _sum=container.querySelector('.meal-sum[data-sum="'+mk+'"]');if(_sum){var _a=day(d).mealItems[mk]||[],_p=0;_a.forEach(function(it){var s=scaleNut(it);if(s&&s.prot)_p+=s.prot;});_sum.textContent=_a.length?(_a.length+(_p>0?" · "+fr1(_p)+" g prot":"")):"";}
       host.querySelectorAll(".tag").forEach(function(tg){
         tg.addEventListener("click",function(e){if(e.target.classList.contains("tag-x"))return;var i=parseInt(tg.getAttribute("data-i"),10);mealEdit[mk]=(mealEdit[mk]===i?-1:i);renderMeal(mk);});
       });
@@ -910,6 +912,7 @@
       }
     }
     MEALS.forEach(function(m){renderMeal(m.k);});
+    container.querySelectorAll(".meal-h").forEach(function(hh){hh.onclick=function(){var mk=hh.getAttribute("data-mk");mealOpen[mk]=!mealOpen[mk];var meal=hh.parentNode;if(meal)meal.classList.toggle("open",!!mealOpen[mk]);};});
     recalcTotals();
   }
 
