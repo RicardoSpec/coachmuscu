@@ -353,7 +353,9 @@
     loadScanLib(function(ok){if(!ok||!window.Html5Qrcode){scanStatus("Scanner non chargé (connexion ?) — tape le numéro.");return;}
       try{crsScanner=new window.Html5Qrcode("crsCam");
         var fmts;try{var F=window.Html5QrcodeSupportedFormats;fmts=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];}catch(e){fmts=undefined;}
-        crsScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:150},formatsToSupport:fmts},function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Vise le code-barres du produit…");}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
+        var vc={facingMode:"environment",width:{ideal:1280},height:{ideal:720},advanced:[{focusMode:"continuous"}]};
+        var cfg={fps:12,qrbox:function(w,h){var bw=Math.floor(Math.min(w*0.9,340));return {width:bw,height:Math.floor(Math.min(bw*0.55,h*0.7))};},aspectRatio:1.7778,experimentalFeatures:{useBarCodeDetectorIfSupported:true},formatsToSupport:fmts};
+        crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Cadre le code-barres bien à plat et éclairé (~15 cm). S'il reste flou, éloigne un peu.");}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
       }catch(e){scanStatus("Scanner indisponible — tape le numéro.");}
     });
   }
