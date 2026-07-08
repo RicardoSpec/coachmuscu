@@ -347,7 +347,13 @@
   var crsScanner=null;
   function loadScanLib(cb){if(window.Html5Qrcode){cb(true);return;}var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";s.onload=function(){cb(!!window.Html5Qrcode);};s.onerror=function(){cb(false);};document.head.appendChild(s);}
   function scanStatus(m){var e=document.getElementById("crsScanStatus");if(e)e.textContent=m||"";}
-  function closeScanner(){var modal=document.getElementById("crsScanModal");if(crsScanner){try{crsScanner.stop().then(function(){try{crsScanner.clear();}catch(e){}}).catch(function(){});}catch(e){}crsScanner=null;}if(modal)modal.hidden=true;}
+  function closeScanner(){var modal=document.getElementById("crsScanModal");var zw=document.getElementById("crsZoomWrap");if(zw)zw.hidden=true;var tb=document.getElementById("crsTorch");if(tb){tb.hidden=true;tb.setAttribute("data-on","0");tb.textContent="🔦 Torche";}if(crsScanner){try{crsScanner.stop().then(function(){try{crsScanner.clear();}catch(e){}}).catch(function(){});}catch(e){}crsScanner=null;}if(modal)modal.hidden=true;}
+  function setupZoomTorch(){if(!crsScanner||!crsScanner.getRunningTrackCapabilities)return;var caps;try{caps=crsScanner.getRunningTrackCapabilities();}catch(e){caps=null;}if(!caps)return;
+    var zEl=document.getElementById("crsZoom"),zWrap=document.getElementById("crsZoomWrap");
+    if(caps.zoom&&zEl&&zWrap&&(caps.zoom.max||1)>(caps.zoom.min||1)){var zmin=caps.zoom.min||1,zmax=caps.zoom.max||1;zEl.min=zmin;zEl.max=zmax;zEl.step=caps.zoom.step||0.1;var zInit=Math.min(zmax,zmin+(zmax-zmin)*0.4);zEl.value=zInit;zWrap.hidden=false;try{crsScanner.applyVideoConstraints({advanced:[{zoom:zInit}]});}catch(e){}zEl.oninput=function(){try{var p=crsScanner.applyVideoConstraints({advanced:[{zoom:parseFloat(zEl.value)}]});if(p&&p.catch)p.catch(function(){});}catch(e){}};}
+    var tBtn=document.getElementById("crsTorch");
+    if(caps.torch&&tBtn){tBtn.hidden=false;tBtn.setAttribute("data-on","0");tBtn.onclick=function(){var on=tBtn.getAttribute("data-on")!=="1";try{var p=crsScanner.applyVideoConstraints({advanced:[{torch:on}]});if(p&&p.then){p.then(function(){tBtn.setAttribute("data-on",on?"1":"0");tBtn.textContent=on?"🔦 Torche (on)":"🔦 Torche";}).catch(function(){});}else{tBtn.setAttribute("data-on",on?"1":"0");}}catch(e){}};}
+  }
   function openScanner(){var modal=document.getElementById("crsScanModal");if(!modal)return;modal.hidden=false;scanStatus("Chargement du scanner…");
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus("Caméra non disponible ici — tape le numéro à la main.");return;}
     loadScanLib(function(ok){if(!ok||!window.Html5Qrcode){scanStatus("Scanner non chargé (connexion ?) — tape le numéro.");return;}
@@ -355,7 +361,7 @@
         var fmts;try{var F=window.Html5QrcodeSupportedFormats;fmts=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];}catch(e){fmts=undefined;}
         var vc={facingMode:"environment",width:{ideal:1280},height:{ideal:720},advanced:[{focusMode:"continuous"}]};
         var cfg={fps:12,qrbox:function(w,h){var bw=Math.floor(Math.min(w*0.9,340));return {width:bw,height:Math.floor(Math.min(bw*0.55,h*0.7))};},aspectRatio:1.7778,experimentalFeatures:{useBarCodeDetectorIfSupported:true},formatsToSupport:fmts};
-        crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Cadre le code-barres bien à plat et éclairé (~15 cm). S'il reste flou, éloigne un peu.");}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
+        crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Cadre le code-barres. Zoome pour le grossir sans t'approcher (là où ça fait le point).");setupZoomTorch();}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
       }catch(e){scanStatus("Scanner indisponible — tape le numéro.");}
     });
   }
