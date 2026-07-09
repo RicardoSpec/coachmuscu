@@ -128,7 +128,19 @@
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
    /* ---- Qualité alimentaire : badges factuels (protéine / NOVA / vigilance) ---- */
   function fqKey(name){return (""+(name==null?"":name)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[×xX]\s*\d+\s*$/,"").replace(/\s+/g," ").trim();}
-  function foodQuality(name){return (typeof FOOD_QUALITY!=="undefined"&&FOOD_QUALITY[fqKey(name)])||null;}
+function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:1,et:1,en:1,d:1,un:1,une:1};s=fqKey(s).replace(/[^a-z0-9]+/g," ");return s.split(" ").filter(function(t){return t.length>=2&&!STOP[t]&&!/^\d+$/.test(t);});}
+  function fqTokMatch(a,b){return a===b||(a.length>=4&&b.length>=4&&(a===b+"s"||b===a+"s"));}
+  var _fqIdx=null;
+  function fqIndex(){if(_fqIdx)return _fqIdx;_fqIdx=[];if(typeof FOOD_QUALITY!=="undefined")Object.keys(FOOD_QUALITY).forEach(function(k){var t=fqTokens(k);if(t.length)_fqIdx.push({k:k,t:t,q:FOOD_QUALITY[k]});});_fqIdx.sort(function(a,b){return (b.t.length-a.t.length)||(b.k.length-a.k.length);});return _fqIdx;}
+  function foodQuality(name){
+    if(typeof FOOD_QUALITY==="undefined")return null;
+    var q=FOOD_QUALITY[fqKey(name)];if(q)return q;                 /* 1) correspondance exacte (prioritaire) */
+    var toks=fqTokens(name);if(!toks.length||toks.length>5)return null; /* 2) mots-clés — on saute les descriptions trop composées */
+    var idx=fqIndex();
+    for(var i=0;i<idx.length;i++){var e=idx[i];                    /* trié du + spécifique au - spécifique → 1re correspondance = la meilleure */
+      if(e.t.every(function(kt){return toks.some(function(nt){return fqTokMatch(kt,nt);});}))return e.q;}
+    return null;
+  }
   function foodQualityBadges(name){
     var q=foodQuality(name);if(!q)return "";
     var P={1:["💪","Protéine complète (profil d'acides aminés complet)"],2:["🌱","Protéine végétale incomplète — associer céréale + légumineuse"]};
