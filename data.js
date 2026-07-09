@@ -210,3 +210,37 @@ var BRISTOL = [
 /* ---------- Journal : options ---------- */
 var SPORTS    = ["Course","Vélo","Natation","Escalade","Muscu","Repos","Autre"];
 var PROG_OPTS = ["","Oui","Partiellement","Non","Jour de repos"];
+
+/* ---------- Qualité alimentaire (signaux factuels) ----------
+   Clé = nom en minuscules (comparaison insensible aux accents/quantités, voir fqKey).
+     p : profil protéique  → 1 complète · 2 végétale incomplète · 0 non pertinent
+     n : transformation (NOVA) → 1 brut · 2 transformé · 3 ultra-transformé · 0 n/a
+     w : vigilance factuelle (chaîne affichée) ou 0
+   Cadres : profil d'acides aminés ; NOVA (Monteiro) ; viande transformée = cancérogène
+   groupe 1 (OMS/CIRC) ; alcool sans seuil sûr (OMS) ; mercure gros poissons (EFSA/FDA). */
+var FQ_MERCURE = "Mercure — gros poisson, à espacer (préférer sardine/maquereau)";
+var FQ_CHARCUT = "Charcuterie — viande transformée (OMS : à limiter)";
+var FQ_ALCOOL  = "Alcool — pas de dose sans risque (OMS)";
+var FQ_SUCRE   = "Sucre ajouté";
+var FOOD_QUALITY = {
+  /* protéines animales complètes */
+  "oeuf dur":{p:1,n:1,w:0}, "oeuf au plat":{p:1,n:1,w:0}, "oeuf":{p:1,n:1,w:0},
+  "poulet":{p:1,n:1,w:0}, "steak":{p:1,n:1,w:0},
+  "sardines":{p:1,n:2,w:0}, "maquereau":{p:1,n:2,w:0}, "thon":{p:1,n:2,w:FQ_MERCURE},
+  "fromage":{p:1,n:2,w:0}, "skyr":{p:1,n:1,w:0}, "whey":{p:1,n:3,w:0},
+  "jambon":{p:1,n:2,w:FQ_CHARCUT}, "sandwich jambon-beurre":{p:1,n:2,w:FQ_CHARCUT},
+  "chipolata":{p:1,n:3,w:FQ_CHARCUT}, "saucisson":{p:1,n:3,w:FQ_CHARCUT},
+  /* céréale (protéine incomplète — associer légumineuse) */
+  "riz":{p:2,n:1,w:0},
+  /* fruits & légumes bruts */
+  "banane":{p:0,n:1,w:0}, "tomate":{p:0,n:1,w:0}, "concombre":{p:0,n:1,w:0},
+  "carotte":{p:0,n:1,w:0}, "abricot":{p:0,n:1,w:0}, "melon":{p:0,n:1,w:0},
+  "poivron":{p:0,n:1,w:0}, "chou chinois":{p:0,n:1,w:0}, "ratatouille":{p:0,n:2,w:0},
+  /* boissons */
+  "cafe":{p:0,n:1,w:0}, "the":{p:0,n:1,w:0},
+  "biere":{p:0,n:2,w:FQ_ALCOOL}, "pulco":{p:0,n:2,w:0}, "apero":{p:0,n:3,w:0},
+  /* transformés sucrés / boulangerie */
+  "brioche":{p:0,n:3,w:0}, "pitch":{p:0,n:3,w:0}, "flan":{p:0,n:3,w:FQ_SUCRE},
+  "tarte":{p:0,n:3,w:FQ_SUCRE}, "magnum":{p:0,n:3,w:FQ_SUCRE},
+  "tartine confiture":{p:0,n:2,w:FQ_SUCRE}, "cookies maison":{p:0,n:2,w:0}
+};
