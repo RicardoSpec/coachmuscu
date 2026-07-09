@@ -242,7 +242,7 @@ var FOOD_QUALITY = {
   /* transformés sucrés / boulangerie */
   "brioche":{p:0,n:3,w:0}, "pitch":{p:0,n:3,w:0}, "flan":{p:0,n:3,w:FQ_SUCRE},
   "tarte":{p:0,n:3,w:FQ_SUCRE}, "magnum":{p:0,n:3,w:FQ_SUCRE},
-  "tartine confiture":{p:0,n:2,w:FQ_SUCRE}, "cookies maison":{p:0,n:2,w:0}
+  "tartine confiture":{p:0,n:2,w:FQ_SUCRE}, "cookies maison":{p:0,n:2,w:0},
 /* ---- Additions FOOD_QUALITY — coller AVANT le "};" de l'objet FOOD_QUALITY (data.js). 98 entrées, clés = noms réellement loggés (matchées via fqKey). ---- */
   "avocat":{p:0,n:1,w:0},
   "baguette":{p:0,n:2,w:0},
