@@ -752,3 +752,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .scan-btns{display:flex;gap:10px;width:100%;max-width:340px;justify-content:center}
 .scan-btns .btn{flex:1;max-width:170px}
 .scan-tbtn{flex:1;max-width:170px;background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:12px;padding:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+
+/* ---------- Qualité alimentaire ---------- */
+.fq-badges{display:inline-flex;gap:2px;margin:0 3px;vertical-align:middle;white-space:nowrap;text-decoration:none}
+.fq{font-size:.82em;line-height:1;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.fq:focus{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+.fq-legend{font-size:11px;color:var(--muted);line-height:1.5;margin:8px 2px 2px}
+.fq-legend-hint{opacity:.85}
+.fq-toast{position:fixed;left:50%;bottom:78px;transform:translate(-50%,8px);max-width:88vw;background:var(--ink);color:#fff;font-size:12.5px;line-height:1.35;padding:9px 13px;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:9999;text-align:center}
+.fq-toast.show{opacity:1;transform:translate(-50%,0)}
