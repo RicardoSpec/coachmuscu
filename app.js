@@ -126,6 +126,24 @@
       cat[k]={name:cat[k].name,unit:u,nut:{base:pick(f.base,bn.base||"1"),baseUnit:u,kcal:pick(f.kcal,bn.kcal||""),prot:pick(f.prot,bn.prot||""),gluc:pick(f.gluc,bn.gluc||""),lip:pick(f.lip,bn.lip||""),portion:bn.portion||""},ref:cat[k].ref,cat:cat[k].cat,fixed:true};});
     return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
+   /* ---- Qualité alimentaire : badges factuels (protéine / NOVA / vigilance) ---- */
+  function fqKey(name){return (""+(name==null?"":name)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[×xX]\s*\d+\s*$/,"").replace(/\s+/g," ").trim();}
+  function foodQuality(name){return (typeof FOOD_QUALITY!=="undefined"&&FOOD_QUALITY[fqKey(name)])||null;}
+  function foodQualityBadges(name){
+    var q=foodQuality(name);if(!q)return "";
+    var P={1:["💪","Protéine complète (profil d'acides aminés complet)"],2:["🌱","Protéine végétale incomplète — associer céréale + légumineuse"]};
+    var N={1:["🟢","Brut / peu transformé (NOVA 1)"],2:["🟡","Transformé (NOVA 3)"],3:["🔴","Ultra-transformé (NOVA 4)"]};
+    function badge(ic,r){return '<span class="fq" data-r="'+esc(r)+'" title="'+esc(r)+'" role="button" tabindex="0" aria-label="'+esc(r)+'">'+ic+'</span>';}
+    var out="";
+    if(P[q.p])out+=badge(P[q.p][0],P[q.p][1]);
+    if(N[q.n])out+=badge(N[q.n][0],N[q.n][1]);
+    if(q.w)out+=badge("⚠️",q.w);
+    return out?'<span class="fq-badges">'+out+'</span>':"";
+  }
+  function foodQualityLegend(){return '<div class="fq-legend">💪 complète · 🌱 à compléter · 🟢🟡🔴 transformation · ⚠️ vigilance <span class="fq-legend-hint">— touche un picto pour la raison</span></div>';}
+  var fqTapWired=false;
+  function fqToast(msg){var t=document.getElementById("fqToast");if(!t){t=document.createElement("div");t.id="fqToast";t.className="fq-toast";document.body.appendChild(t);}t.textContent=msg;t.classList.add("show");clearTimeout(fqToast._t);fqToast._t=setTimeout(function(){t.classList.remove("show");},2600);}
+  function wireFqTaps(){if(fqTapWired||typeof document==="undefined")return;fqTapWired=true;document.addEventListener("click",function(e){var b=(e.target&&e.target.closest)?e.target.closest(".fq"):null;if(!b)return;e.preventDefault();e.stopPropagation();var r=b.getAttribute("data-r");if(r)fqToast(r);});}
   function scaleNut(it){if(!it||!it.nut)return null;var base=num(it.nut.base);var q=num(it.qty);var f;
     if(!isNaN(q)&&q>0&&!isNaN(base)&&base>0&&(it.unit||"")===(it.nut.baseUnit||""))f=q/base; /* quantité explicite compatible */
     else f=1; /* défaut : 1 portion (valeurs de base), unités ignorées */
@@ -833,7 +851,7 @@
       var arr=day(d).mealItems[mk];var ed=mealEdit[mk];var h="";
       h+='<div class="tags">';
       arr.forEach(function(it,i){
-        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+(it.nut?'<span class="tag-q">'+esc(effPortion(it))+'</span>':'')+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
+        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+foodQualityBadges(it.name)+(it.nut?'<span class="tag-q">'+esc(effPortion(it))+'</span>':'')+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
       });
       h+='</div>';
       h+='<input type="text" class="tag-input" placeholder="Aliment puis Entrée…" enterkeyhint="done" autocomplete="off">';
@@ -858,7 +876,7 @@
       host.innerHTML=h;
       var _sum=container.querySelector('.meal-sum[data-sum="'+mk+'"]');if(_sum){var _a=day(d).mealItems[mk]||[],_p=0;_a.forEach(function(it){var s=scaleNut(it);if(s&&s.prot)_p+=s.prot;});_sum.textContent=_a.length?(_a.length+(_p>0?" · "+fr1(_p)+" g prot":"")):"";}
       host.querySelectorAll(".tag").forEach(function(tg){
-        tg.addEventListener("click",function(e){if(e.target.classList.contains("tag-x"))return;var i=parseInt(tg.getAttribute("data-i"),10);mealEdit[mk]=(mealEdit[mk]===i?-1:i);renderMeal(mk);});
+        tg.addEventListener("click",function(e){if(e.target.classList.contains("tag-x")||(e.target.closest&&e.target.closest(".fq")))return;var i=parseInt(tg.getAttribute("data-i"),10);mealEdit[mk]=(mealEdit[mk]===i?-1:i);renderMeal(mk);});
       });
       host.querySelectorAll(".tag-x").forEach(function(b){
         b.addEventListener("click",function(e){e.stopPropagation();var i=parseInt(b.getAttribute("data-i"),10);day(d).mealItems[mk].splice(i,1);if(mealEdit[mk]===i)mealEdit[mk]=-1;else if(mealEdit[mk]>i)mealEdit[mk]--;save();renderMeal(mk);recalcTotals();});
