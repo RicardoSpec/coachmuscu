@@ -761,3 +761,5 @@ nav.tabs .tab.on{color:var(--primary)}
 .fq-legend-hint{opacity:.85}
 .fq-toast{position:fixed;left:50%;bottom:78px;transform:translate(-50%,8px);max-width:88vw;background:var(--ink);color:#fff;font-size:12.5px;line-height:1.35;padding:9px 13px;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:9999;text-align:center}
 .fq-toast.show{opacity:1;transform:translate(-50%,0)}
+.fqe-search{width:100%;box-sizing:border-box;margin:8px 0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px}
+.fqe-scroll{max-height:340px;overflow:auto;-webkit-overflow-scrolling:touch}
