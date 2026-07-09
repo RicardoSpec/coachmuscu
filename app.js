@@ -130,17 +130,27 @@
   function fqKey(name){return (""+(name==null?"":name)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[×xX]\s*\d+\s*$/,"").replace(/\s+/g," ").trim();}
 function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:1,et:1,en:1,d:1,un:1,une:1};s=fqKey(s).replace(/[^a-z0-9]+/g," ");return s.split(" ").filter(function(t){return t.length>=2&&!STOP[t]&&!/^\d+$/.test(t);});}
   function fqTokMatch(a,b){return a===b||(a.length>=4&&b.length>=4&&(a===b+"s"||b===a+"s"));}
+  function foodQualMap(){if(!state.foodQual||typeof state.foodQual!=="object")state.foodQual={};return state.foodQual;}
   var _fqIdx=null;
-  function fqIndex(){if(_fqIdx)return _fqIdx;_fqIdx=[];if(typeof FOOD_QUALITY!=="undefined")Object.keys(FOOD_QUALITY).forEach(function(k){var t=fqTokens(k);if(t.length)_fqIdx.push({k:k,t:t,q:FOOD_QUALITY[k]});});_fqIdx.sort(function(a,b){return (b.t.length-a.t.length)||(b.k.length-a.k.length);});return _fqIdx;}
+  function fqInvalidate(){_fqIdx=null;}                            /* à appeler après toute édition de state.foodQual */
+  function fqIndex(){if(_fqIdx)return _fqIdx;_fqIdx=[];var m={};
+    if(typeof FOOD_QUALITY!=="undefined")Object.keys(FOOD_QUALITY).forEach(function(k){m[k]=FOOD_QUALITY[k];});
+    if(state&&state.foodQual)Object.keys(state.foodQual).forEach(function(k){m[k]=state.foodQual[k];}); /* overrides perso participent aussi au matching */
+    Object.keys(m).forEach(function(k){var t=fqTokens(k);if(t.length)_fqIdx.push({k:k,t:t,q:m[k]});});
+    _fqIdx.sort(function(a,b){return (b.t.length-a.t.length)||(b.k.length-a.k.length);});return _fqIdx;}
   function foodQuality(name){
+    var k=fqKey(name);
+    var uq=(state&&state.foodQual&&state.foodQual[k]);if(uq)return uq; /* 0) override perso (state.foodQual) prioritaire */
     if(typeof FOOD_QUALITY==="undefined")return null;
-    var q=FOOD_QUALITY[fqKey(name)];if(q)return q;                 /* 1) correspondance exacte (prioritaire) */
+    var q=FOOD_QUALITY[k];if(q)return q;                           /* 1) correspondance exacte (seed) */
     var toks=fqTokens(name);if(!toks.length||toks.length>5)return null; /* 2) mots-clés — on saute les descriptions trop composées */
     var idx=fqIndex();
     for(var i=0;i<idx.length;i++){var e=idx[i];                    /* trié du + spécifique au - spécifique → 1re correspondance = la meilleure */
       if(e.t.every(function(kt){return toks.some(function(nt){return fqTokMatch(kt,nt);});}))return e.q;}
     return null;
   }
+ 
+
   function foodQualityBadges(name){
     var q=foodQuality(name);if(!q)return "";
     var P={1:["💪","Protéine complète (profil d'acides aminés complet)"],2:["🌱","Protéine végétale incomplète — associer céréale + légumineuse"]};
@@ -1407,6 +1417,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var settingsFoodSel=null;  /* clé (nom minuscule) d'aliment en correction, ou null */
   var settingsFoodOpen=false; /* section Aliments & unités repliée par défaut */
   var settingsFoodQuery=""; /* filtre de recherche de la liste d'aliments */
+   var settingsQualSel=null, settingsQualOpen=false, settingsQualQuery=""; /* editeur Qualite des aliments */
   var settingsSecOpen={};  /* rubriques Réglages repliées par défaut (par id) */
   function settingsSec(id,title,inner,open){return '<div class="set-sec"><button type="button" class="set-sectog'+(open?" open":"")+'" data-sec="'+id+'"><span class="set-sec-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-secbody">'+inner+'</div>':"")+'</div>';}
   function sessExoRow(ex,i){
@@ -1462,6 +1473,23 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         (_lf.length?'<input type="text" class="ff-search" placeholder="Rechercher un aliment…" value="'+esc(settingsFoodQuery||"")+'"><div class="ff-scroll">'+ffRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
       '</div>':"")+
     '</div>';
+         /* ---- Éditeur Qualité des aliments (badges 💪/🌱 · 🟢🟡🔴 · ⚠️) ---- */
+    var W2TOK={"":"0"};W2TOK[typeof FQ_MERCURE!=="undefined"?FQ_MERCURE:"__m"]="M";W2TOK[typeof FQ_CHARCUT!=="undefined"?FQ_CHARCUT:"__c"]="C";W2TOK[typeof FQ_ALCOOL!=="undefined"?FQ_ALCOOL:"__a"]="A";W2TOK[typeof FQ_SUCRE!=="undefined"?FQ_SUCRE:"__s"]="S";
+    function fqSelP(v){return '<select class="fqe-p"><option value="0"'+(!v?' selected':'')+'>—</option><option value="1"'+(v===1?' selected':'')+'>💪 complète</option><option value="2"'+(v===2?' selected':'')+'>🌱 à compléter</option></select>';}
+    function fqSelN(v){return '<select class="fqe-n"><option value="0"'+(!v?' selected':'')+'>—</option><option value="1"'+(v===1?' selected':'')+'>🟢 brut</option><option value="2"'+(v===2?' selected':'')+'>🟡 transformé</option><option value="3"'+(v===3?' selected':'')+'>🔴 ultra-transformé</option></select>';}
+    function fqSelW(w){var t=W2TOK[w]||"0";function o(val,lbl){return '<option value="'+val+'"'+(t===val?' selected':'')+'>'+lbl+'</option>';}return '<select class="fqe-w">'+o("0","aucune")+o("M","⚠️ mercure")+o("C","⚠️ charcuterie")+o("A","⚠️ alcool")+o("S","⚠️ sucre ajouté")+'</select>';}
+    var qualRows=_lf.map(function(nm){var k=fqKey(nm);var q=foodQuality(nm)||{};var over=!!(state.foodQual&&state.foodQual[k]);
+      if(settingsQualSel===k){
+        return '<div class="ff-edit fqe-edit" data-k="'+esc(k)+'"><div class="ff-name">'+esc(nm)+(over?' <span class="sess-badge">perso</span>':'')+'</div>'+
+          '<div class="ff-grid"><label>Protéine'+fqSelP(q.p)+'</label><label>Transformation'+fqSelN(q.n)+'</label><label>Vigilance'+fqSelW(q.w)+'</label></div>'+
+          '<div class="ff-actions"><button class="btn accent fqe-save" data-k="'+esc(k)+'">Enregistrer</button>'+(over?'<button class="btn ghost fqe-reset" data-k="'+esc(k)+'">Rétablir</button>':'')+'<button class="btn ghost fqe-cancel">Annuler</button></div></div>';
+      }
+      var badges=foodQualityBadges(nm)||'<span class="set-sub">non classé</span>';
+      return '<div class="set-row fqe-pick" data-k="'+esc(k)+'" data-nm="'+esc(k)+'"><span class="set-ic">🏷</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(over?' <span class="sess-badge">perso</span>':'')+'</span><span class="set-sub">'+badges+'</span></span><span class="sess-arrow">›</span></div>';
+    });
+    var qualInner='<p class="set-note">Ajuste les badges qualité d\'un aliment (profil protéique, transformation NOVA, vigilance). Tes réglages priment sur les valeurs par défaut, sont sauvegardés/exportés, et servent aussi au repérage par mots-clés. « Rétablir » revient au défaut.</p>'+
+      (_lf.length?'<input type="text" class="fqe-search" placeholder="Rechercher un aliment…" value="'+esc(settingsQualQuery||"")+'"><div class="fqe-scroll">'+qualRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé — ajoute des repas, ils apparaîtront ici.</p>');
+
     var actsInner='<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
       actCard("muscu")+actCard("tri");
     var rows=pDeadlines().map(function(d){
@@ -1491,6 +1519,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
       settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
       fixSec+
+       settingsSec("qual","Qualite des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel)+
       settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
     host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
@@ -1514,6 +1543,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var done=migrateFood(k);save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();
       try{alert(done+" repas mis à jour. Vérifie tes totaux ; en cas de souci, réimporte la sauvegarde téléchargée.");}catch(e){}
     };});
+         /* --- éditeur Qualité --- */
+    var TOK2W={"0":0,"M":(typeof FQ_MERCURE!=="undefined"?FQ_MERCURE:0),"C":(typeof FQ_CHARCUT!=="undefined"?FQ_CHARCUT:0),"A":(typeof FQ_ALCOOL!=="undefined"?FQ_ALCOOL:0),"S":(typeof FQ_SUCRE!=="undefined"?FQ_SUCRE:0)};
+    function fqeFilter(){var q=(settingsQualQuery||"").trim().toLowerCase();host.querySelectorAll(".fqe-scroll .fqe-pick").forEach(function(r){var nm=r.getAttribute("data-nm")||"";r.style.display=(!q||nm.indexOf(q)>=0)?"":"none";});}
+    var fqeSearch=host.querySelector(".fqe-search");if(fqeSearch){fqeSearch.addEventListener("input",function(){settingsQualQuery=fqeSearch.value;fqeFilter();});fqeFilter();}
+    host.querySelectorAll(".fqe-pick").forEach(function(b){b.onclick=function(){settingsQualSel=b.getAttribute("data-k");settingsSecOpen.qual=true;renderSettings();};});
+    var fqeCancel=host.querySelector(".fqe-cancel");if(fqeCancel)fqeCancel.onclick=function(){settingsQualSel=null;renderSettings();};
+    host.querySelectorAll(".fqe-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".fqe-edit");if(!box)return;
+      var p=parseInt(box.querySelector(".fqe-p").value,10)||0,n=parseInt(box.querySelector(".fqe-n").value,10)||0,w=TOK2W[box.querySelector(".fqe-w").value]||0;
+      foodQualMap()[k]={p:p,n:n,w:w};fqInvalidate();save();settingsQualSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+ 
+
     wireActForm();wireDeadlineForm();
   }
   /* ---------------- Sauvegarde / restauration ---------------- */
@@ -1549,7 +1589,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     inp.click();
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsSecOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsQualSel=null;settingsQualOpen=false;settingsQualQuery="";settingsSecOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
