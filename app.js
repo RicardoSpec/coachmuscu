@@ -1552,6 +1552,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".fqe-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".fqe-edit");if(!box)return;
       var p=parseInt(box.querySelector(".fqe-p").value,10)||0,n=parseInt(box.querySelector(".fqe-n").value,10)||0,w=TOK2W[box.querySelector(".fqe-w").value]||0;
       foodQualMap()[k]={p:p,n:n,w:w};fqInvalidate();save();settingsQualSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+    host.querySelectorAll(".fqe-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodQual)delete state.foodQual[k];fqInvalidate();save();settingsQualSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
  
 
     wireActForm();wireDeadlineForm();
@@ -1627,7 +1628,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();
+    pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();wireFqTaps();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-today");
   }
