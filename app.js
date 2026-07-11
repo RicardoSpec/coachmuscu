@@ -194,6 +194,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* Charges de la dernière séance identique (même code, semaine/bloc antérieurs) */
   function setKey(exId,v){return v?exId+"::"+v:exId;}
+  /* Base de saisie du poids par exo : total (poids affiché en kg) · bras (poids d'UN haltère) · ajout (charge ajoutée au poids du corps).
+     Déduite de la variante ; à défaut de la base par défaut de l'exo (data.js) ; forçage manuel possible via state.muscuBase[setKey]. */
+  var BASE_UNIT={total:"kg",bras:"kg/bras",ajout:"+kg"};
+  function baseFromVariant(v){if(v==="Haltères")return "bras";if(v==="Poids du corps")return "ajout";return "total";}
+  function baseFor(exId,variant,defBase){
+    var f=state.muscuBase&&state.muscuBase[setKey(exId,variant)];   /* 1) forçage manuel prioritaire */
+    if(f&&BASE_UNIT[f])return f;
+    if(variant)return baseFromVariant(variant);                     /* 2) déduit de la variante choisie */
+    return (defBase&&BASE_UNIT[defBase])?defBase:"total";           /* 3) base par défaut de l'exo, sinon total */
+  }
+  function baseUnitFor(exId,variant,defBase){return BASE_UNIT[baseFor(exId,variant,defBase)];}
   function prevSets(b,w,c,exId){
     function pick(bl,wk){var ss=state.sessions[sessKey(bl,wk,c)];if(ss&&ss.sets&&ss.sets[exId]){var a=ss.sets[exId];for(var i=0;i<a.length;i++){if(a[i]&&(a[i].kg!==""||a[i].r!==""))return a;}}return null;}
     for(var ww=w-1;ww>=1;ww--){var r=pick(b,ww);if(r)return r;}
@@ -201,21 +212,46 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     for(var bi=idx-1;bi>=0;bi--){var bb=BLOCK_ORDER[bi];var wk=PROGRAM_BLOCKS[bb].weeks;for(var w2=wk;w2>=1;w2--){var r2=pick(bb,w2);if(r2)return r2;}}
     return null;
   }
-  /* Progression des charges : meilleure série (kg max) par semaine, pour un exercice (code c + exId) du bloc b. */
-  function exoTop(arr){var best=null;for(var i=0;i<arr.length;i++){var kg=num(arr[i]&&arr[i].kg);if(!isNaN(kg)&&kg>0&&(best===null||kg>best.kg))best={kg:kg,r:num(arr[i]&&arr[i].r)};}return best;}
-  function exoSeries(b,c,exId){var wk=PROGRAM_BLOCKS[b].weeks,out=[];for(var w=1;w<=wk;w++){var ss=state.sessions[sessKey(b,w,c)];if(ss&&ss.sets&&ss.sets[exId]){var t=exoTop(ss.sets[exId]);if(t)out.push({w:w,kg:t.kg});}}return out;}
-  function progHTML(b,c,exId){
-    var arr=exoSeries(b,c,exId);if(!arr.length)return "";
-    var max=0,min=Infinity;arr.forEach(function(p){if(p.kg>max)max=p.kg;if(p.kg<min)min=p.kg;});
+  /* Progression (muscu) — deux métriques par exo, une par semaine, pour (code c + exId/variante) du bloc b :
+     · principale = 1RM ESTIMÉ (Epley : kg × (1 + reps/30)), meilleure série de la séance. Haltères : on prend le kg/bras tel quel.
+     · secondaire = VOLUME/SÉANCE = Σ(reps × kg), ×2 pour haltères BILATÉRAL (tonnage réel des deux bras).
+     Bascule au tap sur le bandeau. Epley décroche au-delà de ~15 reps → marqueur « ≈ » discret. */
+  function epley(kg,r){return kg*(1+(r>0?r:0)/30);}
+  function volFactor(base,name){return (base==="bras" && !/1\s*bras|un\s*bras|unilat|altern/i.test(name||""))?2:1;}
+  function exoBest1RM(arr){var best=null;for(var i=0;i<arr.length;i++){var kg=num(arr[i]&&arr[i].kg),r=num(arr[i]&&arr[i].r);if(!isNaN(kg)&&kg>0){var e=epley(kg,isNaN(r)?0:r);if(best===null||e>best.e)best={e:e,r:isNaN(r)?0:r};}}return best;}
+  function exoVol(arr,factor){var v=0,any=false;for(var i=0;i<arr.length;i++){var kg=num(arr[i]&&arr[i].kg),r=num(arr[i]&&arr[i].r);if(!isNaN(kg)&&kg>0&&!isNaN(r)&&r>0){v+=kg*r;any=true;}}return any?v*factor:null;}
+  function exoSeries(b,c,exId,mode,factor){
+    var wk=PROGRAM_BLOCKS[b].weeks,out=[];
+    for(var w=1;w<=wk;w++){var ss=state.sessions[sessKey(b,w,c)];if(ss&&ss.sets&&ss.sets[exId]){
+      if(mode==="vol"){var v=exoVol(ss.sets[exId],factor);if(v!=null)out.push({w:w,val:v});}
+      else{var t=exoBest1RM(ss.sets[exId]);if(t)out.push({w:w,val:t.e,reps:t.r});}
+    }}
+    return out;
+  }
+  var progMode={};  /* exId nu -> "vol" pour la vue volume (défaut : 1RM), conservé entre re-rendus */
+  var PG_TAG='style="font-weight:700;color:var(--muted);font-size:10px;margin-left:5px;letter-spacing:.02em"';
+  function progHTML(b,c,exId,base,name){
+    var bareId=exId.split("::")[0];
+    var mode=progMode[bareId]==="vol"?"vol":"1rm";
+    var factor=volFactor(base,name);
+    var arr=exoSeries(b,c,exId,mode,factor);
+    if(!arr.length&&mode==="vol"){mode="1rm";arr=exoSeries(b,c,exId,"1rm",factor);}  /* volume indispo (reps manquantes) → retombe sur 1RM, jamais de bandeau vide */
+    if(!arr.length)return "";
+    var max=-Infinity,min=Infinity,maxReps=0;arr.forEach(function(p){if(p.val>max){max=p.val;maxReps=p.reps||0;}if(p.val<min)min=p.val;});
     var spark="",trend="";
     if(arr.length>=2){
       var W=104,H=26,pad=3,n=arr.length,span=(max-min)||1;
-      var pts=arr.map(function(p,i){var x=pad+i*((W-2*pad)/(n-1));var y=H-pad-((p.kg-min)/span)*(H-2*pad);return x.toFixed(1)+","+y.toFixed(1);});
+      var pts=arr.map(function(p,i){var x=pad+i*((W-2*pad)/(n-1));var y=H-pad-((p.val-min)/span)*(H-2*pad);return x.toFixed(1)+","+y.toFixed(1);});
       var lp=pts[pts.length-1].split(",");
       spark='<svg class="prog-spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><polyline points="'+pts.join(" ")+'"/><circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="2.6"/></svg>';
-      var d=arr[arr.length-1].kg-arr[0].kg;trend=d>0?'<span class="pg-up">+'+nFmt(d)+' kg</span>':(d<0?'<span class="pg-dn">'+nFmt(d)+' kg</span>':'<span class="pg-eq">stable</span>');
+      var d=Math.round(arr[arr.length-1].val-arr[0].val);trend=d>0?'<span class="pg-up">+'+d+'</span>':(d<0?'<span class="pg-dn">'+d+'</span>':'<span class="pg-eq">stable</span>');
     }
-    return '<div class="exo-prog"><span class="pg-rec">🏆 '+nFmt(max)+' kg</span>'+spark+trend+'</div>';
+    var rec=Math.round(max);
+    if(mode==="vol"){
+      return '<div class="exo-prog" data-prog="'+esc(bareId)+'" role="button" tabindex="0" title="Toucher : voir le 1RM estimé"><span class="pg-rec">📦 '+rec+' kg<span '+PG_TAG+'>vol max</span></span>'+spark+trend+'</div>';
+    }
+    var note=maxReps>15?'<span '+PG_TAG+' title="Estimation Epley moins fiable au-delà de ~15 reps">≈</span>':'';
+    return '<div class="exo-prog" data-prog="'+esc(bareId)+'" role="button" tabindex="0" title="Toucher : voir le volume par séance"><span class="pg-rec">🏆 '+rec+' kg<span '+PG_TAG+'>1RM est.'+note+'</span></span>'+spark+trend+'</div>';
   }
 
   /* ---------------- Journée ---------------- */
@@ -256,7 +292,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false, coursesOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -374,16 +410,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         save();if(afterAdd)afterAdd();};});
     });
   }
-  function coursesList(){if(!Array.isArray(state.courses))state.courses=[];return state.courses;}
-  function logEatenToJournal(it){var d=it.loggedDay||todayStr();var x=day(d);if(!x.mealItems)x.mealItems={pd:[],dj:[],dn:[],co:[]};var mk=it.loggedMeal||"co";if(!x.mealItems[mk])x.mealItems[mk]=[];var nut=it.nut||null;if(!nut){var c=foodCatalog()[(""+it.name).trim().toLowerCase()];if(c&&c.nut)nut=c.nut;}x.mealItems[mk].push({name:it.name,qty:(it.eatenQty!=null&&it.eatenQty!=="")?(""+it.eatenQty):((nut&&nut.base!=null&&nut.base!=="")?(""+nut.base):""),unit:(nut&&nut.baseUnit)||it.unit||"g",nut:nut?JSON.parse(JSON.stringify(nut)):null,_src:it.id});it.loggedDay=d;it.loggedMeal=mk;}
-  function unlogFromJournal(it){var d=it.loggedDay||todayStr();var x=state.days[d];if(x&&x.mealItems){MEALS.forEach(function(m){if(x.mealItems[m.k])x.mealItems[m.k]=x.mealItems[m.k].filter(function(e){return e._src!==it.id;});});}it.loggedDay="";}
-  function lookupBarcodeAndAdd(code,setMsg){code=(""+(code||"")).replace(/\D/g,"");if(!code){if(setMsg)setMsg("Entre un code-barres.");return;}if(typeof fetch==="undefined"){if(setMsg)setMsg("Recherche indisponible sur ce navigateur.");return;}if(setMsg)setMsg("Recherche du produit…");
+  function lookupBarcode(code,cb){code=(""+(code||"")).replace(/\D/g,"");if(!code){cb(null,"Entre un code-barres.");return;}if(typeof fetch==="undefined"){cb(null,"Recherche indisponible sur ce navigateur.");return;}
     fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,product_name_fr,nutriments").then(function(r){return r.json();}).then(function(data){
       if(data&&data.status===1&&data.product){var pr=data.product,n=pr.nutriments||{};var nm=((pr.product_name_fr||pr.product_name||"")+"").trim()||("Produit "+code);
         var nut={base:"100",baseUnit:"g",kcal:(n["energy-kcal_100g"]!=null?Math.round(n["energy-kcal_100g"]):""),prot:(n.proteins_100g!=null?n.proteins_100g:""),gluc:(n.carbohydrates_100g!=null?n.carbohydrates_100g:""),lip:(n.fat_100g!=null?n.fat_100g:""),portion:""};
-        coursesList().push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:"",bought:false,eaten:false,wasted:false,ts:"",nut:nut,unit:"g",logged:false,loggedDay:"",loggedMeal:"co",eatenQty:""});save();coursesOpen=true;renderCourses();
-      }else{if(setMsg)setMsg("Produit non trouvé — ajoute-le à la main.");}
-    }).catch(function(){if(setMsg)setMsg("Pas de connexion — réessaie, ou ajoute à la main.");});
+        cb({name:nm,nut:nut});
+      }else{cb(null,"Produit non trouvé — saisis les valeurs à la main.");}
+    }).catch(function(){cb(null,"Pas de connexion — réessaie, ou saisis à la main.");});
   }
   var crsScanner=null;
   function loadScanLib(cb){if(window.Html5Qrcode){cb(true);return;}var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";s.onload=function(){cb(!!window.Html5Qrcode);};s.onerror=function(){cb(false);};document.head.appendChild(s);}
@@ -395,78 +428,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var tBtn=document.getElementById("crsTorch");
     if(caps.torch&&tBtn){tBtn.hidden=false;tBtn.setAttribute("data-on","0");tBtn.onclick=function(){var on=tBtn.getAttribute("data-on")!=="1";try{var p=crsScanner.applyVideoConstraints({advanced:[{torch:on}]});if(p&&p.then){p.then(function(){tBtn.setAttribute("data-on",on?"1":"0");tBtn.textContent=on?"🔦 Torche (on)":"🔦 Torche";}).catch(function(){});}else{tBtn.setAttribute("data-on",on?"1":"0");}}catch(e){}};}
   }
-  function openScanner(){var modal=document.getElementById("crsScanModal");if(!modal)return;modal.hidden=false;scanStatus("Chargement du scanner…");
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus("Caméra non disponible ici — tape le numéro à la main.");return;}
-    loadScanLib(function(ok){if(!ok||!window.Html5Qrcode){scanStatus("Scanner non chargé (connexion ?) — tape le numéro.");return;}
+  function openScanner(onResult){var modal=document.getElementById("crsScanModal");if(!modal)return;modal.hidden=false;scanStatus("Chargement du scanner…");
+    var cbtn=document.getElementById("crsScanClose");if(cbtn)cbtn.onclick=function(){closeScanner();};
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus("Caméra non disponible ici — saisis les valeurs à la main.");return;}
+    loadScanLib(function(ok){if(!ok||!window.Html5Qrcode){scanStatus("Scanner non chargé (connexion ?).");return;}
       try{crsScanner=new window.Html5Qrcode("crsCam");
         var fmts;try{var F=window.Html5QrcodeSupportedFormats;fmts=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];}catch(e){fmts=undefined;}
         var vc={facingMode:"environment",width:{ideal:1280},height:{ideal:720},advanced:[{focusMode:"continuous"}]};
         var cfg={fps:12,qrbox:function(w,h){var bw=Math.floor(Math.min(w*0.9,340));return {width:bw,height:Math.floor(Math.min(bw*0.55,h*0.7))};},aspectRatio:1.7778,experimentalFeatures:{useBarCodeDetectorIfSupported:true},formatsToSupport:fmts};
-        crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();var mel=document.getElementById("crsScanMsg");lookupBarcodeAndAdd(code,function(m){if(mel)mel.textContent=m;});},function(){}).then(function(){scanStatus("Cadre le code-barres. Zoome pour le grossir sans t'approcher (là où ça fait le point).");setupZoomTorch();}).catch(function(){scanStatus("Caméra refusée ou indisponible — tape le numéro à la main.");});
-      }catch(e){scanStatus("Scanner indisponible — tape le numéro.");}
+        crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();lookupBarcode(code,function(res,msg){if(res&&onResult){onResult(res);}else{modal.hidden=false;scanStatus(msg||"Produit non trouvé — saisis les valeurs à la main.");}});},function(){}).then(function(){scanStatus("Cadre le code-barres. Zoome pour le grossir sans t'approcher.");setupZoomTorch();}).catch(function(){scanStatus("Caméra refusée ou indisponible.");});
+      }catch(e){scanStatus("Scanner indisponible.");}
     });
-  }
-  function renderCourses(){
-    var host=document.getElementById("todayCourses");if(!host)return;
-    var list=coursesList();
-    function stOf(it){return it.wasted?"wasted":(it.eaten?"eaten":(it.bought?"fridge":"buy"));}
-    var LBL={buy:"À acheter",fridge:"🧊 Au frigo",eaten:"✅ Mangé",wasted:"🗑 Jeté"},RANK={buy:0,fridge:1,eaten:2,wasted:3};
-    var total=list.reduce(function(s,it){var p=parseFloat(String(it.prix).replace(",","."));return s+((it.bought&&!isNaN(p))?p:0);},0);
-    var nBuy=0,nFri=0,nEat=0;list.forEach(function(it){var st=stOf(it);if(st==="buy")nBuy++;else if(st==="fridge")nFri++;else nEat++;});
-    var vtxt=list.length?(nBuy+" à acheter · "+nFri+" au frigo"+(total>0?" · "+nFmt(total)+" €":"")):"vide";
-    var head='<button type="button" class="hcol courses-toggle'+(coursesOpen?" open":"")+'"><span class="hcol-ic">🧊</span><span class="hcol-txt"><span class="hcol-k">Frigo &amp; courses</span><span class="hcol-v">'+esc(vtxt)+'</span></span><span class="hcol-chev">▾</span></button>';
-    var body="";
-    if(coursesOpen){
-      var cat=foodCatalog();var have={};list.forEach(function(it){have[(""+it.name).trim().toLowerCase()]=1;});
-      var sug=[];Object.keys(cat).forEach(function(k){var c=cat[k];if(!c.nut||c.cat!=="staples"||have[k])return;var p=num(c.nut.prot);if(isNaN(p)||p<8)return;sug.push({name:c.name,p:p});});
-      sug.sort(function(a,b){return b.p-a.p;});sug=sug.slice(0,6);
-      var sugHTML=sug.length?'<div class="crs-sugtitle">Aliments protéinés à ajouter :</div><div class="crs-sug">'+sug.map(function(o){return '<button type="button" class="crs-sugbtn" data-n="'+esc(o.name)+'">'+esc(o.name)+' <span>+'+nFmt(o.p)+'g</span></button>';}).join("")+'</div>':'';
-      var addRow='<div class="crs-add"><input type="text" class="crs-name" placeholder="Article (ex. Skyr ×2)"><input type="text" inputmode="decimal" class="crs-prix" placeholder="€"><button type="button" class="btn accent crs-addbtn">Ajouter</button></div>';
-      var barcodeRow='<div class="crs-barcode-row"><input type="text" inputmode="numeric" class="crs-barcode" placeholder="Code-barres"><button type="button" class="btn ghost crs-cam" aria-label="Scanner à la caméra">📷</button><button type="button" class="btn ghost crs-scan" aria-label="Chercher">🔍</button></div><div class="crs-scan-msg" id="crsScanMsg"></div>';
-      var help='<div class="crs-help"><b>Code-barres</b> → macros récupérées automatiquement (Open Food Facts). Statut : <b>à acheter → au frigo → mangé</b>. Un <b>mangé</b> s\'ajoute à tes repas — choisis le <b>repas</b>, le <b>jour</b> et la <b>quantité</b> (ex. 300 g), les protéines sont comptées. Gâché → <b>« 🗑 jeté »</b> (hors journal, mais compté en dépense).</div>';
-      var ordered=list.map(function(it,i){return {it:it,i:i,st:stOf(it)};}).sort(function(a,b){return RANK[a.st]-RANK[b.st];});
-      var rows=list.length?ordered.map(function(o){var it=o.it,i=o.i,st=o.st;var p=parseFloat(String(it.prix).replace(",","."));
-        var status='<button type="button" class="crs-status" data-i="'+i+'">'+LBL[st]+'</button>';
-        var del='<button type="button" class="crs-del" data-i="'+i+'" aria-label="Supprimer">×</button>';
-        var prix=(!isNaN(p)?'<span class="crs-prix-v">'+nFmt(p)+' €</span>':"");
-        if(st==="eaten"){
-          var meal='<select class="crs-meal" data-i="'+i+'" aria-label="Repas">'+MEALS.map(function(m){return '<option value="'+m.k+'"'+((it.loggedMeal||"co")===m.k?" selected":"")+'>'+esc(m.label)+'</option>';}).join("")+'</select>';
-          var date='<input type="date" class="crs-date" data-i="'+i+'" value="'+esc(it.loggedDay||todayStr())+'" aria-label="Jour">';
-          var qty='<span class="crs-ctrl-lbl">Quantité</span><input type="number" inputmode="decimal" step="any" class="crs-qty" data-i="'+i+'" value="'+esc(it.eatenQty||(it.nut&&it.nut.base)||"")+'" aria-label="Quantité mangée"><span class="crs-ctrl-lbl">'+esc((it.nut&&it.nut.baseUnit)||it.unit||"")+'</span>';
-          return '<div class="crs-item st-eaten" data-i="'+i+'"><div class="crs-item-main">'+status+'<span class="crs-nm">'+esc(it.name)+'</span>'+del+'</div><div class="crs-eaten-ctrl"><span class="crs-ctrl-lbl">Repas</span>'+meal+'<span class="crs-ctrl-lbl">Jour</span>'+date+qty+'</div></div>';
-        }
-        var jete=(st==="fridge")?'<button type="button" class="crs-jete" data-i="'+i+'">🗑 jeté</button>':"";
-        return '<div class="crs-item st-'+st+'" data-i="'+i+'"><div class="crs-item-main">'+status+'<span class="crs-nm">'+esc(it.name)+'</span>'+prix+jete+del+'</div></div>';
-      }).join(""):'<div class="crs-empty">Rien pour l\'instant. Ajoute ce que tu comptes acheter, ou pioche dans les suggestions.</div>';
-      var totalRow=total>0?'<div class="crs-total">Total dépensé (au frigo + mangé) : <b>'+nFmt(total)+' €</b></div>':"";
-      body='<div class="crs-body">'+addRow+barcodeRow+sugHTML+help+'<div class="crs-list">'+rows+'</div>'+totalRow+'</div>';
-    }
-    host.innerHTML=head+body;
-    host.querySelector(".courses-toggle").onclick=function(){coursesOpen=!coursesOpen;renderCourses();};
-    if(coursesOpen){
-      var nameEl=host.querySelector(".crs-name"),prixEl=host.querySelector(".crs-prix");
-      function addItem(nm,prix,nut,unit){nm=(""+(nm||"")).trim();if(!nm)return;var l=coursesList();l.push({id:"c"+Date.now()+Math.floor(Math.random()*1000),name:nm,qty:"",prix:(""+(prix||"")).trim(),bought:false,eaten:false,ts:"",nut:nut||null,unit:unit||"",logged:false,loggedDay:"",loggedMeal:"co"});save();renderCourses();}
-      var ab=host.querySelector(".crs-addbtn");if(ab)ab.onclick=function(){addItem(nameEl.value,prixEl.value);};
-      if(nameEl)nameEl.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addItem(nameEl.value,prixEl.value);}});
-      host.querySelectorAll(".crs-sugbtn").forEach(function(b){b.onclick=function(){var nm=b.getAttribute("data-n");var c=foodCatalog()[(""+nm).trim().toLowerCase()];addItem(nm,"",c&&c.nut,c&&c.unit);};});
-      var scanBtn=host.querySelector(".crs-scan"),camBtn=host.querySelector(".crs-cam"),bcEl=host.querySelector(".crs-barcode"),msgEl=host.querySelector("#crsScanMsg");
-      function setScanMsg(m){if(msgEl)msgEl.textContent=m;}
-      if(scanBtn)scanBtn.onclick=function(){lookupBarcodeAndAdd(bcEl?bcEl.value:"",setScanMsg);};
-      if(camBtn)camBtn.onclick=function(){openScanner();};
-      var closeBtn=document.getElementById("crsScanClose");if(closeBtn)closeBtn.onclick=function(){closeScanner();};
-      host.querySelectorAll(".crs-qty").forEach(function(inp){inp.onchange=function(){var i=+inp.getAttribute("data-i");var it=coursesList()[i];if(!it)return;it.eatenQty=inp.value;if(it.logged){unlogFromJournal(it);logEatenToJournal(it);it.logged=true;}save();renderCourses();bumpNutri();};});
-      function bumpNutri(){if(typeof renderTodayNutri==="function")renderTodayNutri();var tl=document.getElementById("todayLog");if(tl)buildDayForm(tl,todayStr());}
-      host.querySelectorAll(".crs-status").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();var it=l[i];if(!it)return;var refresh=false;
-        if(it.wasted){it.wasted=false;it.bought=false;it.eaten=false;it.ts="";}
-        else if(!it.bought){it.bought=true;it.eaten=false;it.ts=Date.now();}
-        else if(!it.eaten){it.eaten=true;if(!it.logged){logEatenToJournal(it);it.logged=true;refresh=true;}}
-        else{it.bought=false;it.eaten=false;it.ts="";if(it.logged){unlogFromJournal(it);it.logged=false;refresh=true;}}
-        save();renderCourses();if(refresh)bumpNutri();};});
-      host.querySelectorAll(".crs-jete").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var it=coursesList()[i];if(!it)return;if(it.logged){unlogFromJournal(it);it.logged=false;bumpNutri();}it.wasted=true;it.eaten=false;save();renderCourses();};});
-      host.querySelectorAll(".crs-meal").forEach(function(sel){sel.onchange=function(){var i=+sel.getAttribute("data-i");var it=coursesList()[i];if(!it)return;if(it.logged)unlogFromJournal(it);it.loggedMeal=sel.value;if(it.eaten){logEatenToJournal(it);it.logged=true;}save();renderCourses();bumpNutri();};});
-      host.querySelectorAll(".crs-date").forEach(function(inp){inp.onchange=function(){var i=+inp.getAttribute("data-i");var it=coursesList()[i];if(!it||!inp.value)return;if(it.logged)unlogFromJournal(it);it.loggedDay=inp.value;if(it.eaten){logEatenToJournal(it);it.logged=true;}save();renderCourses();bumpNutri();};});
-      host.querySelectorAll(".crs-del").forEach(function(b){b.onclick=function(){var i=+b.getAttribute("data-i");var l=coursesList();if(i>=0&&i<l.length){l.splice(i,1);save();renderCourses();}};});
-    }
   }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
@@ -501,7 +473,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderChip();
     renderHero();
     renderTodayNutri();
-    renderCourses();
     buildDayForm(document.getElementById("todayLog"),todayStr());
     var bn=document.getElementById("backupNudge");
     if(bn){var st=backupStaleDays();var stale=(st===null||st>=10);
@@ -587,6 +558,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var secLbl=perSide?"s/côté":"s";
       var secTgt=(String(ex.target).match(/(\d+)\s*s/)||[])[1]||"s";
       var rest=restFor(ex.target);
+      var exBase=baseFor(ex.id,curV,ex.base);       /* base de saisie de l'exo (total/bras/ajout), déduite variante+défaut */
+      var kgUnit=BASE_UNIT[exBase];                 /* unité affichée à côté du champ poids (kg / kg/bras / +kg) */
       var setsHTML="";
       for(var i=0;i<ex.sets;i++){
         var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:(isSec?secTgt:"reps");
@@ -596,10 +569,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>'+secLbl+'</b></span>'+
           '</div>';
         }else{
-          var pk=(prev&&prev[i]&&prev[i].kg!=="")?prev[i].kg:"kg";
+          var pk=(prev&&prev[i]&&prev[i].kg!=="")?prev[i].kg:kgUnit;
           setsHTML+='<div class="set" data-exo="'+esc(setK)+'" data-set="'+i+'">'+
             '<span class="sn">Série '+(i+1)+'</span>'+
-            '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>kg</b></span>'+
+            '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>'+esc(kgUnit)+'</b></span>'+
             '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps</b></span>'+
           '</div>';
         }
@@ -629,7 +602,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
-            progHTML(b,c,setK)+
+            progHTML(b,c,setK,exBase,ex.name)+
             '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
           '</div>'+
         '</div>';
@@ -658,6 +631,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};save();}
       if(kgEl)kgEl.addEventListener("input",upd);
       if(rEl)rEl.addEventListener("input",upd);
+    });
+    wrap.querySelectorAll(".exo-prog[data-prog]").forEach(function(el){
+      function tgl(){var id=el.getAttribute("data-prog");progMode[id]=(progMode[id]==="vol")?"1rm":"vol";renderSessionDetail();}
+      el.addEventListener("click",tgl);
+      el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tgl();}});
     });
     wrap.querySelectorAll(".info-btn").forEach(function(btn){btn.addEventListener("click",function(){document.getElementById("help-"+btn.getAttribute("data-help")).classList.toggle("open");});});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
@@ -892,6 +870,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<label>Lip. (g)<input type="number" inputmode="decimal" step="any" class="te-lip" value="'+esc(it.nut?it.nut.lip:"")+'"></label>'+
           '</div>'+
           (sumText(it)?'<div class="food-sum">'+sumText(it)+'</div>':'')+
+          '<button type="button" class="te-scan">📷 Scanner un code-barres</button>'+
           '<button type="button" class="te-close">Fermer</button>'+
         '</div>';
       }
@@ -949,6 +928,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         host.querySelector(".te-baseunit").addEventListener("change",function(){ensureNut();item.nut.baseUnit=this.value;save();recalcTotals();updEdSum();});
         ["kcal","prot","gluc","lip"].forEach(function(f){host.querySelector(".te-"+f).addEventListener("input",function(){ensureNut();item.nut[f]=this.value;save();recalcTotals();updEdSum();});});
         host.querySelector(".te-close").addEventListener("click",function(){mealEdit[mk]=-1;renderMeal(mk);});
+        var teScan=host.querySelector(".te-scan");
+        if(teScan)teScan.addEventListener("click",function(){openScanner(function(res){ensureNut();item.unit="g";item.nut.base="100";item.nut.baseUnit="g";item.nut.kcal=res.nut.kcal;item.nut.prot=res.nut.prot;item.nut.gluc=res.nut.gluc;item.nut.lip=res.nut.lip;if(!item.qty||item.qty==="")item.qty="100";save();renderMeal(mk);recalcTotals();});});
       }
     }
     MEALS.forEach(function(m){renderMeal(m.k);});
