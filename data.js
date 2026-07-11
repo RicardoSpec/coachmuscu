@@ -50,71 +50,71 @@ var ROUTINES = [
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
 var PROGRAM = {
   A:{title:"Séance A — Haut (force) + abdos", sub:"Haut · force", exos:[
-    {id:"a1",name:"Développé couché (haltères/barre)",target:"4 × 6-8",sets:4,unit:"reps",help:"Allongé, pousser la charge du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
-    {id:"a2",name:"Tractions pronation",target:"4 × max",sets:4,unit:"reps",help:"Paumes vers l'avant, se tirer jusqu'au menton au-dessus de la barre. <b>Cible :</b> dos (largeur), biceps."},
-    {id:"a3",name:"Développé militaire (debout/assis)",target:"3 × 8-10",sets:3,unit:"reps",help:"Pousser la barre au-dessus de la tête, dos gainé. <b>Cible :</b> épaules."},
-    {id:"a4",name:"Rowing barre / machine",target:"3 × 8-10",sets:3,unit:"reps",help:"Buste penché, tirer la barre vers le ventre. <b>Cible :</b> dos (épaisseur)."},
-    {id:"a5",name:"Élévations latérales",target:"3 × 12-15",sets:3,unit:"reps",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
-    {id:"a6",name:"Relevés de jambes suspendus",target:"3 × 12-15",sets:3,unit:"reps",help:"Suspendu, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
+    {id:"a1",name:"Développé couché (haltères/barre)",target:"4 × 6-8",sets:4,unit:"reps",base:"bras",help:"Allongé, pousser la charge du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
+    {id:"a2",name:"Tractions pronation",target:"4 × max",sets:4,unit:"reps",base:"ajout",help:"Paumes vers l'avant, se tirer jusqu'au menton au-dessus de la barre. <b>Cible :</b> dos (largeur), biceps."},
+    {id:"a3",name:"Développé militaire (debout/assis)",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Pousser la barre au-dessus de la tête, dos gainé. <b>Cible :</b> épaules."},
+    {id:"a4",name:"Rowing barre / machine",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Buste penché, tirer la barre vers le ventre. <b>Cible :</b> dos (épaisseur)."},
+    {id:"a5",name:"Élévations latérales",target:"3 × 12-15",sets:3,unit:"reps",base:"bras",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
+    {id:"a6",name:"Relevés de jambes suspendus",target:"3 × 12-15",sets:3,unit:"reps",base:"ajout",help:"Suspendu, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
   ]},
   B:{title:"Séance B — Bas (allégé) + core", sub:"Bas · core", exos:[
-    {id:"b1",name:"Squat barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Barre sur le haut du dos, descendre fesses en arrière jusqu'aux cuisses parallèles. <b>Cible :</b> cuisses, fessiers."},
-    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos, fessiers."},
-    {id:"b3",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
-    {id:"b4",name:"Crunch à la poulie (lesté)",target:"3 × 12-15",sets:3,unit:"reps",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux."},
+    {id:"b1",name:"Squat barre",target:"4 × 6-8",sets:4,unit:"reps",base:"total",help:"Barre sur le haut du dos, descendre fesses en arrière jusqu'aux cuisses parallèles. <b>Cible :</b> cuisses, fessiers."},
+    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos, fessiers."},
+    {id:"b3",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",base:"ajout",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
+    {id:"b4",name:"Crunch à la poulie (lesté)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux."},
     {id:"b5",name:"Gainage planche",target:"3 × 45 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."},
     {id:"b6",name:"Gainage latéral",target:"3 × 30 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui sur un avant-bras, hanches hautes. <b>Cible :</b> obliques."}
   ]},
   C:{title:"Séance C — Haut (volume) + abdos", sub:"Haut · volume", exos:[
-    {id:"c1",name:"Développé incliné haltères",target:"4 × 8-10",sets:4,unit:"reps",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
-    {id:"c2",name:"Tirage vertical poulie",target:"4 × 10-12",sets:4,unit:"reps",help:"Tirer la barre vers le haut de la poitrine, coudes vers le bas. <b>Cible :</b> dos (largeur)."},
-    {id:"c3",name:"Dips / développé machine",target:"3 × 10-12",sets:3,unit:"reps",help:"Descendre coudes pliés puis remonter (barres parallèles ou machine). <b>Cible :</b> bas des pectoraux, triceps."},
-    {id:"c4",name:"Face pull (poulie)",target:"3 × 15",sets:3,unit:"reps",help:"Tirer la corde vers le visage, coudes hauts. <b>Cible :</b> épaules arrière, posture."},
-    {id:"c5",name:"Curl + extension triceps",target:"3 × 12",sets:3,unit:"reps",help:"En superset : curl biceps puis extension triceps. <b>Cible :</b> bras (biceps + triceps)."},
-    {id:"c6",name:"Crunch lesté / relevés de jambes",target:"3 × 15",sets:3,unit:"reps",help:"Travail abdominal lesté ou relevés de jambes. <b>Cible :</b> abdominaux."}
+    {id:"c1",name:"Développé incliné haltères",target:"4 × 8-10",sets:4,unit:"reps",base:"bras",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
+    {id:"c2",name:"Tirage vertical poulie",target:"4 × 10-12",sets:4,unit:"reps",base:"total",help:"Tirer la barre vers le haut de la poitrine, coudes vers le bas. <b>Cible :</b> dos (largeur)."},
+    {id:"c3",name:"Dips / développé machine",target:"3 × 10-12",sets:3,unit:"reps",base:"ajout",help:"Descendre coudes pliés puis remonter (barres parallèles ou machine). <b>Cible :</b> bas des pectoraux, triceps."},
+    {id:"c4",name:"Face pull (poulie)",target:"3 × 15",sets:3,unit:"reps",base:"total",help:"Tirer la corde vers le visage, coudes hauts. <b>Cible :</b> épaules arrière, posture."},
+    {id:"c5",name:"Curl + extension triceps",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"En superset : curl biceps puis extension triceps. <b>Cible :</b> bras (biceps + triceps)."},
+    {id:"c6",name:"Crunch lesté / relevés de jambes",target:"3 × 15",sets:3,unit:"reps",base:"ajout",help:"Travail abdominal lesté ou relevés de jambes. <b>Cible :</b> abdominaux."}
   ]},
   D:{title:"Séance D — Haut (accessoire) + abdos", sub:"Haut · accessoire", exos:[
-    {id:"d1",name:"Rowing haltère 1 bras",target:"3 × 10-12",sets:3,unit:"reps",help:"Un genou sur le banc, tirer l'haltère vers la hanche. <b>Cible :</b> dos."},
-    {id:"d2",name:"Écarté poulie / pec deck",target:"3 × 12-15",sets:3,unit:"reps",help:"Rapprocher les bras devant soi en arc de cercle. <b>Cible :</b> pectoraux (étirement)."},
-    {id:"d3",name:"Élévations latérales",target:"4 × 15",sets:4,unit:"reps",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales."},
-    {id:"d4",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",help:"Coudes fixes le long du corps, tendre les bras vers le bas puis écarter la corde en fin de course. <b>Cible :</b> triceps (les épaules arrière sont déjà couvertes en séance C)."},
-    {id:"d5",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
-    {id:"d6",name:"Roue abdos / planche dynamique",target:"3 × 10-12",sets:3,unit:"reps",help:"Roue abdominale ou planche dynamique. <b>Cible :</b> sangle abdominale (avancé)."}
+    {id:"d1",name:"Rowing haltère 1 bras",target:"3 × 10-12",sets:3,unit:"reps",base:"bras",help:"Un genou sur le banc, tirer l'haltère vers la hanche. <b>Cible :</b> dos."},
+    {id:"d2",name:"Écarté poulie / pec deck",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Rapprocher les bras devant soi en arc de cercle. <b>Cible :</b> pectoraux (étirement)."},
+    {id:"d3",name:"Élévations latérales",target:"4 × 15",sets:4,unit:"reps",base:"bras",help:"Lever les bras sur les côtés jusqu'à l'horizontale. <b>Cible :</b> épaules latérales."},
+    {id:"d4",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas puis écarter la corde en fin de course. <b>Cible :</b> triceps (les épaules arrière sont déjà couvertes en séance C)."},
+    {id:"d5",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+    {id:"d6",name:"Roue abdos / planche dynamique",target:"3 × 10-12",sets:3,unit:"reps",base:"ajout",help:"Roue abdominale ou planche dynamique. <b>Cible :</b> sangle abdominale (avancé)."}
   ]}
 };
 
 /* ---------- BLOC 2 — Août (focus plage) ---------- */
 var PROGRAM2 = {
   A:{title:"Séance A — Pecs & épaules (force)", sub:"Pousser", exos:[
-    {id:"a1",name:"Développé couché barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Pousser la barre du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
-    {id:"a2",name:"Développé militaire barre",target:"4 × 6-8",sets:4,unit:"reps",help:"Barre poussée au-dessus de la tête, debout, dos gainé. <b>Cible :</b> épaules (force)."},
-    {id:"a3",name:"Développé incliné haltères",target:"3 × 8-10",sets:3,unit:"reps",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
-    {id:"a4",name:"Élévations latérales",target:"4 × 12-15",sets:4,unit:"reps",help:"Lever les bras sur les côtés à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
-    {id:"a5",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, posture."},
-    {id:"a6",name:"Relevés de jambes lestés",target:"3 × 12",sets:3,unit:"reps",help:"Suspendu ou allongé, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
+    {id:"a1",name:"Développé couché barre",target:"4 × 6-8",sets:4,unit:"reps",base:"total",help:"Pousser la barre du torse vers le haut, omoplates serrées. <b>Cible :</b> pectoraux, épaules, triceps."},
+    {id:"a2",name:"Développé militaire barre",target:"4 × 6-8",sets:4,unit:"reps",base:"total",help:"Barre poussée au-dessus de la tête, debout, dos gainé. <b>Cible :</b> épaules (force)."},
+    {id:"a3",name:"Développé incliné haltères",target:"3 × 8-10",sets:3,unit:"reps",base:"bras",help:"Banc incliné, pousser les haltères vers le haut. <b>Cible :</b> haut des pectoraux."},
+    {id:"a4",name:"Élévations latérales",target:"4 × 12-15",sets:4,unit:"reps",base:"bras",help:"Lever les bras sur les côtés à l'horizontale. <b>Cible :</b> épaules latérales (largeur)."},
+    {id:"a5",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, posture."},
+    {id:"a6",name:"Relevés de jambes lestés",target:"3 × 12",sets:3,unit:"reps",base:"ajout",help:"Suspendu ou allongé, monter les jambes sans balancer. <b>Cible :</b> abdominaux bas."}
   ]},
   B:{title:"Séance B — Bas & gainage", sub:"Jambes", exos:[
-    {id:"b1",name:"Presse à cuisses",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser la charge avec les jambes, amplitude contrôlée. <b>Cible :</b> cuisses, fessiers."},
-    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos."},
-    {id:"b3",name:"Fentes marchées haltères",target:"3 × 12/jambe",sets:3,unit:"reps",help:"Grands pas en fente, genou vers le sol. <b>Cible :</b> cuisses, fessiers, équilibre."},
-    {id:"b4",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
-    {id:"b5",name:"Roue abdos",target:"3 × 10-12",sets:3,unit:"reps",help:"À genoux, rouler vers l'avant dos droit, revenir. <b>Cible :</b> abdominaux (avancé)."},
+    {id:"b1",name:"Presse à cuisses",target:"4 × 8-10",sets:4,unit:"reps",base:"total",help:"Pousser la charge avec les jambes, amplitude contrôlée. <b>Cible :</b> cuisses, fessiers."},
+    {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos."},
+    {id:"b3",name:"Fentes marchées haltères",target:"3 × 12/jambe",sets:3,unit:"reps",base:"bras",help:"Grands pas en fente, genou vers le sol. <b>Cible :</b> cuisses, fessiers, équilibre."},
+    {id:"b4",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",base:"ajout",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
+    {id:"b5",name:"Roue abdos",target:"3 × 10-12",sets:3,unit:"reps",base:"ajout",help:"À genoux, rouler vers l'avant dos droit, revenir. <b>Cible :</b> abdominaux (avancé)."},
     {id:"b6",name:"Gainage planche",target:"3 × 60 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."}
   ]},
   C:{title:"Séance C — Dos & bras", sub:"Tirer", exos:[
-    {id:"c1",name:"Tractions lestées",target:"4 × 6-8",sets:4,unit:"reps",help:"Se tirer menton au-dessus de la barre, lest si besoin. <b>Cible :</b> dos (largeur), biceps."},
-    {id:"c2",name:"Tirage horizontal poulie",target:"4 × 10-12",sets:4,unit:"reps",help:"Tirer la poignée vers le ventre, serrer les omoplates. <b>Cible :</b> dos (épaisseur)."},
-    {id:"c3",name:"Pull-over haltère",target:"3 × 12",sets:3,unit:"reps",help:"Allongé, descendre l'haltère derrière la tête bras semi-tendus. <b>Cible :</b> dorsaux, pectoraux, cage."},
-    {id:"c4",name:"Curl barre",target:"3 × 8-10",sets:3,unit:"reps",help:"Fléchir les coudes, barre vers les épaules, sans balancer. <b>Cible :</b> biceps."},
-    {id:"c5",name:"Extension triceps poulie",target:"3 × 10-12",sets:3,unit:"reps",help:"Tendre les bras vers le bas contre la poulie. <b>Cible :</b> triceps."},
-    {id:"c6",name:"Crunch à la poulie",target:"3 × 15",sets:3,unit:"reps",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux (lesté = progression)."}
+    {id:"c1",name:"Tractions lestées",target:"4 × 6-8",sets:4,unit:"reps",base:"ajout",help:"Se tirer menton au-dessus de la barre, lest si besoin. <b>Cible :</b> dos (largeur), biceps."},
+    {id:"c2",name:"Tirage horizontal poulie",target:"4 × 10-12",sets:4,unit:"reps",base:"total",help:"Tirer la poignée vers le ventre, serrer les omoplates. <b>Cible :</b> dos (épaisseur)."},
+    {id:"c3",name:"Pull-over haltère",target:"3 × 12",sets:3,unit:"reps",base:"total",help:"Allongé, descendre l'haltère derrière la tête bras semi-tendus. <b>Cible :</b> dorsaux, pectoraux, cage."},
+    {id:"c4",name:"Curl barre",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Fléchir les coudes, barre vers les épaules, sans balancer. <b>Cible :</b> biceps."},
+    {id:"c5",name:"Extension triceps poulie",target:"3 × 10-12",sets:3,unit:"reps",base:"total",help:"Tendre les bras vers le bas contre la poulie. <b>Cible :</b> triceps."},
+    {id:"c6",name:"Crunch à la poulie",target:"3 × 15",sets:3,unit:"reps",base:"total",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux (lesté = progression)."}
   ]},
   D:{title:"Séance D — Épaules & finition", sub:"Détails", exos:[
-    {id:"d1",name:"Développé épaules haltères",target:"4 × 8-10",sets:4,unit:"reps",help:"Pousser les haltères au-dessus de la tête, assis. <b>Cible :</b> épaules."},
-    {id:"d2",name:"Élévations latérales (drop set)",target:"4 × 15",sets:4,unit:"reps",help:"Séries longues, baisse la charge sans repos en fin de série. <b>Cible :</b> épaules latérales."},
-    {id:"d3",name:"Élévations frontales",target:"3 × 12",sets:3,unit:"reps",help:"Lever les bras devant soi jusqu'à l'horizontale. <b>Cible :</b> épaules avant."},
-    {id:"d4",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
-    {id:"d5",name:"Dips lestés",target:"3 × 8-10",sets:3,unit:"reps",help:"Sur barres parallèles, descendre coudes pliés, remonter. <b>Cible :</b> bas des pectoraux, triceps."},
+    {id:"d1",name:"Développé épaules haltères",target:"4 × 8-10",sets:4,unit:"reps",base:"bras",help:"Pousser les haltères au-dessus de la tête, assis. <b>Cible :</b> épaules."},
+    {id:"d2",name:"Élévations latérales (drop set)",target:"4 × 15",sets:4,unit:"reps",base:"bras",help:"Séries longues, baisse la charge sans repos en fin de série. <b>Cible :</b> épaules latérales."},
+    {id:"d3",name:"Élévations frontales",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Lever les bras devant soi jusqu'à l'horizontale. <b>Cible :</b> épaules avant."},
+    {id:"d4",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+    {id:"d5",name:"Dips lestés",target:"3 × 8-10",sets:3,unit:"reps",base:"ajout",help:"Sur barres parallèles, descendre coudes pliés, remonter. <b>Cible :</b> bas des pectoraux, triceps."},
     {id:"d6",name:"Gainage latéral",target:"3 × 40 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui sur un avant-bras, hanches hautes. <b>Cible :</b> obliques."}
   ]}
 };
