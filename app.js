@@ -92,7 +92,7 @@
   function num(v){return parseFloat((v===undefined||v===null?"":v).toString().replace(",","."));}
   function fr1(n){return n.toFixed(1).replace(".",",");}
   function nFmt(n){return (n%1===0)?(""+n):fr1(n);}
-  function effPortion(it){if(!it||!it.nut)return "";var b=num(it.nut.base),q=num(it.qty);var n=(!isNaN(q)&&q>0)?q:b;if(isNaN(n)||n<=0)return "";var u=it.nut.baseUnit||it.unit||"g";return (u==="g"||u==="ml")?(nFmt(n)+" "+u):("×"+nFmt(n));}
+  function effPortion(it){if(!it||!it.nut)return "";var b=num(it.nut.base),q=num(it.qty);var n=(!isNaN(q)&&q>0)?q:b;if(isNaN(n)||n<=0)return "";var u=it.nut.baseUnit||it.unit||"g";if(u==="g"||u==="ml")return nFmt(n)+" "+u;var out="×"+nFmt(n);var fk=(""+(it.name||"")).trim().toLowerCase();var g=(state.foodFix&&state.foodFix[fk])?num(state.foodFix[fk].gPerU):NaN;if(!isNaN(g)&&g>0)out+=" · ≈"+nFmt(n*g)+" g";return out;}
 
   /* ---------------- Divers ---------------- */
   function slugify(s){return (""+s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
@@ -205,7 +205,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return (defBase&&BASE_UNIT[defBase])?defBase:"total";           /* 3) base par défaut de l'exo, sinon total */
   }
   function baseUnitFor(exId,variant,defBase){return BASE_UNIT[baseFor(exId,variant,defBase)];}
-   function baseHint(mode){
+  function baseHint(mode){
     if(mode==="bras")return "Note le poids d'<b>UN</b> haltère (par bras). Peu importe l'exécution — bras par bras (alterné), les deux en même temps ou côte à côte — c'est toujours le poids d'un <b>seul</b> haltère. Ex. deux haltères de 12 kg → tu notes <b>12</b>, pas 24.";
     if(mode==="ajout")return "Note seulement la <b>charge ajoutée</b> à ton poids du corps (lest, disque, gilet). Mets <b>0</b> si tu es au poids du corps.";
     return "Note le <b>poids total de l'engin</b> : barre chargée (barre + disques), plaque sélectionnée sur la machine, ou charge à la poulie.";
@@ -606,7 +606,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
-         '<details class="base-hint"><summary>Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
+            '<details class="base-hint"><summary>Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
             '<div class="sets">'+setsHTML+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
             '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
@@ -1447,6 +1447,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
               '<label>Quantité de base<input type="number" inputmode="decimal" step="any" class="ff-base" value="'+esc(n.base||"1")+'"></label>'+
               '<label>kcal (cette base)<input type="number" inputmode="decimal" step="any" class="ff-kcal" value="'+esc(n.kcal||"")+'"></label>'+
               '<label>Protéines g (cette base)<input type="number" inputmode="decimal" step="any" class="ff-prot" value="'+esc(n.prot||"")+'"></label>'+
+              '<label>1 unité ≈ (g)<input type="number" inputmode="decimal" step="any" class="ff-gpu" placeholder="si compté à la pièce" value="'+esc((state.foodFix&&state.foodFix[k]&&state.foodFix[k].gPerU)||"")+'"></label>'+
             '</div>'+
             '<div class="ff-actions"><button class="btn accent ff-save" data-k="'+esc(k)+'">Enregistrer</button>'+(fixed?'<button class="btn ghost ff-reset" data-k="'+esc(k)+'">Rétablir</button>':'')+'<button class="btn ghost ff-cancel">Annuler</button></div>'+
             (fixed?(function(){var mc=countLoggedFood(k);return mc>0?'<div class="ff-mig"><button class="btn ghost ff-migrate" data-k="'+esc(k)+'" data-n="'+mc+'">↻ Corriger aussi les '+mc+' repas déjà notés</button><div class="ff-mig-note">Réécrit l\'historique de cet aliment avec ces valeurs (quantités conservées). Une sauvegarde est téléchargée avant.</div></div>':'';})():'')+
@@ -1520,9 +1521,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var ffTog=host.querySelector(".ff-sectog");if(ffTog)ffTog.onclick=function(){settingsFoodOpen=!settingsFoodOpen;if(!settingsFoodOpen)settingsFoodSel=null;renderSettings();};
     function ffFilter(){var q=(settingsFoodQuery||"").trim().toLowerCase();host.querySelectorAll(".ff-scroll .ff-pick").forEach(function(r){var nm=r.getAttribute("data-nm")||"";r.style.display=(!q||nm.indexOf(q)>=0)?"":"none";});}
     var ffSearch=host.querySelector(".ff-search");if(ffSearch){ffSearch.addEventListener("input",function(){settingsFoodQuery=ffSearch.value;ffFilter();});ffFilter();}
-    host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();};});
+    host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();var ed=host.querySelector(".ff-scroll .ff-edit");if(ed&&ed.scrollIntoView)ed.scrollIntoView({block:"nearest"});};});
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
-    host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+    host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var gpuEl=box.querySelector(".ff-gpu");var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:gpuEl?(""+gpuEl.value).trim():""};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     host.querySelectorAll(".ff-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodFix)delete state.foodFix[k];save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     host.querySelectorAll(".ff-migrate").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k"),cnt=b.getAttribute("data-n");
       if(!confirm("Réécrire "+cnt+" repas déjà notés de « "+k+" » avec les valeurs corrigées ?\n\nLes quantités sont conservées (comptées dans la nouvelle unité). Une sauvegarde va d'abord être téléchargée — réversible en la réimportant."))return;
@@ -1534,7 +1535,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var TOK2W={"0":0,"M":(typeof FQ_MERCURE!=="undefined"?FQ_MERCURE:0),"C":(typeof FQ_CHARCUT!=="undefined"?FQ_CHARCUT:0),"A":(typeof FQ_ALCOOL!=="undefined"?FQ_ALCOOL:0),"S":(typeof FQ_SUCRE!=="undefined"?FQ_SUCRE:0)};
     function fqeFilter(){var q=(settingsQualQuery||"").trim().toLowerCase();host.querySelectorAll(".fqe-scroll .fqe-pick").forEach(function(r){var nm=r.getAttribute("data-nm")||"";r.style.display=(!q||nm.indexOf(q)>=0)?"":"none";});}
     var fqeSearch=host.querySelector(".fqe-search");if(fqeSearch){fqeSearch.addEventListener("input",function(){settingsQualQuery=fqeSearch.value;fqeFilter();});fqeFilter();}
-    host.querySelectorAll(".fqe-pick").forEach(function(b){b.onclick=function(){settingsQualSel=b.getAttribute("data-k");settingsSecOpen.qual=true;renderSettings();};});
+    host.querySelectorAll(".fqe-pick").forEach(function(b){b.onclick=function(){settingsQualSel=b.getAttribute("data-k");settingsSecOpen.qual=true;renderSettings();var ed=host.querySelector(".fqe-scroll .fqe-edit");if(ed&&ed.scrollIntoView)ed.scrollIntoView({block:"nearest"});};});
     var fqeCancel=host.querySelector(".fqe-cancel");if(fqeCancel)fqeCancel.onclick=function(){settingsQualSel=null;renderSettings();};
     host.querySelectorAll(".fqe-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".fqe-edit");if(!box)return;
       var p=parseInt(box.querySelector(".fqe-p").value,10)||0,n=parseInt(box.querySelector(".fqe-n").value,10)||0,w=TOK2W[box.querySelector(".fqe-w").value]||0;
