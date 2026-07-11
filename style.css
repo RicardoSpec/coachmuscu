@@ -134,6 +134,13 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .exo .nm{font-weight:700;font-size:15px;flex:1;min-width:0;overflow-wrap:anywhere}
 .info-btn{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--primary);font-weight:800;font-style:italic;font-size:13px;cursor:pointer;line-height:1}
 
+.base-hint{margin-top:10px}
+.base-hint>summary{cursor:pointer;list-style:none;font-size:12px;font-weight:700;color:var(--primary);padding:3px 0;-webkit-tap-highlight-color:transparent}
+.base-hint>summary::-webkit-details-marker{display:none}
+.base-hint>summary::before{content:"ⓘ ";font-style:normal}
+.base-hint[open]>summary{margin-bottom:6px}
+.base-hint>div{background:#f6f9fb;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;color:#3f4f5b;line-height:1.45}
+
 .help{display:none;margin-top:10px;background:#f6f9fb;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;color:#3f4f5b;line-height:1.5}
 .help.open{display:block}
 .help b{color:var(--ink)}
