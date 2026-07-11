@@ -671,6 +671,10 @@ nav.tabs .tab.on{color:var(--primary)}
 .ff-mig{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
 .ff-mig .ff-migrate{width:100%}
 .ff-mig-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
+.ff-conv{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.ff-conv-h{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px}
+.ff-conv .ff-calc{width:100%;margin-top:8px}
+.ff-conv-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
 
 
 /* Réglages — section aliments repliable + recherche figée + liste bornée */
