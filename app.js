@@ -205,6 +205,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return (defBase&&BASE_UNIT[defBase])?defBase:"total";           /* 3) base par défaut de l'exo, sinon total */
   }
   function baseUnitFor(exId,variant,defBase){return BASE_UNIT[baseFor(exId,variant,defBase)];}
+   function baseHint(mode){
+    if(mode==="bras")return "Note le poids d'<b>UN</b> haltère (par bras). Peu importe l'exécution — bras par bras (alterné), les deux en même temps ou côte à côte — c'est toujours le poids d'un <b>seul</b> haltère. Ex. deux haltères de 12 kg → tu notes <b>12</b>, pas 24.";
+    if(mode==="ajout")return "Note seulement la <b>charge ajoutée</b> à ton poids du corps (lest, disque, gilet). Mets <b>0</b> si tu es au poids du corps.";
+    return "Note le <b>poids total de l'engin</b> : barre chargée (barre + disques), plaque sélectionnée sur la machine, ou charge à la poulie.";
+  }
   function prevSets(b,w,c,exId){
     function pick(bl,wk){var ss=state.sessions[sessKey(bl,wk,c)];if(ss&&ss.sets&&ss.sets[exId]){var a=ss.sets[exId];for(var i=0;i<a.length;i++){if(a[i]&&(a[i].kg!==""||a[i].r!==""))return a;}}return null;}
     for(var ww=w-1;ww>=1;ww--){var r=pick(b,ww);if(r)return r;}
@@ -601,6 +606,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
+         '<details class="base-hint"><summary>Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
             '<div class="sets">'+setsHTML+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
             '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
