@@ -411,6 +411,45 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
   }
 
+  /* ---- Bilan énergétique : profil (taille/âge/sexe), métabolisme de base (Mifflin-St Jeor), dépense ---- */
+  var ACT_LEVELS=[
+    {k:"lit",  label:"Au lit / malade (× 1,2)",                    f:1.2},
+    {k:"sed",  label:"Sédentaire — bureau, peu de pas (× 1,4)",    f:1.4},
+    {k:"semi", label:"Semi-actif — ménage, déplacements (× 1,6)",  f:1.6},
+    {k:"actif",label:"Très actif — physique toute la journée (× 1,8)", f:1.8}
+  ];
+  function profileGet(){if(!state.profile||typeof state.profile!=="object")state.profile={sex:"h",height:"",age:"",weight:""};return state.profile;}
+  function lastWeight(){var ds=Object.keys(state.days).sort();for(var i=ds.length-1;i>=0;i--){var w=num(state.days[ds[i]].weight);if(!isNaN(w)&&w>0)return w;}var pw=num(profileGet().weight);return (!isNaN(pw)&&pw>0)?pw:null;}
+  function bmr(){var p=profileGet(),h=num(p.height),a=num(p.age),w=lastWeight();if(isNaN(h)||h<=0||isNaN(a)||a<=0||w==null)return null;var b=10*w+6.25*h-5*a+(p.sex==="f"?-161:5);return b>0?b:null;}
+  function actLevel(d){var x=state.days[d],k=(x&&x.actLvl)||"sed";for(var i=0;i<ACT_LEVELS.length;i++)if(ACT_LEVELS[i].k===k)return ACT_LEVELS[i];return ACT_LEVELS[1];}
+  function expend(d){var b=bmr();if(b==null)return null;return Math.round(b*actLevel(d).f);} /* étape 1 : métabolisme × niveau du jour (les activités s'ajouteront en étape 2) */
+  var balOpen=false;
+  function renderTodayBalance(){
+    var host=document.getElementById("todayBalance");if(!host)return;
+    var d=todayStr(),b=bmr(),t=dayTotals(d),intake=t?Math.round(t.kcal):0,lv=actLevel(d),out=expend(d),net=(out!=null)?(intake-out):null;
+    function lab(n){return Math.abs(n)<75?" · équilibre":(n<0?" · déficit":" · surplus");}
+    var hv=(b==null)?"profil à compléter":((net>0?"+":"")+net+" kcal"+lab(net));
+    var head='<button type="button" class="hcol bal-toggle'+(balOpen?" open":"")+'"><span class="hcol-ic">⚖️</span><span class="hcol-txt"><span class="hcol-k">Bilan énergie</span><span class="hcol-v">'+hv+'</span></span><span class="hcol-chev">▾</span></button>';
+    var body="";
+    if(balOpen){
+      if(b==null){
+        body='<div class="bal-body"><div class="bal-empty">Ajoute ta <b>taille</b>, ton <b>âge</b> et ton <b>sexe</b> dans Réglages ▸ Profil pour estimer ta dépense.</div><div class="bal-row"><span>🍽️ Apport du jour</span><b>'+intake+' kcal</b></div></div>';
+      }else{
+        var lvls=ACT_LEVELS.map(function(l){return '<button type="button" class="bal-lvl'+(l.k===lv.k?" on":"")+'" data-lvl="'+l.k+'">'+esc(l.label.split(" (")[0].split(" — ")[0])+'</button>';}).join("");
+        body='<div class="bal-body">'+
+          '<div class="bal-net'+(net<0?" neg":(net>75?" pos":""))+'"><span class="bal-net-v">'+(net>0?"+":"")+net+'</span><span class="bal-net-u">kcal net'+lab(net)+'</span></div>'+
+          '<div class="bal-row"><span>🍽️ Apport</span><b>'+intake+' kcal</b></div>'+
+          '<div class="bal-row"><span>🔥 Dépense</span><b>'+out+' kcal</b></div>'+
+          '<div class="bal-sub">métabolisme '+Math.round(b)+' × '+nFmt(lv.f)+'</div>'+
+          '<div class="bal-lvls-l">Niveau de vie du jour — hors sport</div><div class="bal-lvls">'+lvls+'</div>'+
+          '<div class="bal-note">Estimation ±15-20 %. La tendance sur la semaine compte plus que le chiffre du jour ; pour ta prépa triathlon, l\'enjeu est de bien alimenter l\'effort, pas de creuser un déficit.</div>'+
+        '</div>';
+      }
+    }
+    host.innerHTML=head+body;
+    host.querySelector(".bal-toggle").onclick=function(){balOpen=!balOpen;renderTodayBalance();};
+    host.querySelectorAll(".bal-lvl").forEach(function(bt){bt.onclick=function(){day(d).actLvl=bt.getAttribute("data-lvl");save();renderTodayBalance();};});
+  }
   function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=t.prot;n++;}}return n?{avg:s/n,n:n}:null;}
   function nutriTip(tot){
     if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
@@ -495,6 +534,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         sp.innerHTML='<div class="sprot"><span class="sprot-v">'+fr1(tot.prot)+' g</span><span class="sprot-goal">protéines · cible 130–150 · '+st2+'</span></div>';
       }else sp.innerHTML='<div class="sprot"><span class="sprot-v">0 g</span><span class="sprot-goal">protéines aujourd\'hui</span></div>';
     }
+    renderTodayBalance();
   }
   function renderToday(){
     renderChip();
@@ -1529,17 +1569,34 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<button class="btn accent bkp-btn" id="bkpExport">⬇️ Exporter mes données</button>'+
       '<button class="btn ghost bkp-btn" id="bkpImport">⬆️ Importer une sauvegarde</button>'+
       '<div class="bkp-when">'+((state.config&&state.config.lastBackup)?('Dernière sauvegarde : '+esc(frDateShort(state.config.lastBackup))+((backupStaleDays()>=7)?' · <span class="low">pense à en refaire une</span>':'')):'<span class="low">Aucune sauvegarde encore — fais-en une.</span>')+'</div>';
+    var pf=profileGet();var pfBmr=bmr(),pfW=lastWeight();
+    var profilInner='<p class="set-note">Sert au bilan énergétique (métabolisme de base — formule Mifflin-St Jeor). Reste sur ton téléphone.</p>'+
+      '<div class="ff-grid">'+
+        '<label>Sexe<select class="pf-sex"><option value="h"'+(pf.sex!=="f"?" selected":"")+'>Homme</option><option value="f"'+(pf.sex==="f"?" selected":"")+'>Femme</option></select></label>'+
+        '<label>Taille (cm)<input type="number" inputmode="numeric" class="pf-h" value="'+esc(pf.height)+'" placeholder="ex : 178"></label>'+
+        '<label>Âge<input type="number" inputmode="numeric" class="pf-age" value="'+esc(pf.age)+'" placeholder="ex : 25"></label>'+
+        '<label>Poids réf. (kg)<input type="number" inputmode="decimal" step="0.1" class="pf-w" value="'+esc(pf.weight)+'" placeholder="'+(pfW!=null?("auto : "+fr1(pfW)):"ex : 68")+'"></label>'+
+      '</div>'+
+      '<div class="bkp-when pf-bmr">'+(pfBmr!=null?('Métabolisme de base : <b>'+Math.round(pfBmr)+' kcal/j</b>'+(pfW!=null?(' · poids '+fr1(pfW)+' kg'):'')):'<span class="low">Complète taille + âge pour le calcul.</span>')+'</div>';
     host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
       settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
       settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
       settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
+      settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
       fixSec+
        settingsSec("qual","Qualite des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel)+
       settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
     host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
     var bi=document.getElementById("bkpImport");if(bi)bi.onclick=pickImport;
+    (function(){var pf=profileGet();
+      function pfRefresh(){var el=host.querySelector(".pf-bmr");if(!el)return;var b=bmr(),w=lastWeight();el.innerHTML=(b!=null?('Métabolisme de base : <b>'+Math.round(b)+' kcal/j</b>'+(w!=null?(' · poids '+fr1(w)+' kg'):'')):'<span class="low">Complète taille + âge pour le calcul.</span>');}
+      var sx=host.querySelector(".pf-sex");if(sx)sx.onchange=function(){pf.sex=sx.value;save();pfRefresh();};
+      var h=host.querySelector(".pf-h");if(h)h.oninput=function(){pf.height=h.value;save();pfRefresh();};
+      var a=host.querySelector(".pf-age");if(a)a.oninput=function(){pf.age=a.value;save();pfRefresh();};
+      var w=host.querySelector(".pf-w");if(w)w.oninput=function(){pf.weight=w.value;save();pfRefresh();};
+    })();
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
     host.querySelectorAll("[data-actedit]").forEach(function(b){b.onclick=function(){settingsActEdit=b.getAttribute("data-actedit");renderSettings();};});
