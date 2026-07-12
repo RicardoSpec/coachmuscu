@@ -230,6 +230,8 @@ var FOOD_QUALITY = {
   "fromage":{p:1,n:2,w:0}, "skyr":{p:1,n:1,w:0}, "whey":{p:1,n:3,w:0},
   "jambon":{p:1,n:2,w:FQ_CHARCUT}, "sandwich jambon-beurre":{p:1,n:2,w:FQ_CHARCUT},
   "chipolata":{p:1,n:3,w:FQ_CHARCUT}, "saucisson":{p:1,n:3,w:FQ_CHARCUT},
+  /* protéines végétales complètes (quinoa, soja) → 💪, jamais « à compléter » */
+  "quinoa":{p:1,n:1,w:0}, "tofu":{p:1,n:2,w:0}, "edamame":{p:1,n:1,w:0},
   /* céréale (protéine incomplète — associer légumineuse) */
   "riz":{p:2,n:1,w:0},
   /* fruits & légumes bruts */
@@ -271,7 +273,7 @@ var FOOD_QUALITY = {
   "croissant":{p:0,n:3,w:0},
   "eclaire au fruit":{p:0,n:3,w:FQ_SUCRE},
   "espadon":{p:1,n:1,w:FQ_MERCURE},
-  "falafel unite":{p:2,n:2,w:0},
+  "falafel unite":{p:2,n:2,w:0,f:"l"},
   "fougassette":{p:0,n:3,w:0},
   "ginger beer":{p:0,n:3,w:FQ_SUCRE},
   "grog":{p:0,n:2,w:FQ_ALCOOL},
@@ -328,7 +330,7 @@ var FOOD_QUALITY = {
   "soupe miso":{p:0,n:2,w:0},
   "surimi":{p:1,n:3,w:0},
   "sushi":{p:1,n:2,w:0},
-  "taboule":{p:2,n:2,w:0},
+  "taboule":{p:2,n:2,w:0,f:"c"},
   "taco":{p:0,n:3,w:0},
   "tarte myrtille":{p:0,n:3,w:FQ_SUCRE},
   "tartelette caramel noix de pecan":{p:0,n:3,w:FQ_SUCRE},
