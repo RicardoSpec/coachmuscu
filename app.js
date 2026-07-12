@@ -151,13 +151,35 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
  
 
+  /* Familles de protéines incomplètes → suggestion de complémentarité (sur la journée). */
+  var PROT_FAMILY={
+    c:["riz","ble","pate","semoule","boulgour","boulghour","pain","baguette","avoine","mais","polenta","epeautre","orge","sarrasin","millet"],
+    l:["lentille","pois","chiche","haricot","flageolet","feve","houmous","dhal","dal"]
+  };
+  var PROT_COMPLETE_PLANT=["soja","tofu","edamame","quinoa"]; /* protéines végétales complètes → jamais « à compléter » */
+  function protFamily(name,q){
+    if(q&&(q.f==="c"||q.f==="l"))return q.f;                        /* override explicite (noms opaques : taboulé, falafel) */
+    var toks=fqTokens(name);
+    if(toks.some(function(t){return PROT_COMPLETE_PLANT.indexOf(t)>=0;}))return null;
+    function hit(fam){return toks.some(function(t){return PROT_FAMILY[fam].some(function(k){return fqTokMatch(k,t);});});}
+    if(hit("l"))return "l";                                         /* légumineuse d'abord (« pois chiche » avant « pois ») */
+    if(hit("c"))return "c";
+    return null;
+  }
+  function protComplementReason(name,q){
+    var fam=protFamily(name,q);
+    if(fam==="c")return "Céréale — complète avec une légumineuse (lentilles, pois chiches, haricots) sur la journée.";
+    if(fam==="l")return "Légumineuse — complète avec une céréale (riz, pâtes, semoule, pain) sur la journée.";
+    return "Protéine végétale incomplète — associe céréale + légumineuse sur la journée.";
+  }
   function foodQualityBadges(name){
     var q=foodQuality(name);if(!q)return "";
-    var P={1:["💪","Protéine complète (profil d'acides aminés complet)"],2:["🌱","Protéine végétale incomplète — associer céréale + légumineuse"]};
+    var P={1:["💪","Protéine complète (profil d'acides aminés complet)"]};
     var N={1:["🟢","Brut / peu transformé (NOVA 1)"],2:["🟡","Transformé (NOVA 3)"],3:["🔴","Ultra-transformé (NOVA 4)"]};
     function badge(ic,r){return '<span class="fq" data-r="'+esc(r)+'" title="'+esc(r)+'" role="button" tabindex="0" aria-label="'+esc(r)+'">'+ic+'</span>';}
     var out="";
-    if(P[q.p])out+=badge(P[q.p][0],P[q.p][1]);
+    if(q.p===1)out+=badge(P[1][0],P[1][1]);
+    else if(q.p===2)out+=badge("🌱",protComplementReason(name,q));
     if(N[q.n])out+=badge(N[q.n][0],N[q.n][1]);
     if(q.w)out+=badge("⚠️",q.w);
     return out?'<span class="fq-badges">'+out+'</span>':"";
