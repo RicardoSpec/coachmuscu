@@ -322,6 +322,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
+  var journalOpen=false; /* journal : corps du jour replié par défaut, déplié à la demande via « + » */
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
@@ -840,6 +841,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Formulaire de journée ---------------- */
   var suppsOpen=false, routinesOpen=false, transitOpen=false;  /* blocs Compléments / Routines / Transit repliés par défaut */
+  function journalSummary(x,d){
+    var t=dayTotals(d),ef=t?Math.round(t.protEff!=null?t.protEff:t.prot):0;
+    var sp=(x.sports&&x.sports.length)?x.sports.join(" · "):"repos";
+    var parts=['🥩 '+ef+' g'];
+    if(x.weight)parts.push('⚖️ '+x.weight+' kg');
+    parts.push('🏋️ '+sp);
+    return '<span class="jform-sum">'+esc(parts.join("   ·   "))+'</span>';
+  } 
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
@@ -847,6 +856,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var isJournal=container.id==="journalLog";
     container.innerHTML=
       '<div class="card pad">'+
+        (isJournal?('<button type="button" class="jform-tog'+(journalOpen?' open':'')+'">'+journalSummary(x,d)+'<span class="hcol-chev">▾</span></button><div class="jbody'+(journalOpen?'':' collapsed')+'">'):'')+
         (isJournal?'<div class="meal-total-top"><div class="meal-total"></div></div>':'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
@@ -883,11 +893,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
         '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
+        (isJournal?'</div>':'')+
       '</div>';
 
     container.querySelector(".f-weight").value=x.weight||"";
     container.querySelector(".f-sleep").value=x.sleep||"";
     container.querySelector(".f-note").value=x.note||"";
+    (function(){var jt=container.querySelector(".jform-tog");if(!jt)return;jt.addEventListener("click",function(){journalOpen=!journalOpen;jt.classList.toggle("open",journalOpen);var jb=container.querySelector(".jbody");if(jb)jb.classList.toggle("collapsed",!journalOpen);});})();
 
     container.querySelector(".f-weight").addEventListener("input",function(){x.weight=this.value;save();});
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
