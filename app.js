@@ -1085,7 +1085,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- Progrès : protéines ---------------- */
-  function proteinEntries(){var arr=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)arr.push({d:d,p:t.prot});});arr.sort(function(a,b){return a.d<b.d?-1:1;});return arr;}
+  function pEff(t){return t?(t.protEff!=null?t.protEff:t.prot):0;}
+  function proteinEntries(){var arr=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)arr.push({d:d,p:pEff(t)});});arr.sort(function(a,b){return a.d<b.d?-1:1;});return arr;}
   function renderProteinChart(){
     var host=document.getElementById("proteinChart");if(!host)return;var e=proteinEntries();
     if(e.length<2){host.innerHTML='<div class="empty">Note tes repas au moins 2 jours pour voir la courbe des protéines.</div>';return;}
@@ -1149,7 +1150,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     L.push("Sommeil moyen : "+(asl?fr1(asl)+" h":"—"));
     L.push("Hydratation : "+(aw?fr1(aw)+" verres/j (~"+fr1(aw*0.25)+" L)":"—"));
     L.push("Transit : "+(stoolDays?(fr1(stoolTotal/stoolDays)+" passage(s)/j"+(domType?", souvent type "+domType:"")):"—"));
-    var protArr=[];wk.forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)protArr.push(t.prot);});
+    var protArr=[];wk.forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)protArr.push(pEff(t));});
     var apk=avg(protArr);
     L.push("Protéines (estimé) : "+(apk?(Math.round(apk)+" g/j en moyenne"):"— (à renseigner via les repas)"));
     L.push("");
