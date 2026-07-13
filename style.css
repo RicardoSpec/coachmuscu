@@ -753,3 +753,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .pb-pair b{color:var(--done-ink)}
 .pb-un{color:var(--muted)}
 .pb-tot{font-size:11px;color:var(--muted);margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);line-height:1.35}
+
+/* ---- Ajout de série à la volée (exo standard) ---- */
+.setadd{display:flex;gap:8px;margin:4px 0 2px}
+.add-set-std,.del-set-std{border:1.5px dashed var(--line);background:#fff;border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--primary);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.del-set-std{color:var(--muted)}
