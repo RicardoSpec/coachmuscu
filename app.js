@@ -460,7 +460,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }else{
         var kg=lastWeight(),extra=actExtra(d),sess=(kg!=null?Math.round(sessionsKcal(d,kg)):0),a=(state.days[d]&&state.days[d].act)||{};
         function aRow(kind,label,v){v=v||{};return '<div class="bal-act"><span class="bal-act-l">'+label+'</span><input type="number" inputmode="decimal" step="0.1" class="bal-a-d" data-act="'+kind+'" value="'+esc(v.d||"")+'" placeholder="km"><input type="number" inputmode="numeric" class="bal-a-t" data-act="'+kind+'" value="'+esc(v.t||"")+'" placeholder="min"></div>';}
-        var lvls=ACT_LEVELS.map(function(l){
+        var lvls=ACT_LEVELS.map(function(l){return '<button type="button" class="bal-lvl'+(l.k===lv.k?" on":"")+'" data-lvl="'+l.k+'">'+esc(l.label.split(" (")[0].split(" — ")[0])+'</button>';}).join("");
         body='<div class="bal-body">'+
           '<div class="bal-net'+(net<0?" neg":(net>75?" pos":""))+'"><span class="bal-net-v">'+(net>0?"+":"")+net+'</span><span class="bal-net-u">kcal net'+lab(net)+'</span></div>'+
           '<div class="bal-row"><span>🍽️ Apport</span><b>'+intake+' kcal</b></div>'+
@@ -477,9 +477,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.innerHTML=head+body;
     host.querySelector(".bal-toggle").onclick=function(){balOpen=!balOpen;renderTodayBalance();};
     host.querySelectorAll(".bal-lvl").forEach(function(bt){bt.onclick=function(){day(d).actLvl=bt.getAttribute("data-lvl");save();renderTodayBalance();};});
-    host.querySelectorAll(".bal-a-d,.bal-a-t").forEach(function(inp){inp.onchange=function(){var kind=inp.getAttribute("data-act"),dd=day(d);if(!dd.act)dd.act={};if(!dd.act[kind])dd.act[kind]={d:"",t:""};dd.act[kind][inp.classList.contains("bal-a-d")?"d":"t"]=inp.value;save();renderTodayBalance();};});   
+    host.querySelectorAll(".bal-a-d,.bal-a-t").forEach(function(inp){inp.onchange=function(){var kind=inp.getAttribute("data-act"),dd=day(d);if(!dd.act)dd.act={};if(!dd.act[kind])dd.act[kind]={d:"",t:""};dd.act[kind][inp.classList.contains("bal-a-d")?"d":"t"]=inp.value;save();renderTodayBalance();};});
   }
-  function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=t.prot;n++;}}return n?{avg:s/n,n:n}:null;}
+  function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=(t.protEff!=null?t.protEff:t.prot);n++;}}return n?{avg:s/n,n:n}:null;}
   function protBreakHTML(t){
     var comp=Math.round(t.pComp+t.pOther),mn=Math.min(t.pC,t.pL),uC=t.pC-mn,uL=t.pL-mn;
     var rows='<div class="pb-row"><span>✅ Complètes</span><b>'+comp+' g</b></div>';
@@ -489,7 +489,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     rows+='<div class="pb-tot">Total brut : '+fr1(t.prot)+' g · seules les complètes + appariées comptent vers la cible</div>';
     return '<div class="pb">'+rows+'</div>';
   }
-   function nutriTip(tot){
+  function nutriTip(tot){
     if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
     var ep=(tot.protEff!=null?tot.protEff:tot.prot);
     if(ep>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
@@ -732,8 +732,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     wrap.innerHTML=head+exosHTML+extraHTML+addBtnHTML+'</div>';
 
     wrap.querySelectorAll(".set").forEach(function(row){
-    wrap.querySelectorAll(".add-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk"),m=exoMeta(k.split("::")[0]),base=m?m.sets:0;if(!s.sets[k])s.sets[k]=[];var tgt=Math.max(s.sets[k].length,base)+1;while(s.sets[k].length<tgt)s.sets[k].push({kg:"",r:""});save();renderSessionDetail();});});
-    wrap.querySelectorAll(".del-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk");if(s.sets[k]&&s.sets[k].length)s.sets[k].pop();save();renderSessionDetail();});});
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
       var rec=(s.sets[exo]&&s.sets[exo][idx])||{kg:"",r:""};
       var kgEl=row.querySelector(".in-kg"),rEl=row.querySelector(".in-r");
@@ -771,6 +769,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     wrap.querySelectorAll(".exo-name-in").forEach(function(inp){inp.addEventListener("input",function(){var id=inp.getAttribute("data-xid");for(var j=0;j<s.extra.length;j++)if(s.extra[j].id===id){s.extra[j].name=inp.value;break;}save();});});
     wrap.querySelectorAll(".exo-del").forEach(function(bt){bt.addEventListener("click",function(){var id=bt.getAttribute("data-xid");s.extra=s.extra.filter(function(e){return e.id!==id;});delete s.sets[id];save();renderSessionDetail();});});
     wrap.querySelectorAll(".add-set").forEach(function(bt){bt.addEventListener("click",function(){var id=bt.getAttribute("data-xid");for(var j=0;j<s.extra.length;j++)if(s.extra[j].id===id){s.extra[j].sets=(s.extra[j].sets||3)+1;break;}save();renderSessionDetail();});});
+    wrap.querySelectorAll(".add-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk"),m=exoMeta(k.split("::")[0]),base=m?m.sets:0;if(!s.sets[k])s.sets[k]=[];var tgt=Math.max(s.sets[k].length,base)+1;while(s.sets[k].length<tgt)s.sets[k].push({kg:"",r:""});save();renderSessionDetail();});});
+    wrap.querySelectorAll(".del-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk");if(s.sets[k]&&s.sets[k].length)s.sets[k].pop();save();renderSessionDetail();});});
   }
 
   /* ---------------- Triathlon ---------------- */
@@ -872,7 +872,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(x.weight)parts.push('⚖️ '+x.weight+' kg');
     parts.push('🏋️ '+sp);
     return '<span class="jform-sum">'+esc(parts.join("   ·   "))+'</span>';
-  } 
+  }
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
