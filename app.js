@@ -642,8 +642,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var rest=restFor(ex.target);
       var exBase=baseFor(ex.id,curV,ex.base);       /* base de saisie de l'exo (total/bras/ajout), déduite variante+défaut */
       var kgUnit=BASE_UNIT[exBase];                 /* unité affichée à côté du champ poids (kg / kg/bras / +kg) */
-      var setsHTML="";
-      for(var i=0;i<ex.sets;i++){
+      var setsHTML="",nSets=Math.max(ex.sets,(s.sets[setK]||[]).length);
+      for(var i=0;i<nSets;i++){
         var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:(isSec?secTgt:"reps");
         if(isSec){
           setsHTML+='<div class="set sec" data-exo="'+esc(setK)+'" data-set="'+i+'">'+
@@ -685,6 +685,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '</div>'+
             '<details class="base-hint"><summary>Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
             '<div class="sets">'+setsHTML+'</div>'+
+            '<div class="setadd"><button class="add-set-std" data-setk="'+esc(setK)+'">+ série</button>'+(nSets>ex.sets?'<button class="del-set-std" data-setk="'+esc(setK)+'">− série</button>':'')+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
             '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
           '</div>'+
@@ -706,6 +707,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     wrap.innerHTML=head+exosHTML+extraHTML+addBtnHTML+'</div>';
 
     wrap.querySelectorAll(".set").forEach(function(row){
+    wrap.querySelectorAll(".add-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk"),m=exoMeta(k.split("::")[0]),base=m?m.sets:0;if(!s.sets[k])s.sets[k]=[];var tgt=Math.max(s.sets[k].length,base)+1;while(s.sets[k].length<tgt)s.sets[k].push({kg:"",r:""});save();renderSessionDetail();});});
+    wrap.querySelectorAll(".del-set-std").forEach(function(bt){bt.addEventListener("click",function(){var k=bt.getAttribute("data-setk");if(s.sets[k]&&s.sets[k].length)s.sets[k].pop();save();renderSessionDetail();});});
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
       var rec=(s.sets[exo]&&s.sets[exo][idx])||{kg:"",r:""};
       var kgEl=row.querySelector(".in-kg"),rEl=row.querySelector(".in-r");
