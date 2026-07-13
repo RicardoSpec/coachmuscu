@@ -704,7 +704,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             varHTML+
             '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Voir la technique">+</button></div>'+
             (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
-            '<img class="exo-img" src="./images/'+slugify(ex.name)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+
+            '<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
             '</div>'+
