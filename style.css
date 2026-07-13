@@ -765,3 +765,9 @@ nav.tabs .tab.on{color:var(--primary)}
 .jform-tog .hcol-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
 .jform-tog.open .hcol-chev{transform:rotate(180deg)}
 .jbody.collapsed{display:none}
+
+/* ---- Bilan kcal : saisie activités (marche/vélo) ---- */
+.bal-acts{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.bal-act{display:flex;align-items:center;gap:6px}
+.bal-act-l{flex:1;font-size:12.5px;color:var(--ink);font-weight:600}
+.bal-a-d,.bal-a-t{width:64px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;box-sizing:border-box}
