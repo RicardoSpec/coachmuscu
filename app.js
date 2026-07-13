@@ -427,7 +427,25 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function lastWeight(){var ds=Object.keys(state.days).sort();for(var i=ds.length-1;i>=0;i--){var w=num(state.days[ds[i]].weight);if(!isNaN(w)&&w>0)return w;}var pw=num(profileGet().weight);return (!isNaN(pw)&&pw>0)?pw:null;}
   function bmr(){var p=profileGet(),h=num(p.height),a=num(p.age),w=lastWeight();if(isNaN(h)||h<=0||isNaN(a)||a<=0||w==null)return null;var b=10*w+6.25*h-5*a+(p.sex==="f"?-161:5);return b>0?b:null;}
   function actLevel(d){var x=state.days[d],k=(x&&x.actLvl)||"sed";for(var i=0;i<ACT_LEVELS.length;i++)if(ACT_LEVELS[i].k===k)return ACT_LEVELS[i];return ACT_LEVELS[1];}
-  function expend(d){var b=bmr();if(b==null)return null;return Math.round(b*actLevel(d).f);} /* étape 1 : métabolisme × niveau du jour (les activités s'ajouteront en étape 2) */
+  /* Dépense des activités (Compendium of Physical Activities : MET × poids × durée ; raccourci distance pour marche/course). */
+  var MET={muscu:5,run:9,bike:7,swim:8,walk:3.5};
+  var MUSCU_MIN=60; /* durée par défaut d'une séance muscu (pas d'horodatage stocké) */
+  function kcalMET(met,kg,min){return met*kg*(min/60);}
+  function actKcal(kind,dist,min,kg){dist=num(dist);min=num(min);
+    if(kind==="run"){if(!isNaN(dist)&&dist>0)return kg*dist;if(!isNaN(min)&&min>0)return kcalMET(MET.run,kg,min);return 0;}
+    if(kind==="walk"){if(!isNaN(min)&&min>0)return kcalMET(MET.walk,kg,min);if(!isNaN(dist)&&dist>0)return 0.5*kg*dist;return 0;}
+    if(kind==="bike"){if(!isNaN(min)&&min>0)return kcalMET(MET.bike,kg,min);if(!isNaN(dist)&&dist>0)return kcalMET(MET.bike,kg,(dist/18)*60);return 0;}
+    if(kind==="swim"){if(!isNaN(min)&&min>0)return kcalMET(MET.swim,kg,min);if(!isNaN(dist)&&dist>0)return kcalMET(MET.swim,kg,(dist/1000)*25);return 0;}
+    if(kind==="muscu")return kcalMET(MET.muscu,kg,MUSCU_MIN);
+    return 0;}
+  function sessionsKcal(d,kg){var tot=0;
+    Object.keys(state.sessions||{}).forEach(function(k){var s=state.sessions[k];if(s&&s.done&&s.date===d)tot+=actKcal("muscu",0,0,kg);});
+    var mp={nat:"swim",velo:"bike",course:"run"};
+    Object.keys(state.tri||{}).forEach(function(k){var r=state.tri[k];if(r&&r.done&&r.date===d){var kd=mp[k.split("_")[1]];if(kd)tot+=actKcal(kd,r.dist,r.dur,kg);}});
+    return tot;}
+  function dayActKcal(d,kg){var x=state.days[d],a=x&&x.act;if(!a)return 0;var t=0;if(a.walk)t+=actKcal("walk",a.walk.d,a.walk.t,kg);if(a.bike)t+=actKcal("bike",a.bike.d,a.bike.t,kg);return t;}
+  function actExtra(d){var kg=lastWeight();if(kg==null)return 0;return Math.round(sessionsKcal(d,kg)+dayActKcal(d,kg));}
+  function expend(d){var b=bmr();if(b==null)return null;return Math.round(b*actLevel(d).f)+actExtra(d);}
   var balOpen=false;
   function renderTodayBalance(){
     var host=document.getElementById("todayBalance");if(!host)return;
@@ -440,13 +458,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(b==null){
         body='<div class="bal-body"><div class="bal-empty">Ajoute ta <b>taille</b>, ton <b>âge</b> et ton <b>sexe</b> dans Réglages ▸ Profil pour estimer ta dépense.</div><div class="bal-row"><span>🍽️ Apport du jour</span><b>'+intake+' kcal</b></div></div>';
       }else{
-        var lvls=ACT_LEVELS.map(function(l){return '<button type="button" class="bal-lvl'+(l.k===lv.k?" on":"")+'" data-lvl="'+l.k+'">'+esc(l.label.split(" (")[0].split(" — ")[0])+'</button>';}).join("");
+        var kg=lastWeight(),extra=actExtra(d),sess=(kg!=null?Math.round(sessionsKcal(d,kg)):0),a=(state.days[d]&&state.days[d].act)||{};
+        function aRow(kind,label,v){v=v||{};return '<div class="bal-act"><span class="bal-act-l">'+label+'</span><input type="number" inputmode="decimal" step="0.1" class="bal-a-d" data-act="'+kind+'" value="'+esc(v.d||"")+'" placeholder="km"><input type="number" inputmode="numeric" class="bal-a-t" data-act="'+kind+'" value="'+esc(v.t||"")+'" placeholder="min"></div>';}
+        var lvls=ACT_LEVELS.map(function(l){
         body='<div class="bal-body">'+
           '<div class="bal-net'+(net<0?" neg":(net>75?" pos":""))+'"><span class="bal-net-v">'+(net>0?"+":"")+net+'</span><span class="bal-net-u">kcal net'+lab(net)+'</span></div>'+
           '<div class="bal-row"><span>🍽️ Apport</span><b>'+intake+' kcal</b></div>'+
           '<div class="bal-row"><span>🔥 Dépense</span><b>'+out+' kcal</b></div>'+
-          '<div class="bal-sub">métabolisme '+Math.round(b)+' × '+nFmt(lv.f)+'</div>'+
+          '<div class="bal-sub">métabolisme '+Math.round(b)+' × '+nFmt(lv.f)+(extra>0?(' + activités '+extra):'')+'</div>'+
           '<div class="bal-lvls-l">Niveau de vie du jour — hors sport</div><div class="bal-lvls">'+lvls+'</div>'+
+          '<div class="bal-lvls-l">Activités du jour</div>'+
+          '<div class="bal-acts">'+aRow("walk","🚶 Marche",a.walk)+aRow("bike","🚴 Vélo",a.bike)+'</div>'+
+          (sess>0?'<div class="bal-sub">séances enregistrées comptées : '+sess+' kcal</div>':'')+
           '<div class="bal-note">Estimation ±15-20 %. La tendance sur la semaine compte plus que le chiffre du jour ; pour ta prépa triathlon, l\'enjeu est de bien alimenter l\'effort, pas de creuser un déficit.</div>'+
         '</div>';
       }
@@ -454,6 +477,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.innerHTML=head+body;
     host.querySelector(".bal-toggle").onclick=function(){balOpen=!balOpen;renderTodayBalance();};
     host.querySelectorAll(".bal-lvl").forEach(function(bt){bt.onclick=function(){day(d).actLvl=bt.getAttribute("data-lvl");save();renderTodayBalance();};});
+    host.querySelectorAll(".bal-a-d,.bal-a-t").forEach(function(inp){inp.onchange=function(){var kind=inp.getAttribute("data-act"),dd=day(d);if(!dd.act)dd.act={};if(!dd.act[kind])dd.act[kind]={d:"",t:""};dd.act[kind][inp.classList.contains("bal-a-d")?"d":"t"]=inp.value;save();renderTodayBalance();};});   
   }
   function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=t.prot;n++;}}return n?{avg:s/n,n:n}:null;}
   function protBreakHTML(t){
