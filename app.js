@@ -192,7 +192,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(!isNaN(q)&&q>0&&!isNaN(base)&&base>0&&(it.unit||"")===(it.nut.baseUnit||""))f=q/base; /* quantité explicite compatible */
     else f=1; /* défaut : 1 portion (valeurs de base), unités ignorées */
     var r={};var kc=num(it.nut.kcal),pr=num(it.nut.prot);if(!isNaN(kc))r.kcal=kc*f;if(!isNaN(pr))r.prot=pr*f;if(r.kcal===undefined&&r.prot===undefined)return null;return r;}
-  function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,any=false;if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot)p+=s.prot;}});});if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){var mul=(x.supps2&&x.supps2[sp.id])?2:1;if(sp.prot){p+=sp.prot*mul;any=true;}if(sp.kcal){k+=sp.kcal*mul;any=true;}}});return any?{kcal:k,prot:p}:null;}
+  function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,pComp=0,pC=0,pL=0,pOth=0,any=false;
+    if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot){p+=s.prot;var q=foodQuality(it.name),fam=q?protFamily(it.name,q):null;if(q&&q.p===1)pComp+=s.prot;else if(q&&q.p===2&&fam==="c")pC+=s.prot;else if(q&&q.p===2&&fam==="l")pL+=s.prot;else pOth+=s.prot;}}});});
+    if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){var mul=(x.supps2&&x.supps2[sp.id])?2:1;if(sp.prot){p+=sp.prot*mul;pComp+=sp.prot*mul;any=true;}if(sp.kcal){k+=sp.kcal*mul;any=true;}}});
+    var pair=2*Math.min(pC,pL),eff=pComp+pOth+pair;
+    return any?{kcal:k,prot:p,protEff:eff,pComp:pComp,pOther:pOth,pC:pC,pL:pL,pair:pair}:null;}
 
   /* ---------------- Objectifs ---------------- */
   var MUSCU_DEADLINE="2026-07-27";
@@ -451,10 +455,20 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".bal-lvl").forEach(function(bt){bt.onclick=function(){day(d).actLvl=bt.getAttribute("data-lvl");save();renderTodayBalance();};});
   }
   function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=t.prot;n++;}}return n?{avg:s/n,n:n}:null;}
-  function nutriTip(tot){
+  function protBreakHTML(t){
+    var comp=Math.round(t.pComp+t.pOther),mn=Math.min(t.pC,t.pL),uC=t.pC-mn,uL=t.pL-mn;
+    var rows='<div class="pb-row"><span>✅ Complètes</span><b>'+comp+' g</b></div>';
+    if(t.pair>0)rows+='<div class="pb-row pb-pair"><span>🔗 Appariées céréale+légumineuse</span><b>+'+Math.round(t.pair)+' g</b></div>';
+    if(uC>0.5)rows+='<div class="pb-row pb-un"><span>🌾 Céréale seule <i>(+ légumineuse pour compter)</i></span><b>'+Math.round(uC)+' g</b></div>';
+    if(uL>0.5)rows+='<div class="pb-row pb-un"><span>🫘 Légumineuse seule <i>(+ céréale pour compter)</i></span><b>'+Math.round(uL)+' g</b></div>';
+    rows+='<div class="pb-tot">Total brut : '+fr1(t.prot)+' g · seules les complètes + appariées comptent vers la cible</div>';
+    return '<div class="pb">'+rows+'</div>';
+  }
+   function nutriTip(tot){
     if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
-    if(tot.prot>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
-    var r=Math.round(130-tot.prot);
+    var ep=(tot.protEff!=null?tot.protEff:tot.prot);
+    if(ep>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
+    var r=Math.round(130-ep);
     return 'Encore ~'+r+' g. Panier TGTG plutôt sucré/gras ? Complète avec un bloc protéiné (skyr, 2 œufs, whey) — bouton 🥡 ci-dessous.';
   }
   function wireTgtg(bt,pn,d,afterAdd){
@@ -510,16 +524,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var tot=dayTotals(todayStr());
     var nut=document.getElementById("todayNutri");
     if(nut){
-      var reste=tot?Math.round(130-tot.prot):130;
-      var vtxt=(tot?fr1(tot.prot):"0")+' g'+(tot?(tot.prot>=130?' · ✓ cible':' · encore '+reste+' g'):' · à noter');
+      var eff=tot?(tot.protEff!=null?tot.protEff:tot.prot):0;
+      var reste=tot?Math.round(130-eff):130;
+      var vtxt=(tot?fr1(eff):"0")+' g'+(tot?(eff>=130?' · ✓ cible':' · encore '+reste+' g'):' · à noter');
       var head='<button type="button" class="hcol nutri-toggle'+(nutriOpen?' open':'')+'"><span class="hcol-ic">🥩</span><span class="hcol-txt"><span class="hcol-k">Protéines du jour</span><span class="hcol-v">'+vtxt+'</span></span><span class="hcol-chev">▾</span></button>';
       var body="";
       if(nutriOpen){
         var a7=protAvg7();
         var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
         if(tot){
-          var statTxt=tot.prot>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(tot.prot)+'</span><span class="nutri-u">g protéines</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
+          var statTxt=eff>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
+          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(eff)+'</span><span class="nutri-u">g complètes</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+protBreakHTML(tot)+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }else{
           body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }
@@ -530,8 +545,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     var sp=document.getElementById("stickyProt");
     if(sp){
-      if(tot){var rst=Math.round(130-tot.prot);var st2=tot.prot>=130?'<span class="ok">✓ cible</span>':'<span class="low">encore '+rst+' g</span>';
-        sp.innerHTML='<div class="sprot"><span class="sprot-v">'+fr1(tot.prot)+' g</span><span class="sprot-goal">protéines · cible 130–150 · '+st2+'</span></div>';
+      if(tot){var ef=(tot.protEff!=null?tot.protEff:tot.prot);var rst=Math.round(130-ef);var st2=ef>=130?'<span class="ok">✓ cible</span>':'<span class="low">encore '+rst+' g</span>';
+        sp.innerHTML='<div class="sprot"><span class="sprot-v">'+fr1(ef)+' g</span><span class="sprot-goal">protéines · cible 130–150 · '+st2+'</span></div>';
       }else sp.innerHTML='<div class="sprot"><span class="sprot-v">0 g</span><span class="sprot-goal">protéines aujourd\'hui</span></div>';
     }
     renderTodayBalance();
