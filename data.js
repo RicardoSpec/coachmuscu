@@ -47,6 +47,19 @@ var ROUTINES = [
   {id:"etire",    name:"Étirements",           icon:"🤸"}
 ];
 
+/* Petits exercices — mobilité & santé, cochés dans le journal (même principe que les routines).
+   La zone libre permet d'ajouter un exercice ponctuel. */
+var PETITS_EXOS = [
+  {id:"vacuum",   name:"Stomach vacuum",                     icon:"🌀"},
+  {id:"kegel",    name:"Périnée / Kegel",                    icon:"🔺"},
+  {id:"coiffe",   name:"Coiffe des rotateurs",               icon:"💪"},
+  {id:"cheville", name:"Proprioception cheville",            icon:"🦶"},
+  {id:"hanche",   name:"Ouverture / fléchisseurs de hanche", icon:"🦵"},
+  {id:"thorax",   name:"Mobilité thoracique",                icon:"🔄"},
+  {id:"grip",     name:"Dead hang / grip",                   icon:"🖐️"},
+  {id:"respi",    name:"Respiration diaphragmatique",        icon:"💨"}
+];
+
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
 var PROGRAM = {
   A:{title:"Séance A — Haut (force) + abdos", sub:"Haut · force", exos:[
