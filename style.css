@@ -474,6 +474,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .wb-body.collapsed{display:none}
 .wb-body>.field{margin:0;padding-top:16px;border-top:1px solid var(--line)}
 .wb-body>.field:first-child{border-top:none;padding-top:14px}
+.jprot-toggle{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:8px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+.jprot-ttl{flex:1;font-size:12px;font-weight:700;color:var(--ink)}
+.jprot-toggle .supps-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
+.jprot-toggle.open .supps-chev{transform:rotate(180deg)}
+.jprot-body{margin-top:8px}
+.jprot-body.collapsed{display:none}
 
 /* ---------- Sous-onglets Sport ---------- */
 .subtabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
