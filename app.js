@@ -322,7 +322,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
-  var journalOpen=false; /* journal : corps du jour replié par défaut, déplié à la demande via « + » */
+  var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
@@ -881,7 +881,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.innerHTML=
       '<div class="card pad">'+
         (isJournal?('<button type="button" class="jform-tog'+(journalOpen?' open':'')+'">'+journalSummary(x,d)+'<span class="hcol-chev">▾</span></button><div class="jbody'+(journalOpen?'':' collapsed')+'">'):'')+
-        (isJournal?'<div class="meal-total-top"><div class="meal-total"></div></div>':'')+
+        (isJournal?'<div class="meal-total-top"><div class="meal-total"></div><button type="button" class="jprot-toggle'+(jprotOpen?' open':'')+'" hidden><span class="jprot-ttl">🥩 Détail protéines</span><span class="supps-chev">▾</span></button><div class="jprot-body'+(jprotOpen?'':' collapsed')+'"></div></div>':'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
@@ -961,6 +961,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:k==="px"?x.petitsExosX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
     })();
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
+     (function(){var tg=container.querySelector(".jprot-toggle");if(!tg)return;tg.addEventListener("click",function(){jprotOpen=!jprotOpen;tg.classList.toggle("open",jprotOpen);var b=container.querySelector(".jprot-body");if(b)b.classList.toggle("collapsed",!jprotOpen);});})();
     container.querySelectorAll(".f-supp").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!(x.supps&&x.supps[id]);
@@ -984,7 +985,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderStools(container.querySelector(".f-stools"),d);
 
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
-    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(t.prot)+" g protéines";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}if(d===todayStr())renderTodayNutri();}
+    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Total du jour (estimé) : "+Math.round(t.kcal)+" kcal · "+fr1(pEff(t))+" g protéines effectives";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}var jt=container.querySelector(".jprot-toggle"),jb=container.querySelector(".jprot-body");if(jt&&jb){if(t){jt.hidden=false;jb.innerHTML=protBreakHTML(t);}else{jt.hidden=true;jb.innerHTML="";}}if(d===todayStr())renderTodayNutri();}
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1};
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
