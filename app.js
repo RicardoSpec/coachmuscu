@@ -864,7 +864,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- Formulaire de journée ---------------- */
-  var suppsOpen=false, routinesOpen=false, transitOpen=false;  /* blocs Compléments / Routines / Transit repliés par défaut */
+  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, wbOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi */
   function journalSummary(x,d){
     var t=dayTotals(d),ef=t?Math.round(t.protEff!=null?t.protEff:t.prot):0;
     var sp=(x.sports&&x.sports.length)?x.sports.join(" · "):"repos";
@@ -889,6 +889,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field"><label>Repas</label>'+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           (isJournal?'':'<div class="meal-total"></div>')+
+        '</div>'+
+       '<div class="field supps-field wb-group">'+
+          '<button type="button" class="supps-toggle wb-toggle'+(wbOpen?' open':'')+'"><span class="supps-ttl">Bien-être &amp; suivi</span><span class="supps-chev">▾</span></button>'+
+          '<div class="wb-body supps-body'+(wbOpen?'':' collapsed')+'">'+
+       '<div class="field supps-field">'+
+          '<button type="button" class="px-toggle supps-toggle'+(pxOpen?' open':'')+'"><span class="supps-ttl">Petits exercices — mobilité &amp; santé</span><span class="supps-meta px-meta"></span><span class="supps-chev">▾</span></button>'+
+          '<div class="px-body supps-body'+(pxOpen?'':' collapsed')+'">'+
+            (typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).map(function(r){return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-px" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span></label></div>';}).join("")+
+            '<div class="xtras px-x">'+((x.petitsExosX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="px" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
+            '<input class="x-in px-xin" placeholder="Autre exercice puis Entrée…">'+
+            '<div class="supp-hint">De petites routines qui font une grande différence sur la durée.</div>'+
+          '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
           '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
@@ -917,6 +929,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
         '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
+       '</div>'+
+        '</div>'+
         (isJournal?'</div>':'')+
       '</div>';
 
@@ -929,7 +943,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
     function updSuppsMeta(){var m=container.querySelector(".supps-meta:not(.rx-meta)");if(!m)return;var f=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length+(x.suppsX||[]).length;m.textContent=f+"/"+((typeof SUPPS!=="undefined"?SUPPS.length:0)+(x.suppsX||[]).length);}
     function updRxMeta(){var m=container.querySelector(".rx-meta");if(!m)return;var f=(typeof ROUTINES!=="undefined"?ROUTINES:[]).filter(function(r){return (x.routines&&x.routines[r.id])||(r.id==="medit"&&x.meditation);}).length+(x.routinesX||[]).length;m.textContent=f+"/"+((typeof ROUTINES!=="undefined"?ROUTINES.length:0)+(x.routinesX||[]).length);}
-    updSuppsMeta();updRxMeta();
+    function updPxMeta(){var m=container.querySelector(".px-meta");if(!m)return;var f=(typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).filter(function(r){return x.petitsExos&&x.petitsExos[r.id];}).length+(x.petitsExosX||[]).length;m.textContent=f+"/"+((typeof PETITS_EXOS!=="undefined"?PETITS_EXOS.length:0)+(x.petitsExosX||[]).length);}     updSuppsMeta();updRxMeta();updPxMeta();
     container.querySelectorAll(".f-rx").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!((x.routines&&x.routines[id])||(id==="medit"&&x.meditation));
@@ -937,10 +951,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     });
     (function(){var tg=container.querySelector(".rx-toggle");if(!tg)return;tg.addEventListener("click",function(){routinesOpen=!routinesOpen;tg.classList.toggle("open",routinesOpen);var body=container.querySelector(".rx-body");if(body)body.classList.toggle("collapsed",!routinesOpen);});})();
     container.querySelectorAll(".rx-info").forEach(function(bt){bt.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();var h=container.querySelector("#rxhelp-"+bt.getAttribute("data-rx"));if(h)h.classList.toggle("open");});});
-    (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
+    container.querySelectorAll(".f-px").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.petitsExos&&x.petitsExos[id]);cb.addEventListener("change",function(){if(!x.petitsExos)x.petitsExos={};x.petitsExos[id]=cb.checked;save();updPxMeta();});});
+    (function(){var tg=container.querySelector(".px-toggle");if(!tg)return;tg.addEventListener("click",function(){pxOpen=!pxOpen;tg.classList.toggle("open",pxOpen);var body=container.querySelector(".px-body");if(body)body.classList.toggle("collapsed",!pxOpen);});})();
+    (function(){var tg=container.querySelector(".wb-toggle");if(!tg)return;tg.addEventListener("click",function(){wbOpen=!wbOpen;tg.classList.toggle("open",wbOpen);var body=container.querySelector(".wb-body");if(body)body.classList.toggle("collapsed",!wbOpen);});})();
+     (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
     (function(){var si=container.querySelector(".supps-xin");if(si)si.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(si.value||"").trim();if(!v)return;if(!x.suppsX)x.suppsX=[];x.suppsX.push(v);save();buildDayForm(container,d);}});
       var ri=container.querySelector(".rx-xin");if(ri)ri.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(ri.value||"").trim();if(!v)return;if(!x.routinesX)x.routinesX=[];x.routinesX.push(v);save();buildDayForm(container,d);}});
-      container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
+      var pi=container.querySelector(".px-xin");if(pi)pi.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(pi.value||"").trim();if(!v)return;if(!x.petitsExosX)x.petitsExosX=[];x.petitsExosX.push(v);save();buildDayForm(container,d);}});
+      container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:k==="px"?x.petitsExosX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
     })();
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
     container.querySelectorAll(".f-supp").forEach(function(cb){
