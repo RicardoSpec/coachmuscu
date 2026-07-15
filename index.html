@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=75">
+  <link rel="stylesheet" href="style.css?v=81">
 </head>
 <body>
 
@@ -46,6 +46,7 @@
 
     <!-- ====================== AUJOURD'HUI ====================== -->
     <section class="view active" id="v-today">
+      <div id="todayPhase"></div>
       <button class="hcol" id="homeCalToggle"><span class="hcol-ic">📅</span><span class="hcol-txt"><span class="hcol-k">Calendrier</span><span class="hcol-v" id="homeCalSummary"></span></span><span class="hcol-chev">▾</span></button>
       <div id="homeCal" class="calwrap collapsed"></div>
       <div class="hero" id="heroCard"></div>
@@ -102,6 +103,8 @@
       </div>
 
       <div id="weekViz"></div>
+
+      <div id="regularity"></div>
 
       <div class="card pad">
         <div class="sec-title">Poids</div>
@@ -168,16 +171,21 @@
 
   <!-- Scanner code-barres (caméra), affiché à la demande -->
   <div id="crsScanModal" class="scan-modal" hidden>
+    <div class="scan-title">📷 Scanner un produit</div>
     <div id="crsCam" class="scan-cam"></div>
     <div class="scan-msg" id="crsScanStatus"></div>
     <div id="crsZoomWrap" class="scan-zoom" hidden><span>Zoom</span><input type="range" id="crsZoom" class="scan-range" min="1" max="4" step="0.1" value="2"></div>
+    <div class="scan-manual">
+      <div class="scan-manual-l">Pas de lecture ? Saisis le numéro sous le code‑barres :</div>
+      <div class="scan-manual-row"><input type="text" inputmode="numeric" id="crsManualCode" class="scan-manual-in" placeholder="ex. 3017620422003"><button type="button" class="btn accent" id="crsManualGo">Rechercher</button></div>
+    </div>
     <div class="scan-btns"><button type="button" class="scan-tbtn" id="crsTorch" hidden>🔦 Torche</button><button type="button" class="btn" id="crsScanClose">Fermer</button></div>
   </div>
 
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=75"></script>
-  <script src="app.js?v=75"></script>
+  <script src="data.js?v=81"></script>
+  <script src="app.js?v=81"></script>
 </body>
 </html>
