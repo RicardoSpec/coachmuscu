@@ -697,6 +697,27 @@ nav.tabs .tab.on{color:var(--primary)}
 .supp input.f-px:checked ~ .px-n{display:block}
 .lastrep.sugg{color:var(--primary)}
 .sugg-src{opacity:.65;font-weight:400}
+.stat.tapp{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stat.tapp .stat-chev{font-size:10px;opacity:.5;margin-left:1px}
+.stat.tapp.on{outline:2px solid var(--primary);outline-offset:-2px}
+.stat-trend{margin:2px 0 14px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.st-cap{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:9px}
+.mini-strip{display:flex;gap:3px}
+.ms-cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ms-dot{width:13px;height:13px;border-radius:50%;background:var(--line)}
+.ms-dot.on{background:var(--primary)}
+.ms-l{font-size:9px;color:var(--muted)}
+.mini-bars{display:flex;gap:3px;align-items:flex-end}
+.mbar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.mbar-slot{width:100%;height:54px;display:flex;align-items:flex-end;justify-content:center}
+.mbar{width:64%;background:var(--primary);border-radius:2px 2px 0 0;min-height:3px}
+.mbar-empty{width:64%;height:3px;background:var(--line);border-radius:2px;align-self:flex-end}
+.mbar-slot.signed{position:relative;align-items:stretch}
+.mbar-slot.signed::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.mbar-slot.signed .mbar{position:absolute;left:18%;right:18%;width:auto;border-radius:2px}
+.mbar-slot.signed .mbar-empty{position:absolute;left:18%;right:18%;top:calc(50% - 1.5px);width:auto;align-self:auto}
+.mbar.neg{background:#e2574c}
+.mbar-l{font-size:9px;color:var(--muted);white-space:nowrap}
 
 /* Correcteur d'aliments (Réglages) */
 .ff-edit{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:#f6f9fb}
