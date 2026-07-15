@@ -50,14 +50,14 @@ var ROUTINES = [
 /* Petits exercices — mobilité & santé, cochés dans le journal (même principe que les routines).
    La zone libre permet d'ajouter un exercice ponctuel. */
 var PETITS_EXOS = [
-  {id:"vacuum",   name:"Stomach vacuum",                     icon:"🌀"},
-  {id:"kegel",    name:"Périnée / Kegel",                    icon:"🔺"},
-  {id:"coiffe",   name:"Coiffe des rotateurs",               icon:"💪"},
-  {id:"cheville", name:"Proprioception cheville",            icon:"🦶"},
-  {id:"hanche",   name:"Ouverture / fléchisseurs de hanche", icon:"🦵"},
-  {id:"thorax",   name:"Mobilité thoracique",                icon:"🔄"},
-  {id:"grip",     name:"Dead hang / grip",                   icon:"🖐️"},
-  {id:"respi",    name:"Respiration diaphragmatique",        icon:"💨"}
+  {id:"vacuum",   name:"Stomach vacuum",                     icon:"🌀", link:"https://www.youtube.com/results?search_query=stomach+vacuum+exercice+tutoriel", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"kegel",    name:"Périnée / Kegel",                    icon:"🔺", link:"https://www.youtube.com/results?search_query=exercices+kegel+perinee+homme", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"coiffe",   name:"Coiffe des rotateurs",               icon:"💪", link:"https://www.youtube.com/results?search_query=renforcement+coiffe+des+rotateurs+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"cheville", name:"Proprioception cheville",            icon:"🦶", link:"https://www.youtube.com/results?search_query=proprioception+cheville+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"hanche",   name:"Ouverture / fléchisseurs de hanche", icon:"🦵", link:"https://www.youtube.com/results?search_query=ouverture+hanche+flechisseurs+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"thorax",   name:"Mobilité thoracique",                icon:"🔄", link:"https://www.youtube.com/results?search_query=mobilite+thoracique+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"grip",     name:"Dead hang / grip",                   icon:"🖐️", link:"https://www.youtube.com/results?search_query=dead+hang+grip+exercice", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"respi",    name:"Respiration diaphragmatique",        icon:"💨", link:"https://www.youtube.com/results?search_query=respiration+diaphragmatique+exercice", linkLabel:"Vidéos explicatives (YouTube)"}
 ];
 
 /* ---------- BLOC 1 — Construction (27 juin → 31 juillet) ---------- */
