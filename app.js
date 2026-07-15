@@ -1351,6 +1351,48 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="reg-list">'+chips+'</div>'+
       '<div class="wv-note">Une journée compte dès qu\'une habitude ou un petit exercice est coché. La série se poursuit tant que tu ne sautes pas un jour.</div></div>';
   }
+  /* ---- Tendances dépliables des stats Progrès (une seule ouverte, sous la grille) ---- */
+  var statTrendOpen=null;
+  function statDays(n){var a=[];for(var i=n-1;i>=0;i--)a.push(isoOf(addDays(todayStr(),-i)));return a;}
+  function muscuDoneOnDate(iso){for(var k in state.sessions){var s=state.sessions[k];if(s&&s.done&&s.date===iso)return true;}return false;}
+  function triDoneOnDate(iso){for(var k in state.tri){var s=state.tri[k];if(s&&s.done&&s.date===iso)return true;}return false;}
+  function statSeries(metric){
+    var DL2=["D","L","M","M","J","V","S"];function lbl(iso){return DL2[new Date(iso+"T00:00:00").getDay()];}
+    if(metric==="muscu"||metric==="tri"||metric==="medit"){
+      var dd=statDays(14),bl=dd.map(function(d){return metric==="muscu"?muscuDoneOnDate(d):metric==="tri"?triDoneOnDate(d):!!(state.days[d]&&state.days[d].meditation);});
+      return {kind:"strip",labels:dd.map(lbl),vals:bl,cap:"14 j · "+bl.filter(Boolean).length+"/14 faits"};
+    }
+    var d7=statDays(7),vals,unit="",prec=0;
+    if(metric==="prot"){vals=d7.map(function(d){var t=dayTotals(d);return t&&t.prot>0?t.prot:null;});unit=" g";}
+    else if(metric==="sleep"){vals=d7.map(function(d){var v=num(state.days[d]&&state.days[d].sleep);return isNaN(v)?null:v;});unit=" h";prec=1;}
+    else if(metric==="water"){vals=d7.map(function(d){var x=state.days[d];return (x&&typeof x.water==="number"&&x.water>0)?x.water:null;});unit=" v";}
+    else if(metric==="stool"){vals=d7.map(function(d){var x=state.days[d];return (x&&x.stools&&x.stools.length)?x.stools.length:null;});}
+    else if(metric==="bilan"){vals=d7.map(function(d){var t=dayTotals(d);if(!t)return null;var e=expend(d);return e==null?null:(Math.round(t.kcal)-e);});unit=" kcal";}
+    else return null;
+    var pr=vals.filter(function(v){return v!=null;});var av=pr.length?pr.reduce(function(a,b){return a+b;},0)/pr.length:null;
+    return {kind:metric==="bilan"?"sbars":"bars",labels:d7.map(lbl),vals:vals,prec:prec,unit:unit,cap:"7 j"+(av!=null?" · moy "+((av>=0&&metric==="bilan")?"+":"")+(prec?fr1(av):Math.round(av))+unit:" · —")};
+  }
+  function miniStrip(labels,bools){return '<div class="mini-strip">'+bools.map(function(on,i){return '<div class="ms-cell"><span class="ms-dot'+(on?" on":"")+'"></span><span class="ms-l">'+labels[i]+'</span></div>';}).join("")+'</div>';}
+  function miniBars(labels,vals,signed,prec,unit){
+    var mx=0;vals.forEach(function(v){if(v!=null){var a=Math.abs(v);if(a>mx)mx=a;}});if(mx<=0)mx=1;
+    return '<div class="mini-bars">'+vals.map(function(v,i){
+      var tt=v==null?"—":(((signed&&v>0)?"+":"")+(prec?fr1(v):Math.round(v))+(unit||""));
+      var bar;
+      if(v==null)bar='<div class="mbar-empty"></div>';
+      else if(signed){var hh=Math.max(4,Math.abs(v)/mx*50);bar='<div class="mbar '+(v>=0?"pos":"neg")+'" style="height:'+hh.toFixed(0)+'%;'+(v>=0?"bottom:50%":"top:50%")+'"></div>';}
+      else {var h2=Math.max(4,v/mx*100);bar='<div class="mbar pos" style="height:'+h2.toFixed(0)+'%"></div>';}
+      return '<div class="mbar-col" title="'+esc(tt)+'"><div class="mbar-slot'+(signed?" signed":"")+'">'+bar+'</div><span class="mbar-l">'+esc(labels[i])+'</span></div>';
+    }).join("")+'</div>';
+  }
+  function markStatOpen(){var g=document.getElementById("statGrid");if(!g)return;g.querySelectorAll(".stat.tapp").forEach(function(el){el.classList.toggle("on",el.getAttribute("data-metric")===statTrendOpen);});}
+  function showStatTrend(metric){
+    var host=document.getElementById("statTrend");if(!host)return;
+    if(statTrendOpen===metric){statTrendOpen=null;host.hidden=true;host.innerHTML="";markStatOpen();return;}
+    var s=statSeries(metric);if(!s){statTrendOpen=null;host.hidden=true;host.innerHTML="";markStatOpen();return;}
+    statTrendOpen=metric;
+    var body=s.kind==="strip"?miniStrip(s.labels,s.vals):miniBars(s.labels,s.vals,s.kind==="sbars",s.prec,s.unit);
+    host.innerHTML='<div class="st-cap">'+esc(s.cap)+'</div>'+body;host.hidden=false;markStatOpen();
+  }
   function renderProgress(){
     renderGoals();
     var wv=document.getElementById("weekViz");if(wv)wv.innerHTML=weekVizHTML();
@@ -1379,17 +1421,21 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(we.length>=2){var spanDays=(new Date(we[we.length-1].d+"T00:00:00")-new Date(we[0].d+"T00:00:00"))/86400000;if(spanDays>=1)kgWeek=(we[we.length-1].w-we[0].w)/(spanDays/7);}
     var wStatus=kgWeek==null?"":(kgWeek<0.2?" · sous la cible":(kgWeek>0.3?" · au-dessus":" · ✓"));
 
+    var EXP={muscu:1,tri:1,prot:1,bilan:1,sleep:1,water:1,medit:1,stool:1};
+    function sc(metric,vHTML,kHTML,vStyle){var t=EXP[metric];return '<div class="stat'+(t?' tapp':'')+'"'+(t?' role="button" tabindex="0" data-metric="'+metric+'"':'')+'><div class="v"'+(vStyle?' style="'+vStyle+'"':'')+'>'+vHTML+'</div><div class="k">'+kHTML+(t?' <span class="stat-chev">▾</span>':'')+'</div></div>';}
     document.getElementById("statGrid").innerHTML=
-      '<div class="stat"><div class="v">'+dc+'<span style="font-size:15px;color:var(--muted)">/'+totalSessions()+'</span></div><div class="k">Séances muscu faites</div></div>'+
-      '<div class="stat"><div class="v">'+triDoneCount()+'<span style="font-size:15px;color:var(--muted)">/30</span></div><div class="k">Séances triathlon faites</div></div>'+
-      '<div class="stat"><div class="v">'+(protAvg!=null?Math.round(protAvg):'—')+(protAvg!=null?'<span style="font-size:15px;color:var(--muted)"> g</span>':'')+'</div><div class="k">Protéines / j · cible 130-150'+protStatus+'</div></div>'+
-      '<div class="stat"><div class="v">'+(kgWeek!=null?((kgWeek>=0?'+':'')+fr1(kgWeek)):'—')+(kgWeek!=null?'<span style="font-size:15px;color:var(--muted)"> kg/sem</span>':'')+'</div><div class="k">Prise de poids · cible +0,2-0,3'+wStatus+'</div></div>'+
-      '<div class="stat"><div class="v">'+(bal7!=null?((bal7.avg>=0?'+':'')+Math.round(bal7.avg)):'—')+(bal7!=null?'<span style="font-size:15px;color:var(--muted)"> kcal</span>':'')+'</div><div class="k">Bilan moyen / j · 7 j'+(bal7?' ('+bal7.n+' j notés)':'')+'</div></div>'+
-      '<div class="stat"><div class="v">'+(avgSleep?fr1(avgSleep):'—')+'<span style="font-size:15px;color:var(--muted)"> h</span></div><div class="k">Sommeil moyen / nuit</div></div>'+
-      '<div class="stat"><div class="v">'+(waterAvg?fr1(waterAvg):'—')+'</div><div class="k">Eau / jour (verres)</div></div>'+
-      '<div class="stat"><div class="v">'+meditDays+'</div><div class="k">Jours de méditation</div></div>'+
-      '<div class="stat"><div class="v" style="font-size:15px;line-height:1.3;padding-top:4px">'+topSports+'</div><div class="k">Sports les plus loggés</div></div>'+
-      '<div class="stat"><div class="v">'+(stoolAvg?fr1(stoolAvg):'—')+'</div><div class="k">Selles / jour'+(domType?' · souvent type '+domType:'')+'</div></div>';
+      sc("muscu",dc+'<span style="font-size:15px;color:var(--muted)">/'+totalSessions()+'</span>','Séances muscu faites')+
+      sc("tri",triDoneCount()+'<span style="font-size:15px;color:var(--muted)">/30</span>','Séances triathlon faites')+
+      sc("prot",(protAvg!=null?Math.round(protAvg):'—')+(protAvg!=null?'<span style="font-size:15px;color:var(--muted)"> g</span>':''),'Protéines / j · cible 130-150'+protStatus)+
+      sc("weight",(kgWeek!=null?((kgWeek>=0?'+':'')+fr1(kgWeek)):'—')+(kgWeek!=null?'<span style="font-size:15px;color:var(--muted)"> kg/sem</span>':''),'Prise de poids · cible +0,2-0,3'+wStatus)+
+      sc("bilan",(bal7!=null?((bal7.avg>=0?'+':'')+Math.round(bal7.avg)):'—')+(bal7!=null?'<span style="font-size:15px;color:var(--muted)"> kcal</span>':''),'Bilan moyen / j · 7 j'+(bal7?' ('+bal7.n+' j notés)':''))+
+      sc("sleep",(avgSleep?fr1(avgSleep):'—')+'<span style="font-size:15px;color:var(--muted)"> h</span>','Sommeil moyen / nuit')+
+      sc("water",(waterAvg?fr1(waterAvg):'—'),'Eau / jour (verres)')+
+      sc("medit",meditDays,'Jours de méditation')+
+      sc("sports",topSports,'Sports les plus loggés','font-size:15px;line-height:1.3;padding-top:4px')+
+      sc("stool",(stoolAvg?fr1(stoolAvg):'—'),'Selles / jour'+(domType?' · souvent type '+domType:''));
+    (function(){var g=document.getElementById("statGrid");if(!g)return;statTrendOpen=null;var st=document.getElementById("statTrend");if(st){st.hidden=true;st.innerHTML="";}
+      g.querySelectorAll(".stat.tapp").forEach(function(el){var m=el.getAttribute("data-metric");el.addEventListener("click",function(){showStatTrend(m);});el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();showStatTrend(m);}});});})();
 
     renderWeightChart();
     renderProteinChart();
