@@ -669,10 +669,25 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     renderTodayBalance();
   }
+  function renderTodayHabits(){
+    var host=document.getElementById("todayHabits");if(!host)return;
+    var list=customRoutines();
+    if(!list.length){host.innerHTML="";return;}
+    var d=todayStr();
+    var rows=list.map(function(a){
+      var on=crDoneOn(a.id,d);
+      var st=currentStreak(function(iso){return crDoneOn(a.id,iso);});
+      var streak=st>0?'<span class="hchip" style="margin-left:auto"><b>🔥'+st+' j</b></span>':'';
+      return '<label class="supp"><input type="checkbox" class="f-cr" data-id="'+esc(a.id)+'"'+(on?' checked':'')+'><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span>'+streak+'</label>';
+    }).join("");
+    host.innerHTML='<div class="card pad"><div class="sec-title">Mes ancrages</div>'+rows+'<div class="supp-hint">Coche ce que tu tiens aujourd\'hui — chaque jour coché prolonge la série 🔥.</div></div>';
+    host.querySelectorAll(".f-cr").forEach(function(cb){cb.addEventListener("change",function(){var id=cb.getAttribute("data-id");var x=day(d);if(!x.customRoutines)x.customRoutines={};if(cb.checked)x.customRoutines[id]=true;else delete x.customRoutines[id];save();renderTodayHabits();});});
+  }
   function renderToday(){
     renderChip();
     renderHero();
     renderTodayNutri();
+    renderTodayHabits();
     buildDayForm(document.getElementById("todayLog"),todayStr());
     var bn=document.getElementById("backupNudge");
     if(bn){var st=backupStaleDays();var stale=(st===null||st>=10);
@@ -1330,9 +1345,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(x.routines)for(var k in x.routines){if(x.routines[k])return true;}
     if(x.petitsExos)for(var k2 in x.petitsExos){if(x.petitsExos[k2])return true;}
     if((x.routinesX&&x.routinesX.length)||(x.petitsExosX&&x.petitsExosX.length))return true;
+    if(x.customRoutines)for(var k3 in x.customRoutines){if(x.customRoutines[k3])return true;}
     return false;}
   function routineDoneOn(id,iso){var x=state.days[iso];return !!(x&&((x.routines&&x.routines[id])||(id==="medit"&&x.meditation)));}
   function pxDoneOn(id,iso){var x=state.days[iso];return !!(x&&x.petitsExos&&x.petitsExos[id]);}
+  function customRoutines(){return Array.isArray(state.customRoutines)?state.customRoutines:[];}
+  function crDoneOn(id,iso){var x=state.days[iso];return !!(x&&x.customRoutines&&x.customRoutines[id]);}
+  function findCR(id){var l=customRoutines();for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null;}
+  function removeCR(id){if(!Array.isArray(state.customRoutines))return;state.customRoutines=state.customRoutines.filter(function(a){return a.id!==id;});Object.keys(state.days).forEach(function(d){var c=state.days[d].customRoutines;if(c&&c[id]!=null)delete c[id];});}
   function currentStreak(pred){var s=0,cur=todayStr(),g=0;if(!pred(cur))cur=isoOf(addDays(cur,-1));while(pred(cur)&&g<400){s++;cur=isoOf(addDays(cur,-1));g++;}return s;}
   function bestStreak(pred){var keys=Object.keys(state.days).filter(function(d){return /^\d{4}-\d{2}-\d{2}$/.test(d);}).sort();if(!keys.length)return 0;var cur=keys[0],end=todayStr(),best=0,run=0,g=0;while(cur<=end&&g<3000){if(pred(cur)){run++;if(run>best)best=run;}else run=0;cur=isoOf(addDays(cur,1));g++;}return best;}
   function renderRegularity(){
@@ -1343,6 +1363,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var habits=[];
     (typeof ROUTINES!=="undefined"?ROUTINES:[]).forEach(function(r){var st=currentStreak(function(iso){return routineDoneOn(r.id,iso);});if(st>0)habits.push({icon:r.icon,name:r.name,s:st});});
     (typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).forEach(function(r){var st=currentStreak(function(iso){return pxDoneOn(r.id,iso);});if(st>0)habits.push({icon:r.icon,name:r.name,s:st});});
+    customRoutines().forEach(function(a){var st=currentStreak(function(iso){return crDoneOn(a.id,iso);});if(st>0)habits.push({icon:a.icon,name:a.label,s:st});});
     habits.sort(function(a,b){return b.s-a.s;});
     var chips=habits.length?habits.map(function(h){return '<span class="hchip">'+(h.icon?esc(h.icon)+' ':'')+esc(h.name)+' <b>🔥'+h.s+'</b></span>';}).join(""):'<div class="reg-empty">Aucune série en cours — coche une habitude ou un petit exercice aujourd\'hui pour en lancer une.</div>';
     host.innerHTML='<div class="card pad"><div class="sec-title">Régularité — habitudes &amp; petits exercices</div>'+
@@ -1835,8 +1856,25 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '</div>'+
       '<div class="bkp-when pf-bmr">'+(pfBmr!=null?('Métabolisme de base : <b>'+Math.round(pfBmr)+' kcal/j</b>'+(pfW!=null?(' · poids '+fr1(pfW)+' kg'):'')):'<span class="low">Complète taille + âge pour le calcul.</span>')+'</div>';
     host.innerHTML=
+      var crList=customRoutines();
+    var anchorsRows=crList.map(function(a){
+      return '<div class="cr-row" data-id="'+esc(a.id)+'" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
+        '<input type="text" class="cr-emoji" maxlength="3" value="'+esc(a.icon||"")+'" placeholder="🚭" style="width:52px;text-align:center;padding:9px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:18px;background:#fff">'+
+        '<input type="text" class="cr-label" value="'+esc(a.label||"")+'" placeholder="Intitulé (ex : Journée sans cigarette)" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
+        '<button type="button" class="set-del cr-del" aria-label="Supprimer">🗑</button>'+
+      '</div>';
+    }).join("");
+    var anchorsInner='<p class="set-note">Crée tes propres ancrages d\'habitude. Chacun apparaît dans « Aujourd\'hui » avec une case à cocher, et sa série 🔥 se suit dans Progrès — idéal pour un suivi jour après jour (ex. « Journée sans cigarette »). Un emoji + un intitulé suffisent.</p>'+
+      anchorsRows+
+      '<div class="cr-add" style="display:flex;gap:8px;align-items:center;margin-top:4px">'+
+        '<input type="text" class="cr-new-emoji" maxlength="3" placeholder="🚭" style="width:52px;text-align:center;padding:9px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:18px;background:#fff">'+
+        '<input type="text" class="cr-new-label" placeholder="Nouvel ancrage…" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
+        '<button type="button" class="btn accent cr-addbtn">+ Ajouter</button>'+
+      '</div>';
+    host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
       settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
+      settingsSec("anchors","Ancrages de routines",anchorsInner,!!settingsSecOpen.anchors)+
       settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
       settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
       settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
@@ -1854,6 +1892,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var w=host.querySelector(".pf-w");if(w)w.oninput=function(){pf.weight=w.value;save();pfRefresh();};
     })();
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
+    host.querySelectorAll(".cr-row").forEach(function(row){var id=row.getAttribute("data-id");var em=row.querySelector(".cr-emoji"),lb=row.querySelector(".cr-label");
+      function upd(){var a=findCR(id);if(!a)return;a.icon=(em.value||"").trim();a.label=(lb.value||"").trim();save();if(typeof renderTodayHabits==="function")renderTodayHabits();}
+      if(em)em.addEventListener("input",upd);if(lb)lb.addEventListener("input",upd);
+      var del=row.querySelector(".cr-del");if(del)del.onclick=function(){if(confirm("Supprimer cet ancrage ? Son suivi sera retiré des jours notés.")){removeCR(id);save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}};
+    });
+    (function(){var b=host.querySelector(".cr-addbtn");if(!b)return;function addCR(){var ei=host.querySelector(".cr-new-emoji"),li=host.querySelector(".cr-new-label");var lbl=((li&&li.value)||"").trim();if(!lbl)return;if(!Array.isArray(state.customRoutines))state.customRoutines=[];state.customRoutines.push({id:"cr"+Date.now().toString(36),icon:((ei&&ei.value)||"").trim(),label:lbl});settingsSecOpen.anchors=true;save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}
+      b.onclick=addCR;var li=host.querySelector(".cr-new-label");if(li)li.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addCR();}});
+    })();
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
     host.querySelectorAll("[data-actedit]").forEach(function(b){b.onclick=function(){settingsActEdit=b.getAttribute("data-actedit");renderSettings();};});
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
