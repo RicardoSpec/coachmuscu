@@ -611,7 +611,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function renderToday(){
     renderChip();
-    renderPhase();
     renderHero();
     renderTodayNutri();
     buildDayForm(document.getElementById("todayLog"),todayStr());
