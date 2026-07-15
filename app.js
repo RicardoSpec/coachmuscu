@@ -411,6 +411,34 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function goSport(sel){sportSel=sel;activateTab("v-sport");}
 
+   /* ---- Navigation par glissement horizontal entre onglets (aujourd'hui / sport / journal / progrès) ---- */
+  function swipeOverlayOpen(){
+    var ids=["drawer","settings","calSheet"];for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el&&el.classList.contains("open"))return true;}
+    var sc=document.getElementById("crsScanModal");if(sc&&!sc.hidden)return true;return false;
+  }
+  function swipeInHScroll(el){
+    for(var n=el;n&&n!==document.body;n=n.parentElement){if(n.scrollWidth>n.clientWidth+2){var ov=getComputedStyle(n).overflowX||"";if(ov==="auto"||ov==="scroll")return true;}}return false;
+  }
+  function wireSwipe(){
+    var sx=0,sy=0,ok=false;
+    document.addEventListener("touchstart",function(e){
+      if(e.touches.length!==1){ok=false;return;}
+      var t=e.touches[0];sx=t.clientX;sy=t.clientY;
+      ok=!swipeOverlayOpen()&&!swipeInHScroll(e.target)&&!(e.target&&/^(input|textarea|select)$/i.test(e.target.tagName));
+    },{passive:true});
+    document.addEventListener("touchend",function(e){
+      if(!ok)return;ok=false;
+      var t=e.changedTouches&&e.changedTouches[0];if(!t)return;
+      var dx=t.clientX-sx,dy=t.clientY-sy;
+      if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.8)return;
+      if(swipeOverlayOpen())return;
+      var tabs=[].slice.call(document.querySelectorAll(".tab")).map(function(x){return x.getAttribute("data-view");});
+      var act=document.querySelector(".view.active");var cur=act?tabs.indexOf(act.id):-1;if(cur<0)return;
+      var nx=dx<0?cur+1:cur-1;if(nx<0||nx>=tabs.length)return;
+      activateTab(tabs[nx]);window.scrollTo(0,0);
+    },{passive:true});
+  }
+
   /* ---------------- En-tête ---------------- */
   function renderChip(){var n=nextSession();document.getElementById("wkChip").textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+doneCount()+"/"+totalSessions();}
 
