@@ -74,7 +74,7 @@ var PROGRAM = {
     {id:"b1",name:"Squat barre",target:"4 × 6-8",sets:4,unit:"reps",base:"total",help:"Barre sur le haut du dos, descendre fesses en arrière jusqu'aux cuisses parallèles. <b>Cible :</b> cuisses, fessiers."},
     {id:"b2",name:"Soulevé de terre roumain",target:"3 × 8-10",sets:3,unit:"reps",base:"total",help:"Jambes quasi tendues, fesses en arrière, dos droit. <b>Cible :</b> ischios, bas du dos, fessiers."},
     {id:"b3",name:"Mollets debout",target:"4 × 15",sets:4,unit:"reps",base:"ajout",help:"Monter sur la pointe des pieds, redescendre lentement. <b>Cible :</b> mollets."},
-    {id:"b4",name:"Crunch à la poulie (lesté)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"À genoux, enrouler le buste vers le sol. <b>Cible :</b> abdominaux."},
+    {id:"b4",name:"Crunch au sol lesté",target:"3 × 12-15",sets:3,unit:"reps",base:"ajout",help:"Allongé, plaque tenue sur la poitrine (ou derrière la tête), enrouler le buste vers les genoux. Progression : plaque plus lourde. <b>Cible :</b> abdominaux."},
     {id:"b5",name:"Gainage planche",target:"3 × 45 s",sets:3,unit:"sec",help:"Corps droit sur avant-bras et pointes de pieds. <b>Cible :</b> sangle abdominale."},
     {id:"b6",name:"Gainage latéral",target:"3 × 30 s/côté",sets:3,unit:"sec",help:"Sur le côté, appui sur un avant-bras, hanches hautes. <b>Cible :</b> obliques."}
   ]},
@@ -84,7 +84,7 @@ var PROGRAM = {
     {id:"c3",name:"Dips / développé machine",target:"3 × 10-12",sets:3,unit:"reps",base:"ajout",help:"Descendre coudes pliés puis remonter (barres parallèles ou machine). <b>Cible :</b> bas des pectoraux, triceps."},
     {id:"c4",name:"Face pull (poulie)",target:"3 × 15",sets:3,unit:"reps",base:"total",help:"Tirer la corde vers le visage, coudes hauts. <b>Cible :</b> épaules arrière, posture."},
     {id:"c5",name:"Curl + extension triceps",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"En superset : curl biceps puis extension triceps. <b>Cible :</b> bras (biceps + triceps)."},
-    {id:"c6",name:"Crunch lesté / relevés de jambes",target:"3 × 15",sets:3,unit:"reps",base:"ajout",help:"Travail abdominal lesté ou relevés de jambes. <b>Cible :</b> abdominaux."}
+    {id:"c6",name:"Crunch au sol lesté",target:"3 × 15",sets:3,unit:"reps",base:"ajout",help:"Allongé, plaque tenue sur la poitrine, enrouler le buste vers les genoux. Progression : plaque plus lourde. <b>Cible :</b> abdominaux."}
   ]},
   D:{title:"Séance D — Haut (accessoire) + abdos", sub:"Haut · accessoire", exos:[
     {id:"d1",name:"Rowing haltère 1 bras",target:"3 × 10-12",sets:3,unit:"reps",base:"bras",help:"Un genou sur le banc, tirer l'haltère vers la hanche. <b>Cible :</b> dos."},
