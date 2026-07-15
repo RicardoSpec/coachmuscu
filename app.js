@@ -272,6 +272,38 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }}
     return out;
   }
+   /* ---- Équivalence inter-variantes : boussole de poids quand une variante n'a pas d'historique ----
+     1RM estimé constant (Epley) sur la charge TOTALE, coefficient de transfert par matériel,
+     puis retour au poids conseillé pour la fourchette de reps visée. */
+  function vCoef(name,base){var n=(name||"").toLowerCase();if(/machine|convergen|smith|guid/.test(n))return 1.15;if(/halt|dumbbell/.test(n))return 0.90;if(/poulie|cable|câble/.test(n))return 1.00;if(/barre|barbell/.test(n))return 1.00;if(/corps|bodyweight|lest/.test(n))return 1.00;return base==="bras"?0.90:1.00;}
+  function toTotalLoad(kg,base,name,bw){if(base==="bras")return kg*volFactor(base,name);if(base==="ajout")return bw!=null?kg+bw:null;return kg;}
+  function fromTotalLoad(t,base,name,bw){if(base==="bras")return t/volFactor(base,name);if(base==="ajout")return bw!=null?(t-bw):null;return t;}
+  function midReps(t){var m=String(t||"").split("×")[1]||"";var mm=m.match(/(\d+)\s*[-–]\s*(\d+)/);if(mm)return Math.round((+mm[1]+ +mm[2])/2);var s=m.match(/(\d+)/);return s?+s[1]:0;}
+  function variantSuggest(b,w,c,ex,curV,curBase,curKey){
+    var bw=lastWeight();
+    var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
+    var cand={};cand[ex.id]="";
+    vopts.forEach(function(V){cand[setKey(ex.id,V)]=V;});
+    for(var sk in state.sessions){var ss=state.sessions[sk];if(ss&&ss.sets){for(var key in ss.sets){if(key===ex.id||key.indexOf(ex.id+"::")===0){if(!(key in cand))cand[key]=key.indexOf("::")>=0?key.slice(key.indexOf("::")+2):"";}}}}
+    var refRM=null,refFrom=null,refR=0;
+    for(var k in cand){
+      if(k===curKey)continue;
+      var rec=prevSets(b,w,c,k);if(!rec)continue;
+      var vN=cand[k],vBase=baseFor(ex.id,vN,ex.base),bestE=null,bestR=0;
+      for(var i=0;i<rec.length;i++){var kg=num(rec[i]&&rec[i].kg),r=num(rec[i]&&rec[i].r);if(isNaN(kg)||kg<=0)continue;var tot=toTotalLoad(kg,vBase,ex.name,bw);if(tot==null)continue;var e=epley(tot,isNaN(r)?0:r);if(bestE===null||e>bestE){bestE=e;bestR=isNaN(r)?0:r;}}
+      if(bestE===null)continue;
+      var ref=bestE/vCoef(vN,vBase);
+      if(refRM===null||ref>refRM){refRM=ref;refFrom=vN;refR=bestR;}
+    }
+    if(refRM===null)return null;
+    var tR=midReps(ex.target)||refR||8;
+    var sugTotal=refRM*vCoef(curV,curBase)/(1+tR/30);
+    var disp=fromTotalLoad(sugTotal,curBase,ex.name,bw);
+    if(disp==null||!isFinite(disp))return null;
+    var step=curBase==="bras"?1:2.5;disp=Math.max(0,Math.round(disp/step)*step);
+    var kgs=(Math.abs(disp-Math.round(disp))<1e-9)?String(Math.round(disp)):String(disp);
+    return {kg:kgs,r:tR,from:refFrom};
+  }
   var progMode={};  /* exId nu -> "vol" pour la vue volume (défaut : 1RM), conservé entre re-rendus */
   var PG_TAG='style="font-weight:700;color:var(--muted);font-size:10px;margin-left:5px;letter-spacing:.02em"';
   function progHTML(b,c,exId,base,name){
@@ -709,6 +741,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var rest=restFor(ex.target);
       var exBase=baseFor(ex.id,curV,ex.base);       /* base de saisie de l'exo (total/bras/ajout), déduite variante+défaut */
       var kgUnit=BASE_UNIT[exBase];                 /* unité affichée à côté du champ poids (kg / kg/bras / +kg) */
+      var sugg=(!prev&&!isSec)?variantSuggest(b,w,c,ex,curV,exBase,setK):null;
       var setsHTML="",nSets=Math.max(ex.sets,(s.sets[setK]||[]).length);
       for(var i=0;i<nSets;i++){
         var pr=(prev&&prev[i]&&prev[i].r!=="")?prev[i].r:(isSec?secTgt:"reps");
@@ -745,7 +778,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
             varHTML+
             '<div class="exo-tools"><button class="info-btn" data-help="'+ex.id+'" aria-label="Voir la technique">+</button></div>'+
-            (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':'')+
+            (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
             '<div class="help" id="help-'+ex.id+'">'+ex.help+
               '<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+
               '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
