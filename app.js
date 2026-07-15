@@ -147,6 +147,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var idx=fqIndex();
     for(var i=0;i<idx.length;i++){var e=idx[i];                    /* trié du + spécifique au - spécifique → 1re correspondance = la meilleure */
       if(e.t.every(function(kt){return toks.some(function(nt){return fqTokMatch(kt,nt);});}))return e.q;}
+    var pfam=protFamilyByName(name);if(pfam)return {p:2,n:0,w:0};   /* 3) céréale/légumineuse reconnue → protéine incomplète (complémentarité) */
     return null;
   }
  
@@ -157,8 +158,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     l:["lentille","pois","chiche","haricot","flageolet","feve","houmous","dhal","dal"]
   };
   var PROT_COMPLETE_PLANT=["soja","tofu","edamame","quinoa"]; /* protéines végétales complètes → jamais « à compléter » */
-  function protFamily(name,q){
-    if(q&&(q.f==="c"||q.f==="l"))return q.f;                        /* override explicite (noms opaques : taboulé, falafel) */
+  function protFamilyByName(name){
     var toks=fqTokens(name);
     if(toks.some(function(t){return PROT_COMPLETE_PLANT.indexOf(t)>=0;}))return null;
     function hit(fam){return toks.some(function(t){return PROT_FAMILY[fam].some(function(k){return fqTokMatch(k,t);});});}
@@ -166,25 +166,38 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(hit("c"))return "c";
     return null;
   }
+  function protFamily(name,q){
+    if(q&&(q.f==="c"||q.f==="l"))return q.f;                        /* override explicite (noms opaques : taboulé, falafel) */
+    return protFamilyByName(name);
+  }
   function protComplementReason(name,q){
     var fam=protFamily(name,q);
     if(fam==="c")return "Céréale — complète avec une légumineuse (lentilles, pois chiches, haricots) sur la journée.";
     if(fam==="l")return "Légumineuse — complète avec une céréale (riz, pâtes, semoule, pain) sur la journée.";
     return "Protéine végétale incomplète — associe céréale + légumineuse sur la journée.";
   }
-  function foodQualityBadges(name){
+  function dayProtFams(iso){var x=state.days[iso],has={c:false,l:false};if(x&&x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var q=foodQuality(it.name);if(q&&q.p===2){var f=protFamily(it.name,q);if(f==="c")has.c=true;else if(f==="l")has.l=true;}});});return has;}
+  function protComplementState(name,q,iso){
+    var fam=protFamily(name,q);
+    if(!iso)return {done:false,reason:protComplementReason(name,q)};
+    var has=dayProtFams(iso);
+    if(fam==="c")return has.l?{done:true,reason:"✓ Complétée aujourd'hui — une légumineuse est déjà au menu."}:{done:false,reason:"Céréale — à compléter : ajoute une légumineuse (lentilles, pois chiches…) dans la journée."};
+    if(fam==="l")return has.c?{done:true,reason:"✓ Complétée aujourd'hui — une céréale est déjà au menu."}:{done:false,reason:"Légumineuse — à compléter : ajoute une céréale (riz, pâtes, pain…) dans la journée."};
+    return (has.c&&has.l)?{done:true,reason:"✓ Complétée aujourd'hui (céréale + légumineuse présentes)."}:{done:false,reason:"Protéine végétale incomplète — associe céréale + légumineuse dans la journée."};
+  }
+  function foodQualityBadges(name,iso){
     var q=foodQuality(name);if(!q)return "";
     var P={1:["💪","Protéine complète (profil d'acides aminés complet)"]};
     var N={1:["🟢","Brut / peu transformé (NOVA 1)"],2:["🟡","Transformé (NOVA 3)"],3:["🔴","Ultra-transformé (NOVA 4)"]};
-    function badge(ic,r){return '<span class="fq" data-r="'+esc(r)+'" title="'+esc(r)+'" role="button" tabindex="0" aria-label="'+esc(r)+'">'+ic+'</span>';}
+    function badge(ic,r,cls){return '<span class="fq'+(cls?(" "+cls):"")+'" data-r="'+esc(r)+'" title="'+esc(r)+'" role="button" tabindex="0" aria-label="'+esc(r)+'">'+ic+'</span>';}
     var out="";
     if(q.p===1)out+=badge(P[1][0],P[1][1]);
-    else if(q.p===2)out+=badge("🌱",protComplementReason(name,q));
+    else if(q.p===2){var st=protComplementState(name,q,iso);out+=badge(st.done?"🌿":"🌱",st.reason,st.done?"fq-done":"");}
     if(N[q.n])out+=badge(N[q.n][0],N[q.n][1]);
     if(q.w)out+=badge("⚠️",q.w);
     return out?'<span class="fq-badges">'+out+'</span>':"";
   }
-  function foodQualityLegend(){return '<div class="fq-legend">💪 complète · 🌱 à compléter · 🟢🟡🔴 transformation · ⚠️ vigilance <span class="fq-legend-hint">— touche un picto pour la raison</span></div>';}
+  function foodQualityLegend(){return '<div class="fq-legend">💪 complète · 🌱 à compléter · 🌿 complété · 🟢🟡🔴 transformation · ⚠️ vigilance <span class="fq-legend-hint">— touche un picto pour la raison</span></div>';}
   var fqTapWired=false;
   function fqToast(msg){var t=document.getElementById("fqToast");if(!t){t=document.createElement("div");t.id="fqToast";t.className="fq-toast";document.body.appendChild(t);}t.textContent=msg;t.classList.add("show");clearTimeout(fqToast._t);fqToast._t=setTimeout(function(){t.classList.remove("show");},2600);}
   function wireFqTaps(){if(fqTapWired||typeof document==="undefined")return;fqTapWired=true;document.addEventListener("click",function(e){var b=(e.target&&e.target.closest)?e.target.closest(".fq"):null;if(!b)return;e.preventDefault();e.stopPropagation();var r=b.getAttribute("data-r");if(r)fqToast(r);});}
@@ -195,7 +208,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function dayTotals(d){var x=state.days[d];if(!x)return null;var k=0,p=0,pComp=0,pC=0,pL=0,pOth=0,any=false;
     if(x.mealItems)MEALS.forEach(function(m){(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s){any=true;if(s.kcal)k+=s.kcal;if(s.prot){p+=s.prot;var q=foodQuality(it.name),fam=q?protFamily(it.name,q):null;if(q&&q.p===1)pComp+=s.prot;else if(q&&q.p===2&&fam==="c")pC+=s.prot;else if(q&&q.p===2&&fam==="l")pL+=s.prot;else pOth+=s.prot;}}});});
     if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(x.supps[sp.id]){var mul=(x.supps2&&x.supps2[sp.id])?2:1;if(sp.prot){p+=sp.prot*mul;pComp+=sp.prot*mul;any=true;}if(sp.kcal){k+=sp.kcal*mul;any=true;}}});
-    var pair=2*Math.min(pC,pL),eff=pComp+pOth+pair;
+    var pair=2*Math.min(pC,pL),unpaired=(pC+pL)-pair,eff=pComp+pOth+pair+(pComp>0?unpaired:0);
     return any?{kcal:k,prot:p,protEff:eff,pComp:pComp,pOther:pOth,pC:pC,pL:pL,pair:pair}:null;}
 
   /* ---------------- Objectifs ---------------- */
@@ -319,8 +332,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(iso<="2026-09-13")return {t:"Affûtage triathlon 🏁",p:"On réduit le volume, on garde un peu d'intensité. Sommeil et récup prioritaires. Course les 11-13 septembre à Dinard !"};
     return {t:"Bravo 👏",p:"Gros été bouclé. Note tes ressentis et planifie la suite."};
   }
-   
-/* Bandeau phase sur Aujourd'hui : phase courante + prochain objectif lu depuis le calendrier (éditable). */
+  /* Bandeau phase sur Aujourd'hui : phase courante + prochain objectif lu depuis le calendrier (éditable). */
   function renderPhase(){
     var host=document.getElementById("todayPhase");if(!host)return;
     var ph=phaseTip(todayStr());
@@ -330,7 +342,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       nextHTML='<div class="phase-next">🎯 Prochain objectif : '+esc(dl.icon||"🎯")+' '+esc(dl.label)+' — <b>'+jx+'</b> ('+esc(frDateShort(dl.date))+')</div>';}
     host.innerHTML='<div class="phase-banner"><div class="phase-t">'+esc(ph.t)+'</div><div class="phase-p">'+esc(ph.p)+'</div>'+nextHTML+'</div>';
   }
-   
+
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
@@ -455,7 +467,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function dayActKcal(d,kg){var x=state.days[d],a=x&&x.act;if(!a)return 0;var t=0;if(a.walk)t+=actKcal("walk",a.walk.d,a.walk.t,kg);if(a.bike)t+=actKcal("bike",a.bike.d,a.bike.t,kg);return t;}
   function actExtra(d){var kg=lastWeight();if(kg==null)return 0;return Math.round(sessionsKcal(d,kg)+dayActKcal(d,kg));}
   function actOverride(d){var x=state.days[d];var v=x&&x.actKcal;if(v==null||v==="")return null;var n=num(v);return (isFinite(n)&&n>=0)?Math.round(n):null;}
-  function expend(d){var b=bmr();if(b==null)return null;var ov=actOverride(d);if(ov!=null)return Math.round(b)+ov;return Math.round(b*actLevel(d).f)+actExtra(d);}  var balOpen=false;
+  function expend(d){var b=bmr();if(b==null)return null;var ov=actOverride(d);if(ov!=null)return Math.round(b)+ov;return Math.round(b*actLevel(d).f)+actExtra(d);}
+  var balOpen=false;
   function renderTodayBalance(){
     var host=document.getElementById("todayBalance");if(!host)return;
     var d=todayStr(),b=bmr(),t=dayTotals(d),intake=t?Math.round(t.kcal):0,lv=actLevel(d),out=expend(d),net=(out!=null)?(intake-out):null;
@@ -476,11 +489,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="bal-row"><span>🔥 Dépense</span><b>'+out+' kcal</b></div>'+
           '<div class="bal-sub">'+(ov!=null?('métabolisme '+Math.round(b)+' + actives Watch '+ov):('métabolisme '+Math.round(b)+' × '+nFmt(lv.f)+(extra>0?(' + activités '+extra):'')))+'</div>'+
           '<div class="bal-lvls-l">⌚ Actives mesurées (Watch) — optionnel, remplace l\'estimation</div>'+
-          '<div class="bal-acts"><div class="bal-act"><span class="bal-act-l">kcal actives</span><input type="number" inputmode="numeric" step="1" class="bal-watch-in" value="'+esc(x.actKcal||"")+'" placeholder="ex. 650"></div></div>'+          '<div class="bal-lvls-l">Niveau de vie du jour — hors sport</div><div class="bal-lvls">'+lvls+'</div>'+
+          '<div class="bal-acts"><div class="bal-act"><span class="bal-act-l">kcal actives</span><input type="number" inputmode="numeric" step="1" class="bal-watch-in" value="'+esc(x.actKcal||"")+'" placeholder="ex. 650"></div></div>'+
+          '<div class="bal-lvls-l">Niveau de vie du jour — hors sport</div><div class="bal-lvls">'+lvls+'</div>'+
           '<div class="bal-lvls-l">Activités du jour</div>'+
           '<div class="bal-acts">'+aRow("walk","🚶 Marche",a.walk)+aRow("bike","🚴 Vélo",a.bike)+'</div>'+
           (ov!=null?'<div class="bal-sub" style="color:var(--primary)">Override Watch actif : niveau de vie et activités ci-dessus non comptés.</div>':'')+
-           (sess>0?'<div class="bal-sub">séances enregistrées comptées : '+sess+' kcal</div>':'')+
+          (sess>0?'<div class="bal-sub">séances enregistrées comptées : '+sess+' kcal</div>':'')+
           '<div class="bal-note">Estimation ±15-20 %. La tendance sur la semaine compte plus que le chiffre du jour ; pour ta prépa triathlon, l\'enjeu est de bien alimenter l\'effort, pas de creuser un déficit.</div>'+
         '</div>';
       }
@@ -492,8 +506,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var wi=host.querySelector(".bal-watch-in");if(wi)wi.onchange=function(){var dd=day(d),v=wi.value.trim();if(v==="")delete dd.actKcal;else dd.actKcal=v;save();renderTodayBalance();};
   }
   function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=(t.protEff!=null?t.protEff:t.prot);n++;}}return n?{avg:s/n,n:n}:null;}
-  var bal7=balAvg7();
-   function protBreakHTML(t){
+  function balAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(!t)continue;var out=expend(d);if(out==null)continue;s+=(Math.round(t.kcal)-out);n++;}return n?{avg:s/n,n:n}:null;}
+  function protBreakHTML(t){
     var comp=Math.round(t.pComp+t.pOther),mn=Math.min(t.pC,t.pL),uC=t.pC-mn,uL=t.pL-mn;
     var rows='<div class="pb-row"><span>✅ Complètes</span><b>'+comp+' g</b></div>';
     if(t.pair>0)rows+='<div class="pb-row pb-pair"><span>🔗 Appariées céréale+légumineuse</span><b>+'+Math.round(t.pair)+' g</b></div>';
@@ -595,7 +609,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     renderTodayBalance();
   }
-function renderToday(){
+  function renderToday(){
     renderChip();
     renderPhase();
     renderHero();
@@ -669,7 +683,7 @@ function renderToday(){
       wrap.style.setProperty("--exo-sticky-top",Math.round(topPx+h+6)+"px");
     });
   }
-   function renderSessionDetail(){
+  function renderSessionDetail(){
     if(!currentSel)return;
     var b=currentSel.block,w=currentSel.w,c=currentSel.c;
     var p=progOf(b,c);var s=sess(b,w,c);
@@ -920,18 +934,9 @@ function renderToday(){
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           (isJournal?'':'<div class="meal-total"></div>')+
         '</div>'+
-       '<div class="field supps-field wb-group">'+
+        '<div class="field supps-field wb-group">'+
           '<button type="button" class="wb-toggle'+(wbOpen?' open':'')+'"><span class="supps-ttl">Bien-être &amp; suivi</span><span class="supps-chev">▾</span></button>'+
           '<div class="wb-body'+(wbOpen?'':' collapsed')+'">'+
-       '<div class="field supps-field">'+
-          '<button type="button" class="px-toggle supps-toggle'+(pxOpen?' open':'')+'"><span class="supps-ttl">Petits exercices — mobilité &amp; santé</span><span class="supps-meta px-meta"></span><span class="supps-chev">▾</span></button>'+
-          '<div class="px-body supps-body'+(pxOpen?'':' collapsed')+'">'+
-            (typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).map(function(r){return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-px" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span></label></div>';}).join("")+
-            '<div class="xtras px-x">'+((x.petitsExosX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="px" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
-            '<input class="x-in px-xin" placeholder="Autre exercice puis Entrée…">'+
-            '<div class="supp-hint">De petites routines qui font une grande différence sur la durée.</div>'+
-          '</div>'+
-        '</div>'+
         '<div class="field supps-field">'+
           '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
           '<div class="supps-body'+(suppsOpen?'':' collapsed')+'">'+
@@ -955,11 +960,20 @@ function renderToday(){
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
+          '<button type="button" class="px-toggle supps-toggle'+(pxOpen?' open':'')+'"><span class="supps-ttl">Petits exercices — mobilité &amp; santé</span><span class="supps-meta px-meta"></span><span class="supps-chev">▾</span></button>'+
+          '<div class="px-body supps-body'+(pxOpen?'':' collapsed')+'">'+
+            (typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).map(function(r){return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-px" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span></label></div>';}).join("")+
+            '<div class="xtras px-x">'+((x.petitsExosX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="px" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
+            '<input class="x-in px-xin" placeholder="Autre exercice puis Entrée…">'+
+            '<div class="supp-hint">De petites routines qui font une grande différence sur la durée.</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="field supps-field">'+
           '<button type="button" class="tr-toggle supps-toggle'+(transitOpen?' open':'')+'"><span class="supps-ttl">Transit — passages à la selle</span><span class="supps-meta tr-meta"></span><span class="supps-chev">▾</span></button>'+
           '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
         '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
-       '</div>'+
+          '</div>'+
         '</div>'+
         (isJournal?'</div>':'')+
       '</div>';
@@ -973,7 +987,8 @@ function renderToday(){
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
     function updSuppsMeta(){var m=container.querySelector(".supps-meta:not(.rx-meta)");if(!m)return;var f=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length+(x.suppsX||[]).length;m.textContent=f+"/"+((typeof SUPPS!=="undefined"?SUPPS.length:0)+(x.suppsX||[]).length);}
     function updRxMeta(){var m=container.querySelector(".rx-meta");if(!m)return;var f=(typeof ROUTINES!=="undefined"?ROUTINES:[]).filter(function(r){return (x.routines&&x.routines[r.id])||(r.id==="medit"&&x.meditation);}).length+(x.routinesX||[]).length;m.textContent=f+"/"+((typeof ROUTINES!=="undefined"?ROUTINES.length:0)+(x.routinesX||[]).length);}
-    function updPxMeta(){var m=container.querySelector(".px-meta");if(!m)return;var f=(typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).filter(function(r){return x.petitsExos&&x.petitsExos[r.id];}).length+(x.petitsExosX||[]).length;m.textContent=f+"/"+((typeof PETITS_EXOS!=="undefined"?PETITS_EXOS.length:0)+(x.petitsExosX||[]).length);}     updSuppsMeta();updRxMeta();updPxMeta();
+    function updPxMeta(){var m=container.querySelector(".px-meta");if(!m)return;var f=(typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]).filter(function(r){return x.petitsExos&&x.petitsExos[r.id];}).length+(x.petitsExosX||[]).length;m.textContent=f+"/"+((typeof PETITS_EXOS!=="undefined"?PETITS_EXOS.length:0)+(x.petitsExosX||[]).length);}
+    updSuppsMeta();updRxMeta();updPxMeta();
     container.querySelectorAll(".f-rx").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!((x.routines&&x.routines[id])||(id==="medit"&&x.meditation));
@@ -984,14 +999,14 @@ function renderToday(){
     container.querySelectorAll(".f-px").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.petitsExos&&x.petitsExos[id]);cb.addEventListener("change",function(){if(!x.petitsExos)x.petitsExos={};x.petitsExos[id]=cb.checked;save();updPxMeta();});});
     (function(){var tg=container.querySelector(".px-toggle");if(!tg)return;tg.addEventListener("click",function(){pxOpen=!pxOpen;tg.classList.toggle("open",pxOpen);var body=container.querySelector(".px-body");if(body)body.classList.toggle("collapsed",!pxOpen);});})();
     (function(){var tg=container.querySelector(".wb-toggle");if(!tg)return;tg.addEventListener("click",function(){wbOpen=!wbOpen;tg.classList.toggle("open",wbOpen);var body=container.querySelector(".wb-body");if(body)body.classList.toggle("collapsed",!wbOpen);});})();
-     (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
+    (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
     (function(){var si=container.querySelector(".supps-xin");if(si)si.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(si.value||"").trim();if(!v)return;if(!x.suppsX)x.suppsX=[];x.suppsX.push(v);save();buildDayForm(container,d);}});
       var ri=container.querySelector(".rx-xin");if(ri)ri.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(ri.value||"").trim();if(!v)return;if(!x.routinesX)x.routinesX=[];x.routinesX.push(v);save();buildDayForm(container,d);}});
       var pi=container.querySelector(".px-xin");if(pi)pi.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(pi.value||"").trim();if(!v)return;if(!x.petitsExosX)x.petitsExosX=[];x.petitsExosX.push(v);save();buildDayForm(container,d);}});
       container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:k==="px"?x.petitsExosX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
     })();
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
-     (function(){var tg=container.querySelector(".jprot-toggle");if(!tg)return;tg.addEventListener("click",function(){jprotOpen=!jprotOpen;tg.classList.toggle("open",jprotOpen);var b=container.querySelector(".jprot-body");if(b)b.classList.toggle("collapsed",!jprotOpen);});})();
+    (function(){var tg=container.querySelector(".jprot-toggle");if(!tg)return;tg.addEventListener("click",function(){jprotOpen=!jprotOpen;tg.classList.toggle("open",jprotOpen);var b=container.querySelector(".jprot-body");if(b)b.classList.toggle("collapsed",!jprotOpen);});})();
     container.querySelectorAll(".f-supp").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!(x.supps&&x.supps[id]);
@@ -1022,7 +1037,7 @@ function renderToday(){
       var arr=day(d).mealItems[mk];var ed=mealEdit[mk];var h="";
       h+='<div class="tags">';
       arr.forEach(function(it,i){
-        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+foodQualityBadges(it.name)+(it.nut?'<span class="tag-q">'+esc(effPortion(it))+'</span>':'')+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
+        h+='<span class="tag'+(ed===i?" on":"")+(it.nut?" has-nut":"")+'" data-i="'+i+'">'+esc(it.name||"—")+foodQualityBadges(it.name,d)+(it.nut?'<span class="tag-q">'+esc(effPortion(it))+'</span>':'')+'<button type="button" class="tag-x" data-i="'+i+'" aria-label="Supprimer">×</button></span>';
       });
       h+='</div>';
       h+='<input type="text" class="tag-input" placeholder="Aliment puis Entrée…" enterkeyhint="done" autocomplete="off">';
@@ -1248,7 +1263,7 @@ function renderToday(){
       chart("Protéines","🥩",prot,130,"g")+chart("Eau","💧",eau,8,"verres")+chart("Sommeil","😴",som,8,"h")+
       '<div class="wv-note">Barre pleine couleur = cible atteinte · gris clair = pas de donnée.</div></div>';
   }
-   /* ---------------- Régularité (streaks habitudes) ---------------- */
+  /* ---------------- Régularité (streaks habitudes) ---------------- */
   function habitDoneOn(iso){var x=state.days[iso];if(!x)return false;
     if(x.meditation)return true;
     if(x.routines)for(var k in x.routines){if(x.routines[k])return true;}
@@ -1299,7 +1314,7 @@ function renderToday(){
     var protAvg=avg(protList);
     var protStatus=protAvg==null?"":(protAvg>=130?" · ✓":" · ↓ "+Math.round(130-protAvg)+" g");
     var bal7=balAvg7();
-     var we=weightEntries();var kgWeek=null;
+    var we=weightEntries();var kgWeek=null;
     if(we.length>=2){var spanDays=(new Date(we[we.length-1].d+"T00:00:00")-new Date(we[0].d+"T00:00:00"))/86400000;if(spanDays>=1)kgWeek=(we[we.length-1].w-we[0].w)/(spanDays/7);}
     var wStatus=kgWeek==null?"":(kgWeek<0.2?" · sous la cible":(kgWeek>0.3?" · au-dessus":" · ✓"));
 
@@ -1813,7 +1828,7 @@ function renderToday(){
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});
     window.addEventListener("resize",function(){if(currentSel)setExoStickyTop();});
-     var hct=document.getElementById("homeCalToggle");if(hct)hct.addEventListener("click",function(){homeCalOpen=!homeCalOpen;renderCalendars();});
+    var hct=document.getElementById("homeCalToggle");if(hct)hct.addEventListener("click",function(){homeCalOpen=!homeCalOpen;renderCalendars();});
     var tpt=document.getElementById("triPlanToggle");if(tpt)tpt.addEventListener("click",function(){var c=document.getElementById("triPlanCard"),b=document.getElementById("triPlanBody");var open=!c.classList.contains("open");c.classList.toggle("open",open);b.classList.toggle("collapsed",!open);});
     (function(){var card=document.getElementById("todayNutri"),sp=document.getElementById("stickyProt");
       if(card&&sp&&"IntersectionObserver" in window){
