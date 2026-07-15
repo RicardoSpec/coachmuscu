@@ -695,6 +695,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .rx-help a{color:var(--primary);font-weight:700;text-decoration:underline}
 .px-n{display:none;flex:none;width:3.4em;margin-left:6px;padding:3px 5px;border:1.5px solid var(--line);border-radius:7px;font-size:13px;text-align:center;background:#fff;color:var(--ink);-webkit-appearance:none;appearance:none}
 .supp input.f-px:checked ~ .px-n{display:block}
+.lastrep.sugg{color:var(--primary)}
+.sugg-src{opacity:.65;font-weight:400}
 
 /* Correcteur d'aliments (Réglages) */
 .ff-edit{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:#f6f9fb}
