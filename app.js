@@ -836,18 +836,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
             (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
             '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
-            '<div class="sets">'+setsHTML+'</div>'+
+            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
+              exoHistHTML(b,c,setK,lastTxt,isSec,secLbl)+
+              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
+              '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'<div class="hint-sets">🔢 Renseigne <b>'+ex.sets+'</b> série'+(ex.sets>1?'s':'')+' pour cet exercice (utilise « + série » si tu en fais plus).</div></div></details>'+
+              '<details class="base-hint"><summary>🎬 Tuto — technique &amp; démo</summary><div>'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+'</div></details>'+
+            '</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
             '<div class="setadd"><button class="add-set-std" data-setk="'+esc(setK)+'">+ série</button>'+(nSets>ex.sets?'<button class="del-set-std" data-setk="'+esc(setK)+'">− série</button>':'')+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
-            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">'+
-              exoHistHTML(b,c,setK,lastTxt,isSec,secLbl)+
-              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
-            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">'+
-              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
-              '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
-              '<details class="base-hint"><summary>🎬 Tuto — technique &amp; démo</summary><div>'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+'</div></details>'+
-            '</div>'+
           '</div>'+
         '</div>';
     });
