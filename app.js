@@ -784,6 +784,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var rest=restFor(ex.target);
       var exBase=baseFor(ex.id,curV,ex.base);       /* base de saisie de l'exo (total/bras/ajout), déduite variante+défaut */
       var kgUnit=BASE_UNIT[exBase];                 /* unité affichée à côté du champ poids (kg / kg/bras / +kg) */
+      var uni=/\/\s*jambe/i.test(ex.target)?"/jambe":(/\/\s*(c\u00f4t\u00e9|cote)/i.test(ex.target)?"/c\u00f4t\u00e9":(/1\s*bras/i.test(ex.name)?"/bras":""));  /* exos unilat\u00e9raux : reps par c\u00f4t\u00e9 */
       var sugg=(!prev&&!isSec)?variantSuggest(b,w,c,ex,curV,exBase,setK):null;
       var setsHTML="",nSets=Math.max(ex.sets,(s.sets[setK]||[]).length);
       for(var i=0;i<nSets;i++){
@@ -798,7 +799,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           setsHTML+='<div class="set" data-exo="'+esc(setK)+'" data-set="'+i+'">'+
             '<span class="sn">Série '+(i+1)+'</span>'+
             '<span class="setf"><input type="number" inputmode="decimal" step="0.5" class="in-kg" placeholder="'+pk+'"><b>'+esc(kgUnit)+'</b></span>'+
-            '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps</b></span>'+
+            '<span class="setf"><input type="number" inputmode="numeric" class="in-r" placeholder="'+pr+'"><b>reps'+uni+'</b></span>'+
           '</div>';
         }
       }
@@ -819,17 +820,16 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
-            varHTML+
             (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
-            '<div class="help" id="help-'+ex.id+'">'+ex.help+
-              '<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+
-              '<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+
-            '</div>'+
-            '<details class="base-hint"><summary>Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
             '<div class="sets">'+setsHTML+'</div>'+
             '<div class="setadd"><button class="add-set-std" data-setk="'+esc(setK)+'">+ série</button>'+(nSets>ex.sets?'<button class="del-set-std" data-setk="'+esc(setK)+'">− série</button>':'')+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
-            '<button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button>'+
+            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
+            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">'+
+              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
+              '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
+              '<details class="base-hint"><summary>🎬 Tuto — technique &amp; démo</summary><div>'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+'</div></details>'+
+            '</div>'+
           '</div>'+
         '</div>';
     });
@@ -864,7 +864,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       el.addEventListener("click",tgl);
       el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tgl();}});
     });
-    wrap.querySelectorAll(".info-btn").forEach(function(btn){btn.addEventListener("click",function(){document.getElementById("help-"+btn.getAttribute("data-help")).classList.toggle("open");});});
+    wrap.querySelectorAll(".exo-more-btn").forEach(function(btn){btn.addEventListener("click",function(){var m=document.getElementById("more-"+btn.getAttribute("data-more"));if(m){var op=m.style.display==="none";m.style.display=op?"":"none";btn.classList.toggle("open",op);}});});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
     wrap.querySelectorAll(".exo-var").forEach(function(sel){sel.onchange=function(){
       var exId=sel.getAttribute("data-exo"),val=sel.value;
@@ -1026,7 +1026,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
-        '<div class="field"><label>VFC au r\u00e9veil (ms)</label><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><div class="hrv-trend"></div></div>'+
+        '<div class="field"><label>VFC au r\u00e9veil (ms)</label><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><details class="base-hint"><summary>\uff0b VFC : \u00e0 quoi \u00e7a sert&nbsp;?</summary><div>La VFC (variabilit\u00e9 de la fr\u00e9quence cardiaque, en ms) mesure les micro-\u00e9carts entre deux battements de c\u0153ur. Plus elle est haute, mieux ton syst\u00e8me nerveux r\u00e9cup\u00e8re : bon indicateur de fatigue r\u00e9elle plut\u00f4t que ressentie. Une VFC basse le matin = corps encore fatigu\u00e9, tu peux all\u00e9ger la s\u00e9ance ou viser la r\u00e9cup\u00e9ration. Pour la relever : ta montre (Apple Watch \u2192 app Sant\u00e9 \u2192 Variabilit\u00e9 de la FC) la mesure la nuit ; note la valeur en ms chaque matin, au calme, pour comparer jour apr\u00e8s jour.</div></details><div class="hrv-trend"></div></div>'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
         '<div class="field"><label>Repas</label>'+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
@@ -1859,7 +1859,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="cr-add" style="display:flex;gap:8px;align-items:center;margin-top:4px">'+
         '<input type="text" class="cr-new-emoji" maxlength="3" placeholder="🚭" style="width:52px;text-align:center;padding:9px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:18px;background:#fff">'+
         '<input type="text" class="cr-new-label" placeholder="Nouvel ancrage…" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
-        '<button type="button" class="btn accent cr-addbtn">+ Ajouter</button>'+
+        '<button type="button" class="btn accent cr-addbtn" style="flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap">Ajouter</button>'+
       '</div>';
     host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
