@@ -528,10 +528,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function actExtra(d){var kg=lastWeight();if(kg==null)return 0;return Math.round(sessionsKcal(d,kg)+dayActKcal(d,kg));}
   function actOverride(d){var x=state.days[d];var v=x&&x.actKcal;if(v==null||v==="")return null;var n=num(v);return (isFinite(n)&&n>=0)?Math.round(n):null;}
   function expend(d){var b=bmr();if(b==null)return null;var ov=actOverride(d);if(ov!=null)return Math.round(b)+ov;return Math.round(b*actLevel(d).f)+actExtra(d);}
+  function adjIntake(d){var x=state.days[d];if(x&&x.kcalAdj!=null&&x.kcalAdj!==""){var v=num(x.kcalAdj);if(!isNaN(v)&&v>=0)return Math.round(v);}var t=dayTotals(d);return t?Math.round(t.kcal):0;}
   var balOpen=false;
   function renderTodayBalance(){
     var host=document.getElementById("todayBalance");if(!host)return;
-    var d=todayStr(),b=bmr(),t=dayTotals(d),intake=t?Math.round(t.kcal):0,lv=actLevel(d),out=expend(d),net=(out!=null)?(intake-out):null;
+    var d=todayStr(),b=bmr(),t=dayTotals(d),intake=adjIntake(d),lv=actLevel(d),out=expend(d),net=(out!=null)?(intake-out):null;
     function lab(n){return Math.abs(n)<75?" · équilibre":(n<0?" · déficit":" · surplus");}
     var hv=(b==null)?"profil à compléter":((net>0?"+":"")+net+" kcal"+lab(net));
     var head='<button type="button" class="hcol bal-toggle'+(balOpen?" open":"")+'"><span class="hcol-ic">⚖️</span><span class="hcol-txt"><span class="hcol-k">Bilan énergie</span><span class="hcol-v">'+hv+'</span></span><span class="hcol-chev">▾</span></button>';
@@ -566,7 +567,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var wi=host.querySelector(".bal-watch-in");if(wi)wi.onchange=function(){var dd=day(d),v=wi.value.trim();if(v==="")delete dd.actKcal;else dd.actKcal=v;save();renderTodayBalance();};
   }
   function protAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(t){s+=(t.protEff!=null?t.protEff:t.prot);n++;}}return n?{avg:s/n,n:n}:null;}
-  function balAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var t=dayTotals(d);if(!t)continue;var out=expend(d);if(out==null)continue;s+=(Math.round(t.kcal)-out);n++;}return n?{avg:s/n,n:n}:null;}
+  function balAvg7(){var s=0,n=0;for(var i=0;i<7;i++){var d=isoOf(addDays(todayStr(),-i));var out=expend(d);if(out==null)continue;var xx=state.days[d]||{},hasAdj=(xx.kcalAdj!=null&&xx.kcalAdj!=="");if(!dayTotals(d)&&!hasAdj)continue;s+=(adjIntake(d)-out);n++;}return n?{avg:s/n,n:n}:null;}
   function protBreakHTML(t){
     var comp=Math.round(t.pComp+t.pOther),mn=Math.min(t.pC,t.pL),uC=t.pC-mn,uL=t.pL-mn;
     var rows='<div class="pb-row"><span>✅ Complètes</span><b>'+comp+' g</b></div>';
@@ -1014,6 +1015,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     else if(baseAvg!=null){msg="Base 7 j : "+Math.round(baseAvg)+" ms \u2014 renseigne aujourd'hui";}
     host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:40px;display:block;margin:6px 0 3px"><polyline points="'+pts.join(" ")+'" fill="none" stroke="#3a6ea5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg><div style="font-size:12.5px;font-weight:600;line-height:1.35;color:'+col+'">'+esc(msg)+'</div>';
   }
+  function jBalHTML(x,d){var out=expend(d),intake=adjIntake(d),rt=dayTotals(d),raw=(rt?Math.round(rt.kcal):0),net=(out!=null)?(intake-out):null,adjOn=(x.kcalAdj!=null&&x.kcalAdj!=="");function lab(nn){return Math.abs(nn)<75?" · équilibre":(nn<0?" · déficit":" · surplus");}var h='<div class="field jbal"><label>Bilan énergie du jour</label>';if(out==null){h+='<div class="bal-row"><span>🍽️ Apport</span><b>'+intake+' kcal</b></div><div class="bal-sub">Complète taille / âge / sexe dans Réglages ▸ Profil pour estimer la dépense.</div>';}else{h+='<div class="bal-net'+(net<0?" neg":(net>75?" pos":""))+'"><span class="bal-net-v">'+(net>0?"+":"")+net+'</span><span class="bal-net-u">kcal net'+lab(net)+'</span></div><div class="bal-row"><span>🍽️ Apport'+(adjOn?" (ajusté)":"")+'</span><b>'+intake+' kcal</b></div><div class="bal-row"><span>🔥 Dépense</span><b>'+out+' kcal</b></div>';}h+='<div class="bal-acts"><div class="bal-act"><span class="bal-act-l">Ajuster l\'apport réel (kcal)</span><input type="number" inputmode="numeric" step="1" class="bal-watch-in f-kcaladj" value="'+esc(x.kcalAdj||"")+'" placeholder="'+(raw?("logué "+raw):"ex. 2400")+'"></div></div><div class="bal-sub">Corrige ici si un TGTG a faussé le total — ta moyenne 7 j (Progrès) se met à jour.</div></div>';return h;}
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
@@ -1021,7 +1023,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var isJournal=container.id==="journalLog";
     container.innerHTML=
       '<div class="card pad">'+
-        (isJournal?('<button type="button" class="jform-tog'+(journalOpen?' open':'')+'">'+journalSummary(x,d)+'<span class="hcol-chev">▾</span></button><div class="jbody'+(journalOpen?'':' collapsed')+'">'):'')+
         (isJournal?'<div class="meal-total-top"><div class="meal-total"></div><button type="button" class="jprot-toggle'+(jprotOpen?' open':'')+'" hidden><span class="jprot-ttl">🥩 Détail protéines</span><span class="supps-chev">▾</span></button><div class="jprot-body'+(jprotOpen?'':' collapsed')+'"></div></div>':'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
@@ -1032,6 +1033,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           (isJournal?'':'<div class="meal-total"></div>')+
         '</div>'+
+        (isJournal?jBalHTML(x,d):'')+
         '<div class="field supps-field wb-group">'+
           '<button type="button" class="wb-toggle'+(wbOpen?' open':'')+'"><span class="supps-ttl">Bien-être &amp; suivi</span><span class="supps-chev">▾</span></button>'+
           '<div class="wb-body'+(wbOpen?'':' collapsed')+'">'+
@@ -1079,7 +1081,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
           '</div>'+
         '</div>'+
-        (isJournal?'</div>':'')+
       '</div>';
 
     container.querySelector(".f-weight").value=x.weight||"";
@@ -1118,6 +1119,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       container.querySelectorAll(".xdel").forEach(function(b){b.addEventListener("click",function(){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");var arr=(k==="supps"?x.suppsX:k==="px"?x.petitsExosX:x.routinesX)||[];arr.splice(i,1);save();buildDayForm(container,d);});});
     })();
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
+    (function(){var ka=container.querySelector(".f-kcaladj");if(!ka)return;ka.addEventListener("change",function(){var v=(ka.value||"").trim();if(v==="")delete x.kcalAdj;else x.kcalAdj=v;save();buildDayForm(container,d);if(d===todayStr())renderTodayBalance();});})();
     (function(){var tg=container.querySelector(".jprot-toggle");if(!tg)return;tg.addEventListener("click",function(){jprotOpen=!jprotOpen;tg.classList.toggle("open",jprotOpen);var b=container.querySelector(".jprot-body");if(b)b.classList.toggle("collapsed",!jprotOpen);});})();
     container.querySelectorAll(".f-supp").forEach(function(cb){
       var id=cb.getAttribute("data-id");
