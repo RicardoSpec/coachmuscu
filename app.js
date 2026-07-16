@@ -122,7 +122,7 @@
   function foodCatalog(){var cat={};
     (FOOD_DB||[]).forEach(function(f){var k=(""+f.name).trim().toLowerCase();if(k)cat[k]={name:(""+f.name).trim(),unit:f.unit||"g",nut:f.nut||null,ref:true,cat:f.cat};});
     Object.keys(state.days).sort().forEach(function(d){var mi=state.days[d].mealItems;if(!mi)return;MEALS.forEach(function(m){(mi[m.k]||[]).forEach(function(it){if(it&&it.name&&(""+it.name).trim()){var k=(""+it.name).trim().toLowerCase();var ex=cat[k];if(!ex||!ex.ref)cat[k]={name:(""+it.name).trim(),unit:it.unit||"g",nut:it.nut||null};}});});});
-    var fx=state.foodFix||{};Object.keys(fx).forEach(function(k){if(!cat[k])return;var f=fx[k]||{};var bn=cat[k].nut||{};function pick(v,dv){return (v!=null&&v!=="")?v:dv;}var u=pick(f.unit,bn.baseUnit||cat[k].unit||"g");
+    var fx=state.foodFix||{};Object.keys(fx).forEach(function(k){var f=fx[k]||{};if(!cat[k]){if(!(f.uf&&f.name))return;cat[k]={name:(""+f.name).trim(),unit:"g",nut:null};}var bn=cat[k].nut||{};function pick(v,dv){return (v!=null&&v!=="")?v:dv;}var u=pick(f.unit,bn.baseUnit||cat[k].unit||"g");
       cat[k]={name:cat[k].name,unit:u,nut:{base:pick(f.base,bn.base||"1"),baseUnit:u,kcal:pick(f.kcal,bn.kcal||""),prot:pick(f.prot,bn.prot||""),gluc:pick(f.gluc,bn.gluc||""),lip:pick(f.lip,bn.lip||""),portion:bn.portion||""},ref:cat[k].ref,cat:cat[k].cat,fixed:true};});
     return cat;}
   function foodNames(){var c=foodCatalog();return Object.keys(c).map(function(k){return c[k].name;}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});}
@@ -1748,6 +1748,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   var settingsSessSel=null;  /* "b1_A" en édition, ou null */
   var settingsFoodSel=null;  /* clé (nom minuscule) d'aliment en correction, ou null */
+  var settingsFoodNew=false; /* formulaire "Ajouter un aliment" ouvert */
   var settingsFoodOpen=false; /* section Aliments & unités repliée par défaut */
   var settingsFoodQuery=""; /* filtre de recherche de la liste d'aliments */
    var settingsQualSel=null, settingsQualOpen=false, settingsQualQuery=""; /* editeur Qualite des aliments */
@@ -1781,8 +1782,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var host=document.getElementById("settingsBody");if(!host)return;
     if(settingsSessSel){renderSessEditor(host);return;}
     var _cat=foodCatalog(),_lf=loggedFoods();
-    var ffOpen=settingsFoodOpen||!!settingsFoodSel;
-    var ffRows=_lf.map(function(nm){var k=nm.toLowerCase();var c=_cat[k]||{};var n=c.nut||{};var fixed=!!(state.foodFix&&state.foodFix[k]);
+    var ffOpen=settingsFoodOpen||!!settingsFoodSel||settingsFoodNew;
+    var _lfk={};_lf.forEach(function(nm){_lfk[nm.toLowerCase()]=1;});
+    var _uf=Object.keys(state.foodFix||{}).filter(function(k){var f=state.foodFix[k];return f&&f.uf&&f.name&&!_lfk[k];}).map(function(k){return (""+state.foodFix[k].name).trim();});
+    var _allf=_lf.concat(_uf).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1;});
+    var ffRows=_allf.map(function(nm){var k=nm.toLowerCase();var c=_cat[k]||{};var n=c.nut||{};var fixed=!!(state.foodFix&&state.foodFix[k]);
         var pu=(n.baseUnit==="g"||n.baseUnit==="ml")?((n.base||"?")+" "+n.baseUnit):("×"+(n.base||"1")+" "+(n.baseUnit||"unité"));
         var sub=(n.prot!==""&&n.prot!=null&&!isNaN(num(n.prot)))?(fr1(num(n.prot))+" g prot / "+pu):"valeurs à renseigner";
         if(settingsFoodSel===k){
@@ -1807,10 +1811,30 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         }
         return '<div class="set-row ff-pick" data-k="'+esc(k)+'" data-nm="'+esc(k)+'"><span class="set-ic">🍽</span><span class="set-main"><span class="set-lbl">'+esc(nm)+(fixed?' <span class="sess-badge">corrigé</span>':'')+'</span><span class="set-sub">'+esc(sub)+'</span></span><span class="sess-arrow">›</span></div>';
       });
+    var ffNewForm=settingsFoodNew?('<div class="ff-edit ff-new">'+
+        '<div class="ff-name">Nouvel aliment</div>'+
+        '<div class="ff-grid">'+
+          '<label>Nom<input type="text" class="ff-newname" placeholder="ex. Skyr vanille Lidl"></label>'+
+          '<label>Unité<select class="ff-unit">'+unitOptions("g")+'</select></label>'+
+          '<label>Quantité de base<input type="number" inputmode="decimal" step="any" class="ff-base" value="100"></label>'+
+          '<label>kcal (cette base)<input type="number" inputmode="decimal" step="any" class="ff-kcal"></label>'+
+          '<label>Protéines g (cette base)<input type="number" inputmode="decimal" step="any" class="ff-prot"></label>'+
+          '<label>1 unité ≈ (g)<input type="number" inputmode="decimal" step="any" class="ff-gpu" placeholder="si compté à la pièce"></label>'+
+        '</div>'+
+        '<div class="ff-conv"><div class="ff-conv-h">Ou saisis les valeurs pour 100 g</div>'+
+          '<div class="ff-grid"><label>kcal / 100 g<input type="number" inputmode="decimal" step="any" class="ff-k100"></label>'+
+          '<label>Protéines g / 100 g<input type="number" inputmode="decimal" step="any" class="ff-p100"></label></div>'+
+          '<button type="button" class="btn ghost ff-calc">→ Calculer par pièce</button>'+
+          '<div class="ff-conv-note">Pour un aliment compté à la pièce : renseigne « 1 unité ≈ (g) » + les valeurs /100 g, puis calcule.</div>'+
+        '</div>'+
+        '<div class="ff-actions"><button class="btn accent ff-newsave">Créer l\'aliment</button><button class="btn ghost ff-newcancel">Annuler</button></div>'+
+      '</div>'):"";
     var fixSec='<div class="set-sec">'+
-      '<button type="button" class="ff-sectog'+(ffOpen?" open":"")+'"><span class="set-sec-h">Aliments &amp; unités</span>'+(_lf.length?'<span class="ff-count">'+_lf.length+'</span>':"")+'<span class="hcol-chev">▾</span></button>'+
-      (ffOpen?'<div class="ff-secbody"><p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme). La correction s\'applique à tes prochains ajouts et aux totaux du jour ; « Rétablir » l\'annule. Les repas déjà notés ne changent pas.</p>'+
-        (_lf.length?'<input type="text" class="ff-search" placeholder="Rechercher un aliment…" value="'+esc(settingsFoodQuery||"")+'"><div class="ff-scroll">'+ffRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé pour l\'instant — ajoute des repas, ils apparaîtront ici.</p>')+
+      '<button type="button" class="ff-sectog'+(ffOpen?" open":"")+'"><span class="set-sec-h">Aliments &amp; unités</span>'+(_allf.length?'<span class="ff-count">'+_allf.length+'</span>':"")+'<span class="hcol-chev">▾</span></button>'+
+      (ffOpen?'<div class="ff-secbody"><p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme), ou <b>ajoute tes propres aliments</b> (tes courses) pour les retrouver au moment de logger.</p>'+
+        '<button type="button" class="btn ghost ff-add">＋ Ajouter un aliment</button>'+
+        ffNewForm+
+        (_allf.length?'<input type="text" class="ff-search" placeholder="Rechercher un aliment…" value="'+esc(settingsFoodQuery||"")+'"><div class="ff-scroll">'+ffRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment encore — ajoute-en un ci-dessus, ou logge un repas.</p>')+
       '</div>':"")+
     '</div>';
          /* ---- Éditeur Qualité des aliments (badges 💪/🌱 · 🟢🟡🔴 · ⚠️) ---- */
@@ -1916,7 +1940,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var ffSearch=host.querySelector(".ff-search");if(ffSearch){ffSearch.addEventListener("input",function(){settingsFoodQuery=ffSearch.value;ffFilter();});ffFilter();}
     host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();var ed=host.querySelector(".ff-scroll .ff-edit");if(ed&&ed.scrollIntoView)ed.scrollIntoView({block:"nearest"});};});
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
-    host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var gpuEl=box.querySelector(".ff-gpu");var fx=foodFixMap();fx[k]={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:gpuEl?(""+gpuEl.value).trim():""};save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
+    var ffAdd=host.querySelector(".ff-add");if(ffAdd)ffAdd.onclick=function(){settingsFoodNew=true;settingsFoodSel=null;renderSettings();var f=host.querySelector(".ff-new");if(f&&f.scrollIntoView)f.scrollIntoView({block:"nearest"});var ni=host.querySelector(".ff-newname");if(ni)ni.focus();};
+    var ffNewCancel=host.querySelector(".ff-newcancel");if(ffNewCancel)ffNewCancel.onclick=function(){settingsFoodNew=false;renderSettings();};
+    var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
+    var ffAdd=host.querySelector(".ff-add");if(ffAdd)ffAdd.onclick=function(){settingsFoodNew=true;settingsFoodSel=null;renderSettings();var f=host.querySelector(".ff-new");if(f&&f.scrollIntoView)f.scrollIntoView({block:"nearest"});var ni=host.querySelector(".ff-newname");if(ni)ni.focus();};
+    var ffNewCancel=host.querySelector(".ff-newcancel");if(ffNewCancel)ffNewCancel.onclick=function(){settingsFoodNew=false;renderSettings();};
+    var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
+    host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var gpuEl=box.querySelector(".ff-gpu");var fx=foodFixMap();var _p=fx[k]||{};var nf={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:gpuEl?(""+gpuEl.value).trim():""};if(_p.uf)nf.uf=_p.uf;if(_p.name)nf.name=_p.name;fx[k]=nf;save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     host.querySelectorAll(".ff-calc").forEach(function(b){b.onclick=function(){var box=b.closest(".ff-edit");if(!box)return;var gEl=box.querySelector(".ff-gpu");var g=num(gEl?gEl.value:"");if(isNaN(g)||g<=0){alert("Renseigne d'abord « 1 unité ≈ (g) » (ex. 60).");if(gEl)gEl.focus();return;}var f=g/100;var k100=num(box.querySelector(".ff-k100").value),p100=num(box.querySelector(".ff-p100").value);var kc=box.querySelector(".ff-kcal"),pr=box.querySelector(".ff-prot"),ba=box.querySelector(".ff-base"),un=box.querySelector(".ff-unit");if(!isNaN(k100)&&kc)kc.value=""+Math.round(k100*f);if(!isNaN(p100)&&pr)pr.value=""+(Math.round(p100*f*10)/10);if(ba)ba.value="1";if(un&&(un.value==="g"||un.value==="ml"))un.value="unité";};});
     host.querySelectorAll(".ff-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodFix)delete state.foodFix[k];save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
     host.querySelectorAll(".ff-migrate").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k"),cnt=b.getAttribute("data-n");
