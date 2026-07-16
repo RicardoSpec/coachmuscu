@@ -56,6 +56,7 @@ var PETITS_EXOS = [
   {id:"cheville", name:"Proprioception cheville",            icon:"🦶", link:"https://www.youtube.com/results?search_query=proprioception+cheville+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
   {id:"hanche",   name:"Ouverture / fléchisseurs de hanche", icon:"🦵", link:"https://www.youtube.com/results?search_query=ouverture+hanche+flechisseurs+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
   {id:"thorax",   name:"Mobilité thoracique",                icon:"🔄", link:"https://www.youtube.com/results?search_query=mobilite+thoracique+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
+  {id:"nuque",    name:"Posture nuque (anti-« tête en avant »)", icon:"🦒", link:"https://www.youtube.com/results?search_query=chin+tuck+posture+cervicale+t%C3%AAte+en+avant+exercices", linkLabel:"Vidéos explicatives (YouTube)"},
   {id:"grip",     name:"Dead hang / grip",                   icon:"🖐️", link:"https://www.youtube.com/results?search_query=dead+hang+grip+exercice", linkLabel:"Vidéos explicatives (YouTube)"},
   {id:"respi",    name:"Respiration diaphragmatique",        icon:"💨", link:"https://www.youtube.com/results?search_query=respiration+diaphragmatique+exercice", linkLabel:"Vidéos explicatives (YouTube)"}
 ];
