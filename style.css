@@ -840,3 +840,11 @@ nav.tabs .tab.on{color:var(--primary)}
 .bal-a-d,.bal-a-t{width:64px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;box-sizing:border-box}
 .bal-watch-in{width:96px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;box-sizing:border-box}
 .jbal{border-top:1px solid var(--line);padding-top:12px}
+.exo-hist{display:flex;flex-direction:column;gap:5px}
+.hist-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.hist-wk{flex:none;width:26px;color:var(--muted);font-weight:600}
+.hist-bar-wrap{flex:1;height:8px;background:var(--line);border-radius:5px;overflow:hidden}
+.hist-bar{display:block;height:100%;background:var(--primary);border-radius:5px}
+.hist-val{flex:none;min-width:54px;text-align:right;color:var(--ink);font-weight:600}
+.hist-cap,.exo-hist-empty{font-size:11px;color:var(--muted);margin-top:4px}
+.hist-last{font-size:12px;color:var(--ink);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
