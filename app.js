@@ -330,6 +330,19 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return '<div class="exo-prog" data-prog="'+esc(bareId)+'" role="button" tabindex="0" title="Toucher : voir le volume par séance"><span class="pg-rec">🏆 '+rec+' kg<span '+PG_TAG+'>1RM est.'+note+'</span></span>'+spark+trend+'</div>';
   }
 
+  function exoHistHTML(b,c,setK,lastTxt,isSec,secLbl){
+    var wk=PROGRAM_BLOCKS[b].weeks,rows=[],mx=0;
+    for(var w=1;w<=wk;w++){var ss=state.sessions[sessKey(b,w,c)];if(!ss||!ss.sets||!ss.sets[setK])continue;var sets=ss.sets[setK],top=0,lbl="";
+      if(isSec){for(var i=0;i<sets.length;i++){var r=num(sets[i]&&sets[i].r);if(!isNaN(r)&&r>top)top=r;}if(top<=0)continue;lbl=top+" "+(secLbl||"s");}
+      else{var best=exoBest1RM(sets);if(!best)continue;top=Math.round(best.e);lbl=top+" kg";}
+      rows.push({w:w,top:top,lbl:lbl});if(top>mx)mx=top;}
+    var last=lastTxt?'<div class="hist-last">Dernière fois : '+esc(lastTxt)+'</div>':"";
+    if(!rows.length)return lastTxt?('<details class="base-hint" open><summary>📊 Historique</summary><div class="exo-hist">'+last+'</div></details>'):'<details class="base-hint"><summary>📊 Historique</summary><div class="exo-hist-empty">Pas encore d\'historique — remplis tes séries, elles s\'afficheront ici.</div></details>';
+    var bars=rows.map(function(r){var pct=mx>0?Math.max(6,Math.round(r.top/mx*100)):6;return '<div class="hist-row"><span class="hist-wk">S'+r.w+'</span><span class="hist-bar-wrap"><span class="hist-bar" style="width:'+pct+'%"></span></span><span class="hist-val">'+esc(r.lbl)+'</span></div>';}).join("");
+    var cap=isSec?'<div class="hist-cap">Barres = meilleur temps tenu par semaine.</div>':'<div class="hist-cap">Barres = 1RM estimé par semaine (repère de progression).</div>';
+    return '<details class="base-hint" open><summary>📊 Historique</summary><div class="exo-hist">'+bars+cap+last+'</div></details>';
+  }
+
   /* ---------------- Journée ---------------- */
   function day(d){
     if(!state.days[d])state.days[d]={program:"",sports:[],note:"",weight:"",meals:{pd:"",dj:"",dn:"",co:""},protein:false,meditation:false,sleep:"",stools:[],water:0};
@@ -821,11 +834,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
-            (lastTxt?'<div class="lastrep">Dernière fois : '+lastTxt+'</div>':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
+            (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
+            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
+            '<div class="sets">'+setsHTML+'</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
             '<div class="setadd"><button class="add-set-std" data-setk="'+esc(setK)+'">+ série</button>'+(nSets>ex.sets?'<button class="del-set-std" data-setk="'+esc(setK)+'">− série</button>':'')+'</div>'+
             progHTML(b,c,setK,exBase,ex.name)+
-            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:#fff;font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
+            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">'+
+              exoHistHTML(b,c,setK,lastTxt,isSec,secLbl)+
+              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
             '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">'+
               (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
               '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'</div></details>'+
