@@ -702,6 +702,42 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     renderTodayBalance();
   }
+   function radarDay(d){
+    var x=state.days[d]||{};
+    function clamp(v){return v<0?0:(v>1?1:v);}
+    var sportsN=(x.sports&&x.sports.length)?x.sports.length:0;
+    var muscuT=Object.keys(state.sessions||{}).some(function(k){var s=state.sessions[k];return s&&s.done&&s.date===d;})?1:0;
+    var triT=Object.keys(state.tri||{}).some(function(k){var r=state.tri[k];return r&&r.done&&r.date===d;})?1:0;
+    var sportU=sportsN+muscuT+triT;
+    var prot=Math.round(pEff(dayTotals(d)));
+    var sl=num(x.sleep);if(isNaN(sl))sl=0;
+    var eau=(typeof x.water==="number"&&x.water>0)?x.water:0;
+    var anch=customRoutines(),cDone,cTot;
+    if(anch.length){cTot=anch.length;cDone=anch.filter(function(a){return crDoneOn(a.id,d);}).length;}else{cTot=1;cDone=habitDoneOn(d)?1:0;}
+    function mk(ic,lab,real,tgt,valTxt){var rr=tgt>0?real/tgt:0;return {ic:ic,lab:lab,r:clamp(rr),pct:Math.round(rr*100),met:rr>=0.98,valTxt:valTxt};}
+    return [
+      mk("\ud83c\udfc3","Sport",sportU,1,sportU>0?(sportU+" activit\u00e9"+(sportU>1?"s":"")):"0 / 1"),
+      mk("\ud83e\udd69","Prot\u00e9ines",prot,130,prot+" / 130 g"),
+      mk("\ud83d\ude34","Sommeil",sl,8,fr1(sl)+" / 8 h"),
+      mk("\ud83d\udca7","Eau",eau,8,eau+" / 8 verres"),
+      mk("\ud83c\udf31","\u00c0-c\u00f4t\u00e9s",cDone,cTot,cDone+" / "+cTot+" tenus")
+    ];
+  }
+  function renderTodayRadar(){
+    var host=document.getElementById("todayRadar");if(!host)return;
+    var A=radarDay(todayStr()),N=A.length,cx=130,cy=104,R=64,LR=R+20;
+    function pt(i,rr){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+R*rr*Math.cos(a),cy+R*rr*Math.sin(a)];}
+    function poly(fn){return A.map(function(_,i){var p=pt(i,fn(i));return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ");}
+    var rings=[0.25,0.5,0.75].map(function(L){return '<polygon class="rad-ring" points="'+poly(function(){return L;})+'"/>';}).join("");
+    var outer='<polygon class="rad-goal" points="'+poly(function(){return 1;})+'"/>';
+    var spokes=A.map(function(_,i){var p=pt(i,1);return '<line class="rad-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'"/>';}).join("");
+    var real='<polygon class="rad-real" points="'+poly(function(i){return A[i].r;})+'"/>';
+    var dots=A.map(function(a,i){var p=pt(i,a.r);return '<circle class="rad-dot'+(a.met?' met':'')+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6"/>';}).join("");
+    var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);return '<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
+    var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/N*100);
+    var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
+    host.innerHTML='<div class="card pad radar-card"><div class="radar-head"><div class="sec-title">Ma journ\u00e9e</div><div class="radar-score">'+overall+'<span>%</span></div></div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div><svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar r\u00e9alis\u00e9 vs objectif du jour">'+rings+outer+spokes+real+dots+labs+'</svg><div class="radar-legend">'+legend+'</div></div>';
+  }
   function renderTodayHabits(){
     var host=document.getElementById("todayHabits");if(!host)return;
     var list=customRoutines();
@@ -720,6 +756,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderChip();
     renderHero();
     renderTodayNutri();
+    renderTodayRadar();
     renderTodayHabits();
     buildDayForm(document.getElementById("todayLog"),todayStr());
     var bn=document.getElementById("backupNudge");
