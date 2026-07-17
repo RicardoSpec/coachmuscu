@@ -735,8 +735,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);return '<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
     var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/N*100);
     var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
-    host.innerHTML='<div class="card pad radar-card"><div class="radar-head"><div class="sec-title">Ma journ\u00e9e</div><div class="radar-score">'+overall+'<span>%</span></div></div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div><svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar r\u00e9alis\u00e9 vs objectif du jour">'+rings+outer+spokes+real+dots+labs+'</svg><div class="radar-legend">'+legend+'</div></div>';
+    return '<div class="card pad radar-card"><div class="radar-head"><div class="sec-title">Ma journ\u00e9e</div><div class="radar-score">'+overall+'<span>%</span></div></div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div><svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar r\u00e9alis\u00e9 vs objectif du jour">'+rings+outer+spokes+real+dots+labs+'</svg><div class="radar-legend">'+legend+'</div></div>';
   }
+  function renderTodayRadar(){var h=document.getElementById("todayRadar");if(h)h.innerHTML=radarBlockHTML(todayStr());}
+  function renderJournalRadar(){var h=document.getElementById("journalRadar");if(h)h.innerHTML=radarBlockHTML(journalDate);}
   function renderTodayHabits(){
     var host=document.getElementById("todayHabits");if(!host)return;
     var list=customRoutines();
@@ -1311,6 +1313,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function renderJournal(){
     document.getElementById("dayLabel").textContent=frDateFull(journalDate)+(journalDate===todayStr()?" · aujourd'hui":"");
     buildDayForm(document.getElementById("journalLog"),journalDate);
+    renderJournalRadar();
   }
 
   /* ---------------- Progrès : poids ---------------- */
