@@ -1892,6 +1892,47 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }else out+='<div class="zn-hint">\u2764\ufe0f Renseigne ta <b>FC max</b> pour voir tes zones cardio.</div>';
     return out;
   }
+   function thHistSync(){
+    var t=thresholdsGet(),vma=num(t.vma),fc=num(t.fcmax),ftp=num(t.ftp);
+    if(isNaN(vma)&&isNaN(fc)&&isNaN(ftp))return false;
+    if(!Array.isArray(state.thresholdHist))state.thresholdHist=[];
+    var h=state.thresholdHist,d=todayStr();
+    var snap={d:d,vma:isNaN(vma)?null:vma,fcmax:isNaN(fc)?null:fc,ftp:isNaN(ftp)?null:ftp};
+    var last=h.length?h[h.length-1]:null;
+    if(last&&last.d===d){if(last.vma===snap.vma&&last.fcmax===snap.fcmax&&last.ftp===snap.ftp)return false;h[h.length-1]=snap;save();return true;}
+    h.push(snap);save();return true;
+  }
+  function thHistChartHTML(){
+    var h=Array.isArray(state.thresholdHist)?state.thresholdHist:[];
+    var intro='<p class="set-note" style="margin-top:14px">\ud83d\udcc8 <b>\u00c9volution de ton moteur</b> \u2014 \u00e0 chaque mise \u00e0 jour de tes seuils ci-dessus, un point est enregistr\u00e9. Voir ta <b>VMA</b> (course) et ton <b>FTP</b> (v\u00e9lo) monter au fil des semaines, c\u2019est la preuve que ta base a\u00e9robie progresse \u2014 le facteur le plus d\u00e9terminant pour un triathlon M. La <b>VO2max</b> (ton plafond a\u00e9robie \u2248 VMA\u00d73,5) suit ta VMA. La <b>FC max</b> n\u2019est pas trac\u00e9e : quasi g\u00e9n\u00e9tique, elle ne bouge presque pas \u2014 c\u2019est un rep\u00e8re, pas un objectif \u00e0 pousser.</p>';
+    if(!h.length)return intro+'<div class="empty">Renseigne un seuil ci-dessus pour d\u00e9marrer le suivi.</div>';
+    var series=[
+      {key:"vma",lab:"VMA",col:"#12466B",unit:"\u2009km/h",fmt:function(x){return fr1(x);}},
+      {key:"ftp",lab:"FTP",col:"#F4622B",unit:"\u2009W",fmt:function(x){return ""+Math.round(x);}}
+    ];
+    series.forEach(function(s){
+      s.raw=[];h.forEach(function(sn,i){var v=sn[s.key];if(v!=null&&!isNaN(v))s.raw.push({i:i,v:v});});
+      if(s.raw.length){s.v0=s.raw[0].v;s.vN=s.raw[s.raw.length-1].v;s.pct=s.raw.map(function(p){return {i:p.i,y:(p.v/s.v0)*100};});}
+    });
+    var draw=series.filter(function(s){return s.raw.length>=2;});
+    if(!draw.length)return intro+'<div class="empty">Un seul relev\u00e9 pour l\u2019instant. Refais un test (VMA ou FTP) dans quelques semaines et mets \u00e0 jour tes seuils \u2014 la courbe montrera l\u2019\u00e9volution.</div>';
+    var W=320,H=110,pad=10,n=h.length;
+    var allY=[100];draw.forEach(function(s){s.pct.forEach(function(p){allY.push(p.y);});});
+    var minY=Math.min.apply(null,allY),maxY=Math.max.apply(null,allY);if(maxY-minY<4){maxY+=2;minY-=2;}
+    function X(i){return n<2?W/2:(pad+(i/(n-1))*(W-2*pad));}
+    function Y(y){return pad+(1-(y-minY)/(maxY-minY))*(H-2*pad);}
+    var baseY=Y(100).toFixed(1);
+    var base='<line x1="'+pad+'" y1="'+baseY+'" x2="'+(W-pad)+'" y2="'+baseY+'" stroke="#9fb0c0" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>';
+    var lines=draw.map(function(s){
+      var pts=s.pct.map(function(p){return X(p.i).toFixed(1)+","+Y(p.y).toFixed(1);}).join(" ");
+      var dots=s.pct.map(function(p){return '<circle cx="'+X(p.i).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="2.6" fill="'+s.col+'"/>';}).join("");
+      return '<polyline fill="none" stroke="'+s.col+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>'+dots;
+    }).join("");
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;margin:8px 0 4px">'+base+lines+'</svg>';
+    var legend=draw.map(function(s){var dp=Math.round((s.vN/s.v0-1)*100);return '<span style="color:'+s.col+';font-weight:600">\u25cf '+s.lab+' '+s.fmt(s.v0)+'\u2009\u2192\u2009'+s.fmt(s.vN)+s.unit+' ('+(dp>=0?"+":"")+dp+'\u2009%)</span>';}).join(' &nbsp; ');
+    var vs=series[0],vo2="";if(vs.raw&&vs.raw.length>=2)vo2='<div class="muted" style="font-size:12.5px;margin-top:2px">VO2max \u2248 '+fr1(vs.v0*3.5)+'\u2009\u2192\u2009'+fr1(vs.vN*3.5)+' ml/kg/min</div>';
+    return intro+svg+'<div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">'+legend+' \u00b7 base 100 = 1<sup>er</sup> relev\u00e9</div>'+vo2;
+  }
    function fuelPlanGet(){if(!state.fuelPlan)state.fuelPlan={type:"course",dur:60};if(!state.fuelPlan.type)state.fuelPlan.type="course";if(!state.fuelPlan.dur)state.fuelPlan.dur=60;return state.fuelPlan;}
   function fMPP(n,key){var base=num(n.base);if(isNaN(base)||base<=0)base=1;var por=num(n.portion);if(isNaN(por)||por<=0)por=base;var v=num(n[key]);if(isNaN(v))return 0;return v*por/base;}
   function fuelFoods(kind){var cat=foodCatalog(),arr=[],seen={};
@@ -2054,14 +2095,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<input type="text" class="cr-new-label" placeholder="Nouvel ancrage…" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
         '<button type="button" class="btn accent cr-addbtn" style="flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap">Ajouter</button>'+
       '</div>';
-    var _th=thresholdsGet();
+    var _th=thresholdsGet();thHistSync();
     var seuilsInner='<p class="set-note">Tes seuils transforment l\'intensit\u00e9 en rep\u00e8res concrets (allures, watts, pulsations). Ce sont des <b>guides</b> : la <b>VMA</b> = ta vitesse maximale a\u00e9robie en course, la <b>FC max</b> = ta fr\u00e9quence cardiaque maximale, le <b>FTP</b> = la puissance tenue ~1 h \u00e0 v\u00e9lo. Renseigne ce que tu connais (Apple Watch, test terrain) \u2014 le reste se calcule.</p>'+
       '<div class="ff-grid">'+
         '<label>VMA course (km/h)<input type="number" inputmode="decimal" step="0.1" class="th-vma" value="'+esc(_th.vma||"")+'" placeholder="ex : 16"></label>'+
         '<label>FC max (bpm)<input type="number" inputmode="numeric" class="th-fcmax" value="'+esc(_th.fcmax||"")+'" placeholder="ex : 190"></label>'+
         '<label>FTP v\u00e9lo (W)<input type="number" inputmode="numeric" class="th-ftp" value="'+esc(_th.ftp||"")+'" placeholder="ex : 220"></label>'+
       '</div>'+
-      '<div class="seuils-out">'+zonesHTML(_th)+'</div>';
+      '<div class="seuils-out">'+zonesHTML(_th)+'</div>'+
+      '<div class="th-hist">'+thHistChartHTML()+'</div>';
     var fuelInner='<p class="set-note">Un guide pour caler ton alimentation autour de la s\u00e9ance, selon son type et sa dur\u00e9e. Ce sont des rep\u00e8res, pas des r\u00e8gles.</p><div class="fuel-wrap">'+fuelWrapHTML()+'</div>';  
     host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
@@ -2086,8 +2128,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var w=host.querySelector(".pf-w");if(w)w.oninput=function(){pf.weight=w.value;save();pfRefresh();};
       var kg2=host.querySelector(".pf-kcalgoal");if(kg2)kg2.oninput=function(){state.kcalGoal=kg2.value;save();renderTodayRadar();renderProgressRadar();};
     })();
-    (function(){var out=host.querySelector(".seuils-out");if(!out)return;var t=thresholdsGet();
-      function ref(){out.innerHTML=zonesHTML(t);}
+    (function(){var out=host.querySelector(".seuils-out");if(!out)return;var t=thresholdsGet();var histBox=host.querySelector(".th-hist");
+      function ref(){out.innerHTML=zonesHTML(t);thHistSync();if(histBox)histBox.innerHTML=thHistChartHTML();}
       var v=host.querySelector(".th-vma");if(v)v.oninput=function(){t.vma=v.value;save();ref();};
       var f=host.querySelector(".th-fcmax");if(f)f.oninput=function(){t.fcmax=f.value;save();ref();};
       var p=host.querySelector(".th-ftp");if(p)p.oninput=function(){t.ftp=p.value;save();ref();};
