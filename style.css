@@ -894,3 +894,17 @@ nav.tabs .tab.on{color:var(--primary)}
 .rl-val{color:var(--muted);font-variant-numeric:tabular-nums}
 .rl-chk{margin-left:auto;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
 .rl-item.met .rl-chk{color:var(--accent)}
+
+/* ---- Seuils & zones (triathlon) ---- */
+.seuils-out{margin-top:12px}
+.zn-vo2{background:#eef4f9;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;color:var(--ink);margin-bottom:10px}
+.zn-mut{color:var(--muted);font-size:12px}
+.zn-block{margin-bottom:12px}
+.zn-h{font-size:12.5px;font-weight:800;color:var(--primary);margin-bottom:5px}
+.zn-table{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.zn-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"n v" "d d";gap:1px 10px;padding:7px 10px;font-size:13px;border-top:1px solid var(--line)}
+.zn-row:first-child{border-top:none}
+.zn-n{grid-area:n;font-weight:700;color:var(--ink)}
+.zn-v{grid-area:v;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;text-align:right}
+.zn-d{grid-area:d;color:var(--muted);font-size:11.5px;margin-top:1px}
+.zn-hint{font-size:12.5px;color:var(--muted);background:#f6f9fb;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;line-height:1.4}
