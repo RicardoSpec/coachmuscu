@@ -652,6 +652,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }catch(e){scanStatus("Scanner indisponible — saisis le numéro ci-dessous.");}
     });
   }
+  function dayMealDistHTML(d){
+    var x=state.days[d];if(!x||!x.mealItems)return "";
+    var bw=lastWeight();var lo=bw?Math.round(0.3*bw):24,hi=bw?Math.round(0.55*bw):41;
+    var rows=MEALS.map(function(m){var p=0;(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s&&s.prot)p+=s.prot;});return {label:m.label,p:p};});
+    if(!rows.some(function(r){return r.p>0;}))return "";
+    var mx=(Math.max(hi,rows.reduce(function(a,r){return Math.max(a,r.p);},0))*1.1)||1;
+    var bars=rows.map(function(r){var pr=Math.round(r.p);var zone=r.p<=0?"z0":(r.p<lo?"lo":(r.p>hi?"hi":"ok"));var w=Math.max(2,Math.round(r.p/mx*100));var lbl=r.label==="Petit-déjeuner"?"Petit-déj":r.label;return '<div class="md-row"><span class="md-lbl">'+esc(lbl)+'</span><span class="md-track"><span class="md-fill '+zone+'" style="width:'+w+'%"></span></span><span class="md-val">'+pr+' g</span></div>';}).join("");
+    return '<div class="mealdist"><div class="mealdist-h">Répartition protéines · repère ~'+lo+'–'+hi+' g/repas</div>'+bars+'<div class="mealdist-cap">🟢 dans la zone · 🟡 un peu léger · 🔵 gros apport d\'un coup — ça compte pour ton total, mais stimule moins la synthèse musculaire : mieux vaut étaler sur la journée.</div></div>';
+  }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
     var nut=document.getElementById("todayNutri");
@@ -666,7 +675,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
         if(tot){
           var statTxt=eff>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(eff)+'</span><span class="nutri-u">g complètes</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+protBreakHTML(tot)+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
+          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(eff)+'</span><span class="nutri-u">g complètes</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+protBreakHTML(tot)+dayMealDistHTML(todayStr())+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }else{
           body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }
