@@ -652,14 +652,23 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }catch(e){scanStatus("Scanner indisponible — saisis le numéro ci-dessous.");}
     });
   }
+  var mealDistMode="prot";
+  function mdLbl(l){return l==="Petit-déjeuner"?"Petit-déj":l;}
   function dayMealDistHTML(d){
     var x=state.days[d];if(!x||!x.mealItems)return "";
-    var bw=lastWeight();var lo=bw?Math.round(0.3*bw):24,hi=bw?Math.round(0.55*bw):41;
-    var rows=MEALS.map(function(m){var p=0;(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s&&s.prot)p+=s.prot;});return {label:m.label,p:p};});
-    if(!rows.some(function(r){return r.p>0;}))return "";
-    var mx=(Math.max(hi,rows.reduce(function(a,r){return Math.max(a,r.p);},0))*1.1)||1;
-    var bars=rows.map(function(r){var pr=Math.round(r.p);var zone=r.p<=0?"z0":(r.p<lo?"lo":(r.p>hi?"hi":"ok"));var w=Math.max(2,Math.round(r.p/mx*100));var lbl=r.label==="Petit-déjeuner"?"Petit-déj":r.label;return '<div class="md-row"><span class="md-lbl">'+esc(lbl)+'</span><span class="md-track"><span class="md-fill '+zone+'" style="width:'+w+'%"></span></span><span class="md-val">'+pr+' g</span></div>';}).join("");
-    return '<div class="mealdist"><div class="mealdist-h">Répartition protéines · repère ~'+lo+'–'+hi+' g/repas</div>'+bars+'<div class="mealdist-cap">🟢 dans la zone · 🟡 un peu léger · 🔵 gros apport d\'un coup — ça compte pour ton total, mais stimule moins la synthèse musculaire : mieux vaut étaler sur la journée.</div></div>';
+    if(!MEALS.some(function(m){return x.mealItems[m.k]&&x.mealItems[m.k].length;}))return "";
+    var mode=mealDistMode==="kcal"?"kcal":"prot";
+    var rows=MEALS.map(function(m){var v=0;(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s)v+=(mode==="kcal"?(s.kcal||0):(s.prot||0));});return {label:m.label,v:v};});
+    var toggle='<div class="md-modes"><button type="button" class="md-mode'+(mode==="prot"?" on":"")+'" data-mode="prot">Protéines</button><button type="button" class="md-mode'+(mode==="kcal"?" on":"")+'" data-mode="kcal">kcal</button></div>';
+    var peak=rows.reduce(function(a,r){return Math.max(a,r.v);},0);
+    if(mode==="kcal"){
+      var tot=Math.round(rows.reduce(function(a,r){return a+r.v;},0));var mxk=(peak*1.1)||1;
+      var kb=rows.map(function(r){var kc=Math.round(r.v);var w=Math.max(2,Math.round(r.v/mxk*100));return '<div class="md-row"><span class="md-lbl">'+esc(mdLbl(r.label))+'</span><span class="md-track"><span class="md-fill kc" style="width:'+w+'%"></span></span><span class="md-val">'+kc+'</span></div>';}).join("");
+      return '<div class="mealdist">'+toggle+'<div class="mealdist-h">Répartition énergie · '+tot+' kcal au total</div>'+kb+'<div class="mealdist-cap">Où va ton énergie sur la journée. Pas de « plafond » par repas comme les protéines — mais pense à bien alimenter autour de tes séances.</div></div>';
+    }
+    var bw=lastWeight();var lo=bw?Math.round(0.3*bw):24,hi=bw?Math.round(0.55*bw):41;var mxp=(Math.max(hi,peak)*1.1)||1;
+    var bars=rows.map(function(r){var pr=Math.round(r.v);var zone=r.v<=0?"z0":(r.v<lo?"lo":(r.v>hi?"hi":"ok"));var w=Math.max(2,Math.round(r.v/mxp*100));return '<div class="md-row"><span class="md-lbl">'+esc(mdLbl(r.label))+'</span><span class="md-track"><span class="md-fill '+zone+'" style="width:'+w+'%"></span></span><span class="md-val">'+pr+' g</span></div>';}).join("");
+    return '<div class="mealdist">'+toggle+'<div class="mealdist-h">Répartition protéines · repère ~'+lo+'–'+hi+' g/repas</div>'+bars+'<div class="mealdist-cap">🟢 dans la zone · 🟡 un peu léger · 🔵 gros apport d\'un coup — ça compte pour ton total, mais stimule moins la synthèse musculaire : mieux vaut étaler sur la journée.</div></div>';
   }
   function renderTodayNutri(){
     var tot=dayTotals(todayStr());
@@ -682,6 +691,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }
       nut.innerHTML=head+body;
       nut.querySelector(".nutri-toggle").onclick=function(){nutriOpen=!nutriOpen;renderTodayNutri();};
+      nut.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");renderTodayNutri();};});
       var tg=nut.querySelector(".nutri-tgtg"),tp=nut.querySelector(".tgtg-panel");if(tg&&tp)wireTgtg(tg,tp,todayStr(),function(){renderTodayNutri();buildDayForm(document.getElementById("todayLog"),todayStr());});
     }
     var sp=document.getElementById("stickyProt");
