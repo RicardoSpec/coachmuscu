@@ -397,6 +397,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
+  var onbHidden=false,onbMin=false,onbIdx=0,onbTimer=null;  /* alerte "profil à compléter" */ 
   function activateTab(id){
     var t;
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
@@ -791,6 +792,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderTodayNutri();
     renderTodayRadar();
     renderTodayHabits();
+    renderOnboard(); 
     buildDayForm(document.getElementById("todayLog"),todayStr());
     var bn=document.getElementById("backupNudge");
     if(bn){var st=backupStaleDays();var stale=(st===null||st>=10);
@@ -801,6 +803,46 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
   }
   function menuBtnOpenSettings(){openSettings();}
+  function onbMissing(){
+    var pf=profileGet(),th=thresholdsGet(),arr=[];
+    function empty(v){return v===undefined||v===null||(""+v).trim()==="";}
+    if(empty(pf.height))arr.push({ic:"\ud83d\udccf",txt:"Ta <b>taille</b> n\u2019est pas renseign\u00e9e \u2014 indispensable pour estimer ta d\u00e9pense \u00e9nerg\u00e9tique.",grp:"g_profil",sec:"profil"});
+    if(empty(pf.weight)&&lastWeight()==null)arr.push({ic:"\u2696\ufe0f",txt:"Ton <b>poids</b> n\u2019est pas renseign\u00e9 \u2014 base du bilan calorique et de ton suivi de progression.",grp:"g_profil",sec:"profil"});
+    if(empty(pf.age))arr.push({ic:"\ud83c\udf82",txt:"Ton <b>\u00e2ge</b> n\u2019est pas renseign\u00e9 \u2014 il affine le calcul de ton m\u00e9tabolisme de base.",grp:"g_profil",sec:"profil"});
+    if(empty(th.vma))arr.push({ic:"\ud83c\udfc3",txt:"Ta <b>VMA</b> n\u2019est pas renseign\u00e9e \u2014 elle d\u00e9bloque tes allures de course, ta VO2max et le suivi de ton moteur.",grp:"g_profil",sec:"seuils"});
+    if(empty(th.ftp))arr.push({ic:"\ud83d\udeb4",txt:"Ton <b>FTP v\u00e9lo</b> n\u2019est pas renseign\u00e9 \u2014 il d\u00e9bloque tes zones de puissance et le suivi v\u00e9lo.",grp:"g_profil",sec:"seuils"});
+    if(empty(th.fcmax))arr.push({ic:"\u2764\ufe0f",txt:"Ta <b>FC max</b> n\u2019est pas renseign\u00e9e \u2014 elle d\u00e9bloque tes zones cardio.",grp:"g_profil",sec:"seuils"});
+    return arr;
+  }
+  function renderOnboard(){
+    var host=document.getElementById("onbNudge");if(!host)return;
+    if(onbTimer){clearInterval(onbTimer);onbTimer=null;}
+    if(onbHidden){host.innerHTML="";return;}
+    var miss=onbMissing();
+    if(!miss.length){host.innerHTML="";return;}
+    if(onbIdx>=miss.length)onbIdx=0;
+    if(onbMin){
+      host.innerHTML='<button type="button" class="onb-pill" id="onbExpand">\u26a0\ufe0f '+miss.length+' info'+(miss.length>1?"s":"")+' \u00e0 compl\u00e9ter</button>';
+      var ex=document.getElementById("onbExpand");if(ex)ex.onclick=function(){onbMin=false;renderOnboard();};
+      return;
+    }
+    function itemHTML(){var m=miss[onbIdx];
+      return '<div class="onb-ic">'+m.ic+'</div>'+
+        '<div class="onb-body"><div class="onb-msg">'+m.txt+'</div>'+
+          '<div class="onb-actions"><button type="button" class="onb-go" data-grp="'+m.grp+'" data-sec="'+m.sec+'">Compl\u00e9ter</button>'+
+          (miss.length>1?'<button type="button" class="onb-next" aria-label="Suivant">\u2192</button><span class="onb-count">'+(onbIdx+1)+'/'+miss.length+'</span>':'')+'</div></div>'+
+        '<div class="onb-ctl"><button type="button" class="onb-min" aria-label="R\u00e9duire">\u2013</button><button type="button" class="onb-x" aria-label="Fermer">\u00d7</button></div>';}
+    function wire(){
+      var go=host.querySelector(".onb-go");if(go)go.onclick=function(){openSettingsAt(go.getAttribute("data-grp"),go.getAttribute("data-sec"));};
+      var nx=host.querySelector(".onb-next");if(nx)nx.onclick=function(){onbIdx=(onbIdx+1)%miss.length;refresh();};
+      var mn=host.querySelector(".onb-min");if(mn)mn.onclick=function(){onbMin=true;renderOnboard();};
+      var xb=host.querySelector(".onb-x");if(xb)xb.onclick=function(){onbHidden=true;host.innerHTML="";if(onbTimer){clearInterval(onbTimer);onbTimer=null;}};
+    }
+    function refresh(){var card=host.querySelector(".onb-card");if(!card)return;card.innerHTML=itemHTML();wire();}
+    host.innerHTML='<div class="onb-card">'+itemHTML()+'</div>';
+    wire();
+    if(miss.length>1)onbTimer=setInterval(function(){var h=document.getElementById("onbNudge");if(!h||!h.querySelector(".onb-card")){if(onbTimer){clearInterval(onbTimer);onbTimer=null;}return;}onbIdx=(onbIdx+1)%miss.length;refresh();},5000);
+  } 
 
   /* ---------------- Muscu (grilles) ---------------- */
   function ensureBlockOpen(){
@@ -1844,7 +1886,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var settingsFoodQuery=""; /* filtre de recherche de la liste d'aliments */
    var settingsQualSel=null, settingsQualOpen=false, settingsQualQuery=""; /* editeur Qualite des aliments */
   var settingsSecOpen={};  /* rubriques Réglages repliées par défaut (par id) */
+  var settingsGrpOpen={};  /* groupes Réglages (titres) repliés par défaut (par id) */ 
   function settingsSec(id,title,inner,open){return '<div class="set-sec"><button type="button" class="set-sectog'+(open?" open":"")+'" data-sec="'+id+'"><span class="set-sec-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-secbody">'+inner+'</div>':"")+'</div>';}
+  function settingsGroup(id,title,inner,open){return '<div class="set-grp'+(open?" open":"")+'"><button type="button" class="set-grptog'+(open?" open":"")+'" data-grp="'+id+'"><span class="set-grp-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-grpbody">'+inner+'</div>':"")+'</div>';} 
   function sessExoRow(ex,i){
     return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
       '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
@@ -2105,18 +2149,28 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="seuils-out">'+zonesHTML(_th)+'</div>'+
       '<div class="th-hist">'+thHistChartHTML()+'</div>';
     var fuelInner='<p class="set-note">Un guide pour caler ton alimentation autour de la s\u00e9ance, selon son type et sa dur\u00e9e. Ce sont des rep\u00e8res, pas des r\u00e8gles.</p><div class="fuel-wrap">'+fuelWrapHTML()+'</div>';  
+    var _ffOpen=settingsFoodOpen||!!settingsFoodSel||settingsFoodNew;
     host.innerHTML=
-      settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
-      settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
-      settingsSec("anchors","Ancrages de routines",anchorsInner,!!settingsSecOpen.anchors)+
-      settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
-      settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
-      settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
-      settingsSec("seuils","Seuils &amp; zones · triathlon",seuilsInner,!!settingsSecOpen.seuils)+
-      settingsSec("fuel","Carburant de séance",fuelInner,!!settingsSecOpen.fuel)+
-      fixSec+
-       settingsSec("qual","Qualite des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel)+
-      settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
+      settingsGroup("g_profil","👤 Profil & physiologie",
+        settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
+        settingsSec("seuils","Seuils &amp; zones · triathlon",seuilsInner,!!settingsSecOpen.seuils)+
+        settingsSec("fuel","Carburant de séance",fuelInner,!!settingsSecOpen.fuel),
+        !!settingsGrpOpen.g_profil||!!settingsSecOpen.profil||!!settingsSecOpen.seuils||!!settingsSecOpen.fuel)+
+      settingsGroup("g_train","🏋️ Entraînement",
+        settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
+        settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
+        settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
+        settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit),
+        !!settingsGrpOpen.g_train||!!settingsSecOpen.acts||!!settingsActEdit||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.obj||!!settingsEdit)+
+      settingsGroup("g_track","📊 Suivi & aliments",
+        settingsSec("anchors","Ancrages de routines",anchorsInner,!!settingsSecOpen.anchors)+
+        fixSec+
+        settingsSec("qual","Qualité des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel),
+        !!settingsGrpOpen.g_track||!!settingsSecOpen.anchors||_ffOpen||!!settingsSecOpen.qual||!!settingsQualSel)+
+      settingsGroup("g_data","💾 Données",
+        settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup),
+        !!settingsGrpOpen.g_data||!!settingsSecOpen.backup);
+    host.querySelectorAll(".set-grptog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-grp");settingsGrpOpen[id]=!settingsGrpOpen[id];renderSettings();};});  
     host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
     var bi=document.getElementById("bkpImport");if(bi)bi.onclick=pickImport;
@@ -2221,8 +2275,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     inp.click();
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
-  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsQualSel=null;settingsQualOpen=false;settingsQualQuery="";settingsSecOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
-  function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
+  function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsQualSel=null;settingsQualOpen=false;settingsQualQuery="";settingsSecOpen={};settingsGrpOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
+  function openSettingsAt(grp,sec){openSettings();if(grp)settingsGrpOpen[grp]=true;if(sec)settingsSecOpen[sec]=true;renderSettings();var el=document.querySelector('#settingsBody .set-sectog[data-sec="'+sec+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});}  function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
   /* ---------------- Initialisation ---------------- */
   function init(){
