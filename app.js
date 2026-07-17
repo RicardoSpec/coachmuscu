@@ -647,7 +647,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       try{crsScanner=new window.Html5Qrcode("crsCam");
         var fmts;try{var F=window.Html5QrcodeSupportedFormats;fmts=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];}catch(e){fmts=undefined;}
         var vc={facingMode:"environment",width:{ideal:1280},height:{ideal:720},advanced:[{focusMode:"continuous"}]};
-        var cfg={fps:12,qrbox:function(w,h){var bw=Math.floor(Math.min(w*0.9,340));return {width:bw,height:Math.floor(Math.min(bw*0.55,h*0.7))};},aspectRatio:1.7778,experimentalFeatures:{useBarCodeDetectorIfSupported:true},formatsToSupport:fmts};
+        var cfg={fps:12,qrbox:function(w,h){var bw=Math.floor(Math.min(w*0.9,340));return {width:bw,height:Math.floor(Math.min(bw*0.55,h*0.7))};},aspectRatio:1.7778,experimentalFeatures:{useBarCodeDetectorIfSupported:false},formatsToSupport:fmts};
         crsScanner.start(vc,cfg,function(txt){var code=(""+txt).replace(/\D/g,"");closeScanner();scanStatus("Recherche du produit…");lookupBarcode(code,function(res,msg){finish(res,msg,code);});},function(){}).then(function(){scanStatus("Cadre le code-barres, ou saisis le numéro ci-dessous.");setupZoomTorch();}).catch(function(){scanStatus("Caméra refusée ou indisponible — saisis le numéro ci-dessous.");});
       }catch(e){scanStatus("Scanner indisponible — saisis le numéro ci-dessous.");}
     });
