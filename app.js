@@ -655,10 +655,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var mealDistMode="prot";
   function mdLbl(l){return l==="Petit-déjeuner"?"Petit-déj":l;}
   function dayMealDistHTML(d){
-    var x=state.days[d];if(!x||!x.mealItems)return "";
-    if(!MEALS.some(function(m){return x.mealItems[m.k]&&x.mealItems[m.k].length;}))return "";
+    var x=state.days[d];if(!x)return "";
+    var mi=x.mealItems||{};
+    var hasMeal=MEALS.some(function(m){return mi[m.k]&&mi[m.k].length;});
+    var hasSupp=x.supps&&typeof SUPPS!=="undefined"&&SUPPS.some(function(sp){return sp.prot&&x.supps[sp.id];});
+    if(!hasMeal&&!hasSupp)return "";
     var mode=mealDistMode==="kcal"?"kcal":"prot";
-    var rows=MEALS.map(function(m){var v=0;(x.mealItems[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s)v+=(mode==="kcal"?(s.kcal||0):(s.prot||0));});return {label:m.label,v:v};});
+    var rows=MEALS.map(function(m){var v=0;(mi[m.k]||[]).forEach(function(it){var s=scaleNut(it);if(s)v+=(mode==="kcal"?(s.kcal||0):(s.prot||0));});
+      if(x.supps&&typeof SUPPS!=="undefined")SUPPS.forEach(function(sp){if(!sp.prot||!x.supps[sp.id])return;if((((x.suppMeal&&x.suppMeal[sp.id])||"co"))!==m.k)return;var mul=(x.supps2&&x.supps2[sp.id])?2:1;v+=(mode==="kcal"?(num(sp.kcal)||0):sp.prot)*mul;});
+      return {label:m.label,v:v};});
     var toggle='<div class="md-modes"><button type="button" class="md-mode'+(mode==="prot"?" on":"")+'" data-mode="prot">Protéines</button><button type="button" class="md-mode'+(mode==="kcal"?" on":"")+'" data-mode="kcal">kcal</button></div>';
     var peak=rows.reduce(function(a,r){return Math.max(a,r.v);},0);
     if(mode==="kcal"){
@@ -1114,7 +1119,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
               var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
               if(!items.length)return "";
-              return '<div class="supp-slot"><div class="supp-slot-h">'+esc(slot.label)+'</div>'+items.map(function(sp){return '<label class="supp"><input type="checkbox" class="f-supp" data-id="'+sp.id+'"><span class="supp-txt"><span class="supp-name">'+esc(sp.name)+'</span>'+(sp.dose?'<span class="supp-dose">'+esc(sp.dose)+'</span>':'')+'</span>'+(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+'<button type="button" class="supp-x2'+((x.supps2&&x.supps2[sp.id])?" on":"")+'" data-x2="'+sp.id+'" title="Pris 2 fois aujourd\'hui">×2</button></label>';}).join("")+'</div>';
+              +(sp.prot?'<span class="supp-badge">+'+sp.prot+' g prot</span>':'')+(sp.prot?'<span class="supp-meal"'+((x.supps&&x.supps[sp.id])?'':' hidden')+'>\u2248 <select class="f-suppmeal" data-id="'+sp.id+'">'+MEALS.map(function(mm){return '<option value="'+mm.k+'"'+((((x.suppMeal&&x.suppMeal[sp.id])||"co")===mm.k)?' selected':'')+'>'+esc(mm.label)+'</option>';}).join("")+'</select></span>':'')+'<button type="button" class="supp-x2'+((x.supps2&&x.supps2[sp.id])?" on":"")+'" data-x2="'+sp.id+'" title="Pris 2 fois aujourd\'hui">×2</button></label>';}).join("")+'</div>';
             }).join("")+
             '<div class="supp-hint">Le whey coché s\'ajoute à tes protéines du jour.</div>'+
             '<div class="xtras supps-x">'+((x.suppsX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="supps" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
@@ -1195,7 +1200,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelectorAll(".f-supp").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!(x.supps&&x.supps[id]);
-      cb.addEventListener("change",function(){if(!x.supps)x.supps={};x.supps[id]=cb.checked;save();recalcTotals();
+      cb.addEventListener("change",function(){if(!x.supps)x.supps={};x.supps[id]=cb.checked;var lab=cb.closest(".supp");var sm=lab?lab.querySelector(".supp-meal"):null;if(sm)sm.hidden=!cb.checked;save();recalcTotals();
         updSuppsMeta();});
     });
     container.querySelectorAll(".supp-x2").forEach(function(bt){
