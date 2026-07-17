@@ -392,7 +392,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=true, radarPeriod=30;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -720,16 +720,19 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var anch=customRoutines(),cDone,cTot;
     if(anch.length){cTot=anch.length;cDone=anch.filter(function(a){return crDoneOn(a.id,d);}).length;}else{cTot=1;cDone=habitDoneOn(d)?1:0;}
     function mk(ic,lab,real,tgt,valTxt){var rr=tgt>0?real/tgt:0;return {ic:ic,lab:lab,r:clamp(rr),pct:Math.round(rr*100),met:rr>=0.98,valTxt:valTxt};}
-    return [
+    var axes=[
       mk("\ud83c\udfc3","Sport",sportU,1,sportU>0?(sportU+" activit\u00e9"+(sportU>1?"s":"")):"0 / 1"),
       mk("\ud83e\udd69","Prot\u00e9ines",prot,130,prot+" / 130 g"),
       mk("\ud83d\ude34","Sommeil",sl,8,fr1(sl)+" / 8 h"),
       mk("\ud83d\udca7","Eau",eau,8,eau+" / 8 verres"),
       mk("\ud83c\udf31","\u00c0-c\u00f4t\u00e9s",cDone,cTot,cDone+" / "+cTot+" tenus")
     ];
+    var exp=expend(d);
+    if(exp!=null){var net=adjIntake(d)-exp;var goal=num(state.kcalGoal);if(isNaN(goal)||goal===0)goal=300;var rr=goal>0?net/goal:0;axes.push({ic:"\u2696\ufe0f",lab:"Bilan kcal",r:clamp(rr),pct:Math.max(0,Math.round(clamp(rr)*100)),met:(goal>0&&net>=goal*0.9),valTxt:(net>0?"+":"")+Math.round(net)+" / "+(goal>0?"+":"")+Math.round(goal)+" kcal"});}
+    return axes;
   }
-  function radarBlockHTML(d){
-    var A=radarDay(d),N=A.length,cx=130,cy=104,R=64,LR=R+20;
+  function radarSVG(A){
+    var N=A.length,cx=130,cy=104,R=64,LR=R+20;
     function pt(i,rr){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+R*rr*Math.cos(a),cy+R*rr*Math.sin(a)];}
     function poly(fn){return A.map(function(_,i){var p=pt(i,fn(i));return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ");}
     var rings=[0.25,0.5,0.75].map(function(L){return '<polygon class="rad-ring" points="'+poly(function(){return L;})+'"/>';}).join("");
@@ -738,10 +741,34 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var real='<polygon class="rad-real" points="'+poly(function(i){return A[i].r;})+'"/>';
     var dots=A.map(function(a,i){var p=pt(i,a.r);return '<circle class="rad-dot'+(a.met?' met':'')+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6"/>';}).join("");
     var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);return '<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
-    var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/N*100);
-    var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
-    return '<div class="card pad radar-card"><div class="radar-head"><div class="sec-title">Ma journ\u00e9e</div><div class="radar-score">'+overall+'<span>%</span></div></div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div><svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar r\u00e9alis\u00e9 vs objectif du jour">'+rings+outer+spokes+real+dots+labs+'</svg><div class="radar-legend">'+legend+'</div></div>';
+    return '<svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar">'+rings+outer+spokes+real+dots+labs+'</svg>';
   }
+  function radarBlockHTML(d){
+    var A=radarDay(d);
+    var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/A.length*100);
+    var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
+    var head='<button type="button" class="hcol radar-toggle'+(radarOpen?' open':'')+'"><span class="hcol-ic">\ud83d\udd78\ufe0f</span><span class="hcol-txt"><span class="hcol-k">Ma journ\u00e9e</span><span class="hcol-v">'+overall+' %</span></span><span class="hcol-chev">\u25be</span></button>';
+    var body=radarOpen?('<div class="radar-body"><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div>'+radarSVG(A)+'<div class="radar-legend">'+legend+'</div></div>'):'';
+    return head+body;
+  }
+  function renderTodayRadar(){var h=document.getElementById("todayRadar");if(!h)return;h.innerHTML=radarBlockHTML(todayStr());var t=h.querySelector(".radar-toggle");if(t)t.onclick=function(){radarOpen=!radarOpen;renderTodayRadar();};}
+  function renderJournalRadar(){var h=document.getElementById("journalRadar");if(!h)return;h.innerHTML=radarBlockHTML(journalDate);var t=h.querySelector(".radar-toggle");if(t)t.onclick=function(){radarOpen=!radarOpen;renderJournalRadar();};}
+  function radarPeriodAxes(per){
+    var accum={},order=[],days=0,end=new Date();
+    for(var i=0;i<per;i++){var dt=new Date(end);dt.setDate(dt.getDate()-i);var iso=isoOf(dt);if(!state.days[iso])continue;var A=radarDay(iso);if(!A.length)continue;days++;A.forEach(function(a){if(!(a.lab in accum)){accum[a.lab]={ic:a.ic,sum:0,n:0};order.push(a.lab);}accum[a.lab].sum+=a.r;accum[a.lab].n++;});}
+    var axes=order.map(function(lab){var o=accum[lab];var r=o.n?o.sum/o.n:0;return {ic:o.ic,lab:lab,r:r,pct:Math.round(r*100),met:false,valTxt:Math.round(r*100)+"%"};});
+    return {axes:axes,days:days};
+  }
+  function radarPeriodHTML(){
+    var per=radarPeriod||30;var pr=radarPeriodAxes(per);
+    var sels=[7,30,90].map(function(p){return '<button type="button" class="seg rp-per'+(per===p?" on":"")+'" data-p="'+p+'">'+p+' j</button>';}).join("");
+    var head='<div class="radar-head"><div class="sec-title">Moyenne par dimension</div>'+(pr.days?'<div class="radar-score">'+Math.round(pr.axes.reduce(function(s,a){return s+a.r;},0)/pr.axes.length*100)+'<span>%</span></div>':'')+'</div>';
+    var selBar='<div class="fuel-seg rp-bar">'+sels+'</div>';
+    if(!pr.days)return '<div class="card pad radar-card">'+head+selBar+'<div class="zn-hint">Pas encore de donn\u00e9es sur cette p\u00e9riode.</div></div>';
+    var legend=pr.axes.map(function(a){return '<div class="rl-item"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
+    return '<div class="card pad radar-card">'+head+selBar+'<div class="radar-sub">Moyenne sur '+per+' j \u00b7 '+pr.days+' jour(s) suivi(s). Chaque axe = ta moyenne vs objectif.</div>'+radarSVG(pr.axes)+'<div class="radar-legend">'+legend+'</div></div>';
+  }
+  function renderProgressRadar(){var h=document.getElementById("progRadar");if(!h)return;h.innerHTML=radarPeriodHTML();h.querySelectorAll(".rp-per").forEach(function(b){b.onclick=function(){radarPeriod=parseInt(b.getAttribute("data-p"),10);renderProgressRadar();};});}
   function renderTodayRadar(){var h=document.getElementById("todayRadar");if(h)h.innerHTML=radarBlockHTML(todayStr());}
   function renderJournalRadar(){var h=document.getElementById("journalRadar");if(h)h.innerHTML=radarBlockHTML(journalDate);}
   function renderTodayHabits(){
@@ -1492,6 +1519,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderGoals();
     var wv=document.getElementById("weekViz");if(wv)wv.innerHTML=weekVizHTML();
     renderRegularity();
+    renderProgressRadar();
     var dc=doneCount();
     var sleeps=[],meditDays=0,sportTally={},progFollow=0,progTot=0,stoolDays=0,stoolTotal=0,typeCount={},waters=[];
     Object.keys(state.days).forEach(function(d){
@@ -2008,6 +2036,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<label>Taille (cm)<input type="number" inputmode="numeric" class="pf-h" value="'+esc(pf.height)+'" placeholder="ex : 178"></label>'+
         '<label>Âge<input type="number" inputmode="numeric" class="pf-age" value="'+esc(pf.age)+'" placeholder="ex : 25"></label>'+
         '<label>Poids réf. (kg)<input type="number" inputmode="decimal" step="0.1" class="pf-w" value="'+esc(pf.weight)+'" placeholder="'+(pfW!=null?("auto : "+fr1(pfW)):"ex : 68")+'"></label>'+
+        '<label>Objectif bilan (kcal/j)<input type="number" inputmode="numeric" class="pf-kcalgoal" value="'+esc(state.kcalGoal!=null?state.kcalGoal:"")+'" placeholder="+300 (prise de masse)"></label>'+
       '</div>'+
       '<div class="bkp-when pf-bmr">'+(pfBmr!=null?('Métabolisme de base : <b>'+Math.round(pfBmr)+' kcal/j</b>'+(pfW!=null?(' · poids '+fr1(pfW)+' kg'):'')):'<span class="low">Complète taille + âge pour le calcul.</span>')+'</div>';
     var crList=customRoutines();
@@ -2055,6 +2084,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var h=host.querySelector(".pf-h");if(h)h.oninput=function(){pf.height=h.value;save();pfRefresh();};
       var a=host.querySelector(".pf-age");if(a)a.oninput=function(){pf.age=a.value;save();pfRefresh();};
       var w=host.querySelector(".pf-w");if(w)w.oninput=function(){pf.weight=w.value;save();pfRefresh();};
+      var kg2=host.querySelector(".pf-kcalgoal");if(kg2)kg2.oninput=function(){state.kcalGoal=kg2.value;save();renderTodayRadar();renderProgressRadar();};
     })();
     (function(){var out=host.querySelector(".seuils-out");if(!out)return;var t=thresholdsGet();
       function ref(){out.innerHTML=zonesHTML(t);}
