@@ -723,9 +723,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       mk("\ud83c\udf31","\u00c0-c\u00f4t\u00e9s",cDone,cTot,cDone+" / "+cTot+" tenus")
     ];
   }
-  function renderTodayRadar(){
-    var host=document.getElementById("todayRadar");if(!host)return;
-    var A=radarDay(todayStr()),N=A.length,cx=130,cy=104,R=64,LR=R+20;
+  function radarBlockHTML(d){
+    var A=radarDay(d),N=A.length,cx=130,cy=104,R=64,LR=R+20;
     function pt(i,rr){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+R*rr*Math.cos(a),cy+R*rr*Math.sin(a)];}
     function poly(fn){return A.map(function(_,i){var p=pt(i,fn(i));return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ");}
     var rings=[0.25,0.5,0.75].map(function(L){return '<polygon class="rad-ring" points="'+poly(function(){return L;})+'"/>';}).join("");
