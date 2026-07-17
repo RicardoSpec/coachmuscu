@@ -924,3 +924,7 @@ nav.tabs .tab.on{color:var(--primary)}
 .supp-meal{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--muted)}
 .supp-meal select{font-size:11.5px;font-weight:700;color:var(--primary);border:1px solid var(--line);border-radius:8px;padding:3px 5px;background:#eef4f8;max-width:120px;-webkit-appearance:menulist}
 .supp-meal[hidden]{display:none}
+
+/* ---- Radar : bandeau repliable + période Progrès ---- */
+.radar-body{margin-top:12px}
+.rp-bar{margin:2px 0 8px}
