@@ -1859,6 +1859,44 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }else out+='<div class="zn-hint">\u2764\ufe0f Renseigne ta <b>FC max</b> pour voir tes zones cardio.</div>';
     return out;
   }
+   function fuelPlanGet(){if(!state.fuelPlan)state.fuelPlan={type:"course",dur:60};if(!state.fuelPlan.type)state.fuelPlan.type="course";if(!state.fuelPlan.dur)state.fuelPlan.dur=60;return state.fuelPlan;}
+  function fMPP(n,key){var base=num(n.base);if(isNaN(base)||base<=0)base=1;var por=num(n.portion);if(isNaN(por)||por<=0)por=base;var v=num(n[key]);if(isNaN(v))return 0;return v*por/base;}
+  function fuelFoods(kind){var cat=foodCatalog(),arr=[],seen={};
+    Object.keys(cat).forEach(function(k){var it=cat[k];if(!it||!it.nut)return;var n=it.nut;var kcal=num(n.kcal);if(isNaN(kcal)||kcal<=0)return;var nm=(""+it.name).trim();var lk=nm.toLowerCase();if(seen[lk])return;
+      if(kind==="carb"){var g=num(n.gluc);if(isNaN(g))return;var dens=g/kcal;if(dens<0.15)return;var per=fMPP(n,"gluc");if(per<12)return;seen[lk]=1;arr.push({name:nm,g:Math.round(per),d:dens});}
+      else{var pr=num(n.prot);if(isNaN(pr))return;var dens=pr/kcal;if(dens<0.12)return;var per=fMPP(n,"prot");if(per<10)return;seen[lk]=1;arr.push({name:nm,g:Math.round(per),d:dens});}
+    });
+    arr.sort(function(a,b){return b.d-a.d;});return arr.slice(0,5);}
+  function fuelFoodBlock(title,list){if(!list.length)return "";var rows=list.map(function(f){return '<div class="zn-row"><span class="zn-n">'+esc(f.name)+'</span><span class="zn-v">~'+f.g+' g</span></div>';}).join("");return znTable(title,rows);}
+  function fuelHTML(p){
+    var w=lastWeight();var wv=(w!=null)?w:70;var endurance=(p.type!=="muscu");var h=p.dur/60;
+    var rate=(!endurance||p.dur<75)?0:(p.dur<150?45:75);var during=Math.round(rate*h);var protPost=Math.round(0.3*wv);var carbLoad=Math.round(1*wv);
+    var out="";
+    var avant=(endurance&&p.dur>=90)?("1 \u00e0 3 h avant : un repas riche en glucides (~"+carbLoad+" g), pauvre en graisses et fibres, pour partir r\u00e9serves pleines.")
+      :("Dernier repas datant de plus de 3 h ? Une collation glucidique l\u00e9g\u00e8re (banane, compote) 30 \u00e0 60 min avant. Sinon, rien de sp\u00e9cial.");
+    out+='<div class="fuel-blk"><div class="fuel-h">Avant</div><div class="fuel-txt">'+avant+'</div></div>';
+    var pendant;
+    if(rate>0){pendant=rate+" g de glucides par heure (~"+during+" g sur la s\u00e9ance), d\u00e8s 45 \u00e0 60 min, en petites prises r\u00e9guli\u00e8res, en buvant r\u00e9guli\u00e8rement.";if(p.type==="natation")pendant+=" En natation, difficile \u00e0 faire : charge plut\u00f4t avant et r\u00e9cup\u00e8re apr\u00e8s.";}
+    else pendant="S\u00e9ance courte : rester hydrat\u00e9 suffit, pas de glucides n\u00e9cessaires pendant.";
+    out+='<div class="fuel-blk"><div class="fuel-h">Pendant</div><div class="fuel-txt">'+pendant+'</div></div>';
+    var apres="Sous 1 h : ~"+protPost+" g de prot\u00e9ines pour r\u00e9parer le muscle";
+    if(endurance&&p.dur>=90)apres+=", plus des glucides pour recharger le glycog\u00e8ne (~"+carbLoad+" g)";
+    else if(p.type==="muscu")apres+=" \u2014 ton levier principal : vise tes ~130 g sur la journ\u00e9e";
+    apres+=".";
+    out+='<div class="fuel-blk"><div class="fuel-h">Apr\u00e8s</div><div class="fuel-txt">'+apres+'</div></div>';
+    if(w==null)out+='<div class="zn-hint">Renseigne ton poids (R\u00e9glages \u25b8 Profil) pour des grammages personnalis\u00e9s. Valeur par d\u00e9faut : 70 kg.</div>';
+    if(rate>0)out+=fuelFoodBlock("\ud83c\udf4c Glucides faciles (avant / pendant)",fuelFoods("carb"));
+    var prot=fuelFoods("prot");out+=fuelFoodBlock("\ud83e\udd5b R\u00e9cup\u00e9ration (prot\u00e9ines)",prot);
+    if(!prot.length)out+='<div class="zn-hint">Logue quelques repas, ou attends le chargement de ta base, pour voir des propositions.</div>';
+    return out;
+  }
+  function fuelWrapHTML(){var p=fuelPlanGet();
+    function fdur(d){if(d<60)return d+" min";var hh=Math.floor(d/60),mm=d%60;return hh+" h"+(mm?(""+mm):"");}
+    var types=[["muscu","\ud83d\udcaa Muscu"],["natation","\ud83c\udfca Natation"],["velo","\ud83d\udeb4 V\u00e9lo"],["course","\ud83c\udfc3 Course"]];
+    var durs=[30,45,60,90,120,180];
+    var tb=types.map(function(t){return '<button type="button" class="fuel-type seg'+(p.type===t[0]?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</button>';}).join("");
+    var db=durs.map(function(d){return '<button type="button" class="fuel-dur seg'+(p.dur===d?" on":"")+'" data-d="'+d+'">'+fdur(d)+'</button>';}).join("");
+    return '<div class="fuel-seg-lbl">Type de s\u00e9ance</div><div class="fuel-seg">'+tb+'</div><div class="fuel-seg-lbl">Dur\u00e9e pr\u00e9vue</div><div class="fuel-seg">'+db+'</div><div class="fuel-out">'+fuelHTML(p)+'</div>';}
    function renderSettings(){
     var host=document.getElementById("settingsBody");if(!host)return;
     if(settingsSessSel){renderSessEditor(host);return;}
@@ -1989,7 +2027,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<label>FC max (bpm)<input type="number" inputmode="numeric" class="th-fcmax" value="'+esc(_th.fcmax||"")+'" placeholder="ex : 190"></label>'+
         '<label>FTP v\u00e9lo (W)<input type="number" inputmode="numeric" class="th-ftp" value="'+esc(_th.ftp||"")+'" placeholder="ex : 220"></label>'+
       '</div>'+
-      '<div class="seuils-out">'+zonesHTML(_th)+'</div>';  
+      '<div class="seuils-out">'+zonesHTML(_th)+'</div>';
+    var fuelInner='<p class="set-note">Un guide pour caler ton alimentation autour de la s\u00e9ance, selon son type et sa dur\u00e9e. Ce sont des rep\u00e8res, pas des r\u00e8gles.</p><div class="fuel-wrap">'+fuelWrapHTML()+'</div>';  
     host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
       settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
@@ -1998,6 +2037,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
       settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
       settingsSec("seuils","Seuils &amp; zones · triathlon",seuilsInner,!!settingsSecOpen.seuils)+
+      settingsSec("fuel","Carburant de séance",fuelInner,!!settingsSecOpen.fuel)+
       fixSec+
        settingsSec("qual","Qualite des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel)+
       settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
@@ -2016,6 +2056,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var v=host.querySelector(".th-vma");if(v)v.oninput=function(){t.vma=v.value;save();ref();};
       var f=host.querySelector(".th-fcmax");if(f)f.oninput=function(){t.fcmax=f.value;save();ref();};
       var p=host.querySelector(".th-ftp");if(p)p.oninput=function(){t.ftp=p.value;save();ref();};
+    })();
+    (function(){var wrap=host.querySelector(".fuel-wrap");if(!wrap)return;
+      function bind(){var p=fuelPlanGet();
+        wrap.querySelectorAll(".fuel-type").forEach(function(b){b.onclick=function(){p.type=b.getAttribute("data-t");save();wrap.innerHTML=fuelWrapHTML();bind();};});
+        wrap.querySelectorAll(".fuel-dur").forEach(function(b){b.onclick=function(){p.dur=parseInt(b.getAttribute("data-d"),10);save();wrap.innerHTML=fuelWrapHTML();bind();};});}
+      bind();
     })();
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
     host.querySelectorAll(".cr-row").forEach(function(row){var id=row.getAttribute("data-id");var em=row.querySelector(".cr-emoji"),lb=row.querySelector(".cr-label");
