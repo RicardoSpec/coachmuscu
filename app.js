@@ -1836,7 +1836,30 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.getElementById("sessAddExo").onclick=function(){progOverride(b,c).exos.push({id:"u"+Date.now().toString(36),name:"",target:"3 × 10",sets:3,unit:"reps",help:""});save();renderSettings();var ni=host.querySelector(".sx-row:last-of-type .sx-name");if(ni)ni.focus();};
     var sr=document.getElementById("sessReset");if(sr)sr.onclick=function(){if(confirm("Rétablir la séance par défaut ? Les modifications de cette séance seront perdues.")){progReset(b,c);renderSettings();}};
   }
-  function renderSettings(){
+  function thresholdsGet(){if(!state.thresholds)state.thresholds={};return state.thresholds;}
+  function fmtPace(mpk){if(!isFinite(mpk)||mpk<=0)return "\u2014";var m=Math.floor(mpk),s=Math.round((mpk-m)*60);if(s===60){m++;s=0;}return m+":"+(s<10?"0":"")+s;}
+  var Z_COURSE=[["Endurance fondamentale",0.65,0.75,"sorties longues, r\u00e9cup\u00e9ration"],["Endurance active",0.75,0.85,"allure longue / marathon"],["Seuil (tempo)",0.85,0.90,"soutenu, ~semi"],["Seuil haut",0.90,0.95,"allure ~10 km"],["VO2max / VMA",0.95,1.05,"fractionn\u00e9 court"]];
+  var Z_VELO=[["Z1 R\u00e9cup\u00e9ration",0,0.55,"tr\u00e8s facile"],["Z2 Endurance",0.56,0.75,"sorties longues"],["Z3 Tempo",0.76,0.90,"soutenu"],["Z4 Seuil (FTP)",0.91,1.05,"~1 h max"],["Z5 VO2max",1.06,1.20,"efforts courts"]];
+  var Z_FC=[["Z1 \u00c9chauffement",0.50,0.60,"tr\u00e8s facile"],["Z2 Endurance",0.60,0.70,"aisance respiratoire"],["Z3 Tempo",0.70,0.80,"conversation difficile"],["Z4 Seuil",0.80,0.90,"dur mais soutenable"],["Z5 Max",0.90,1.00,"tr\u00e8s intense"]];
+  function znTable(title,rows){return '<div class="zn-block"><div class="zn-h">'+title+'</div><div class="zn-table">'+rows+'</div></div>';}
+  function zonesHTML(t){
+    var vma=num(t.vma),fc=num(t.fcmax),ftp=num(t.ftp),out="";
+    if(!isNaN(vma)&&vma>0){
+      out+='<div class="zn-vo2">VO2max estim\u00e9e \u2248 <b>'+fr1(vma*3.5)+'</b> ml/kg/min <span class="zn-mut">(VMA \u00d7 3,5)</span></div>';
+      var r=Z_COURSE.map(function(z){var pf=60/(vma*z[2]),ps=60/(vma*z[1]);return '<div class="zn-row"><span class="zn-n">'+z[0]+'</span><span class="zn-v">'+fmtPace(pf)+'\u2013'+fmtPace(ps)+' /km</span><span class="zn-d">'+z[3]+'</span></div>';}).join("");
+      out+=znTable("\ud83c\udfc3 Allures course \u00b7 % VMA ("+fr1(vma)+" km/h)",r);
+    }else out+='<div class="zn-hint">\ud83c\udfc3 Renseigne ta <b>VMA</b> pour voir tes allures de course et ta VO2max estim\u00e9e.</div>';
+    if(!isNaN(ftp)&&ftp>0){
+      var r2=Z_VELO.map(function(z){var lo=Math.round(ftp*z[1]),hi=Math.round(ftp*z[2]);var rng=z[1]<=0?("< "+hi+" W"):(lo+"\u2013"+hi+" W");return '<div class="zn-row"><span class="zn-n">'+z[0]+'</span><span class="zn-v">'+rng+'</span><span class="zn-d">'+z[3]+'</span></div>';}).join("");
+      out+=znTable("\ud83d\udeb4 Puissance v\u00e9lo \u00b7 % FTP ("+Math.round(ftp)+" W)",r2);
+    }else out+='<div class="zn-hint">\ud83d\udeb4 Renseigne ton <b>FTP</b> pour voir tes zones de puissance.</div>';
+    if(!isNaN(fc)&&fc>0){
+      var r3=Z_FC.map(function(z){return '<div class="zn-row"><span class="zn-n">'+z[0]+'</span><span class="zn-v">'+Math.round(fc*z[1])+'\u2013'+Math.round(fc*z[2])+' bpm</span><span class="zn-d">'+z[3]+'</span></div>';}).join("");
+      out+=znTable("\u2764\ufe0f Zones cardio \u00b7 % FC max ("+Math.round(fc)+" bpm)",r3);
+    }else out+='<div class="zn-hint">\u2764\ufe0f Renseigne ta <b>FC max</b> pour voir tes zones cardio.</div>';
+    return out;
+  }
+   function renderSettings(){
     var host=document.getElementById("settingsBody");if(!host)return;
     if(settingsSessSel){renderSessEditor(host);return;}
     var _cat=foodCatalog(),_lf=loggedFoods();
@@ -1959,6 +1982,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<input type="text" class="cr-new-label" placeholder="Nouvel ancrage…" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
         '<button type="button" class="btn accent cr-addbtn" style="flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap">Ajouter</button>'+
       '</div>';
+    var _th=thresholdsGet();
+    var seuilsInner='<p class="set-note">Tes seuils transforment l\'intensit\u00e9 en rep\u00e8res concrets (allures, watts, pulsations). Ce sont des <b>guides</b> : la <b>VMA</b> = ta vitesse maximale a\u00e9robie en course, la <b>FC max</b> = ta fr\u00e9quence cardiaque maximale, le <b>FTP</b> = la puissance tenue ~1 h \u00e0 v\u00e9lo. Renseigne ce que tu connais (Apple Watch, test terrain) \u2014 le reste se calcule.</p>'+
+      '<div class="ff-grid">'+
+        '<label>VMA course (km/h)<input type="number" inputmode="decimal" step="0.1" class="th-vma" value="'+esc(_th.vma||"")+'" placeholder="ex : 16"></label>'+
+        '<label>FC max (bpm)<input type="number" inputmode="numeric" class="th-fcmax" value="'+esc(_th.fcmax||"")+'" placeholder="ex : 190"></label>'+
+        '<label>FTP v\u00e9lo (W)<input type="number" inputmode="numeric" class="th-ftp" value="'+esc(_th.ftp||"")+'" placeholder="ex : 220"></label>'+
+      '</div>'+
+      '<div class="seuils-out">'+zonesHTML(_th)+'</div>';  
     host.innerHTML=
       settingsSec("acts","Activités préparées",actsInner,!!settingsSecOpen.acts||!!settingsActEdit)+
       settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit)+
@@ -1966,6 +1997,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
       settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
       settingsSec("profil","Profil &amp; métabolisme",profilInner,!!settingsSecOpen.profil)+
+      settingsSec("seuils","Seuils &amp; zones · triathlon",seuilsInner,!!settingsSecOpen.seuils)+
       fixSec+
        settingsSec("qual","Qualite des aliments",qualInner,!!settingsSecOpen.qual||!!settingsQualSel)+
       settingsSec("backup","Sauvegarde",bkpInner,!!settingsSecOpen.backup);
@@ -1978,6 +2010,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var h=host.querySelector(".pf-h");if(h)h.oninput=function(){pf.height=h.value;save();pfRefresh();};
       var a=host.querySelector(".pf-age");if(a)a.oninput=function(){pf.age=a.value;save();pfRefresh();};
       var w=host.querySelector(".pf-w");if(w)w.oninput=function(){pf.weight=w.value;save();pfRefresh();};
+    })();
+    (function(){var out=host.querySelector(".seuils-out");if(!out)return;var t=thresholdsGet();
+      function ref(){out.innerHTML=zonesHTML(t);}
+      var v=host.querySelector(".th-vma");if(v)v.oninput=function(){t.vma=v.value;save();ref();};
+      var f=host.querySelector(".th-fcmax");if(f)f.oninput=function(){t.fcmax=f.value;save();ref();};
+      var p=host.querySelector(".th-ftp");if(p)p.oninput=function(){t.ftp=p.value;save();ref();};
     })();
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
     host.querySelectorAll(".cr-row").forEach(function(row){var id=row.getAttribute("data-id");var em=row.querySelector(".cr-emoji"),lb=row.querySelector(".cr-label");
