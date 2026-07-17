@@ -865,3 +865,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .md-fill.z0{background:transparent}
 .md-val{flex:none;min-width:40px;text-align:right;font-size:12px;font-weight:600;color:var(--ink)}
 .mealdist-cap{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.45}
+
+.md-modes{display:flex;gap:6px;margin-bottom:8px}
+.md-mode{flex:none;padding:3px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:11px;color:var(--muted);cursor:pointer}
+.md-mode.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.md-fill.kc{background:#8a7bd8}
