@@ -313,6 +313,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .calmonth{font-size:18px;font-weight:800;color:var(--ink);text-transform:capitalize}
 .calhead{text-align:center;margin:0 4px 12px}
 .calhead .btn{display:inline-block;width:auto;padding:9px 16px}
+.cr-add .btn{width:auto;flex:0 0 auto}
+.cr-add{flex-wrap:wrap}
 
 .cd-row{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding:0 4px 2px;-webkit-overflow-scrolling:touch}
 .cd-card{flex:0 0 auto;min-width:120px;border:1.5px solid var(--line);border-radius:14px;padding:10px 13px;background:#fff}
@@ -669,6 +671,19 @@ nav.tabs .tab.on{color:var(--primary)}
 .bkp-nudge-t{flex:1;min-width:0;font-size:12.5px;font-weight:700;color:#a3502a}
 .bkp-nudge-go{flex:none;border:none;background:var(--accent);color:#fff;border-radius:9px;padding:6px 12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
 .bkp-nudge-x{flex:none;border:none;background:transparent;color:#a3502a;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+.onb-card{display:flex;align-items:flex-start;gap:11px;margin:14px 0 4px;background:#eef4fb;border:1.5px solid #cfe0f2;border-radius:14px;padding:12px 13px}
+.onb-ic{flex:none;font-size:20px;line-height:1.2;margin-top:1px}
+.onb-body{flex:1;min-width:0}
+.onb-msg{font-size:13px;font-weight:600;color:#1c4568;line-height:1.45}
+.onb-actions{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.onb-go{border:none;background:var(--primary);color:#fff;border-radius:9px;padding:6px 13px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.onb-next{border:1.5px solid #cfe0f2;background:#fff;color:var(--primary);border-radius:9px;width:32px;height:29px;font-size:15px;font-weight:800;cursor:pointer;line-height:1;padding:0;font-family:inherit}
+.onb-count{font-size:11.5px;font-weight:700;color:#6b8bab}
+.onb-ctl{flex:none;display:flex;flex-direction:column;align-items:center;gap:1px;margin:-3px -3px 0 0}
+.onb-min,.onb-x{border:none;background:transparent;color:#6b8bab;line-height:1;cursor:pointer;padding:2px 4px;font-family:inherit}
+.onb-min{font-size:21px}
+.onb-x{font-size:17px}
+.onb-pill{display:inline-flex;align-items:center;gap:6px;margin:14px 0 4px;background:#fff;border:1.5px solid #cfe0f2;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:800;color:var(--primary);cursor:pointer;font-family:inherit}
 
 /* ---------- Progression des charges (par exercice) ---------- */
 .exo-prog{display:flex;align-items:center;gap:9px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
@@ -755,6 +770,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .set-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
 .set-sectog.open .hcol-chev{transform:rotate(180deg)}
 .set-secbody{margin-top:12px}
+.set-grp{margin-bottom:20px}
+.set-grptog{display:flex;align-items:center;gap:10px;width:100%;background:#eef2f6;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent;font-family:inherit}
+.set-grp.open>.set-grptog{margin-bottom:12px}
+.set-grp-h{flex:1;margin:0;font-size:14px;font-weight:800;color:var(--primary)}
+.set-grptog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
+.set-grptog.open .hcol-chev{transform:rotate(180deg)}
 
 /* Variantes d'exercice (sélecteur dans le corps d'un exo) */
 .exo-var-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
