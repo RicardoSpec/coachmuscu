@@ -10,6 +10,7 @@
   --bg:#eef2f6;       --card:#ffffff;       --none-bg:#eaeff4;
   --done-bg:#e2f3ea;  --done-line:#9bd6b3;  --done-ink:#1d7a46;
   --danger:#c0392b;
+  --bnd-top:calc(env(safe-area-inset-top) + 50px); /* hauteur à laquelle un bandeau se fige */
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 
@@ -463,29 +464,64 @@ nav.tabs .tab.on{color:var(--primary)}
 .tgl-dot{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s}
 .tgl.on .tgl-dot{left:23px}
 
-/* ---------- Compléments repliables ---------- */
-.supps-field{padding:0}
-.supps-toggle{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:2px 0;cursor:pointer;font-family:inherit;text-align:left}
-.supps-ttl{flex:1;min-width:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.supps-meta{flex:none;font-size:11.5px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono)}
-.supps-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
-.supps-toggle.open .supps-chev{transform:rotate(180deg)}
-.supps-body{margin-top:12px}
-.supps-body.collapsed{display:none}
-.wb-group{padding:0}
-.wb-toggle{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);padding:2px 0 12px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
-.wb-toggle .supps-ttl{color:var(--ink);font-weight:800;font-size:12px;text-transform:none;letter-spacing:0}
-.wb-toggle.open .supps-chev{transform:rotate(180deg)}
+/* ========== BANDEAU REPLIABLE — PATRON UNIQUE ==========
+   Tout bandeau de l'app = un bouton .bnd (le titre) + un corps .bnd-body.
+   État centralisé côté JS dans `bndOpen`, un seul gestionnaire de clic délégué.
+
+   Deux mécaniques, volontairement distinctes :
+     • repli par classe   → le corps existe toujours, on lui met/retire .collapsed
+                             (formulaire du jour : rien à recalculer, bascule instantanée)
+     • repli par rendu     → le bloc entier est regénéré (attribut data-bndr sur le bouton)
+                             pour les bandeaux dont le contenu doit être recalculé
+                             (héro, radar, protéines, bilan énergie, calendrier)
+
+   PEAUX — ne choisir QUE parmi celles-ci, ne jamais recréer une variante :
+     .bnd-card   carte autonome (fond, bordure, icône + clé/valeur)   — niveau 1
+     .bnd-group  groupe de formulaire (bordure fine, titre + résumé)   — niveau 2
+     .bnd-sec    section (filet bas, titre franc)                     — niveau 3
+     .bnd-sub    sous-section (titre discret + pastille)              — niveau 4
+     .bnd-mini   encadré compact                                      — hors hiérarchie
+     .bnd-flat / .bnd-band : Réglages (rubrique / groupe)
+   MODIFICATEUR : .bnd-stick = ce bandeau se fige en haut quand il est ouvert. */
+.bnd{display:flex;align-items:center;width:100%;text-align:left;font-family:inherit;cursor:pointer;background:transparent;border:none;-webkit-tap-highlight-color:transparent}
+.bnd-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
+.bnd.open>.bnd-chev,.card.pad.blockcard.open .bnd-chev{transform:rotate(180deg)}
+.bnd-body{margin-top:12px}
+.bnd-body.collapsed,.calwrap.collapsed{display:none}
+/* éléments internes */
+.bnd-ttl{flex:1;min-width:0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.bnd-meta{flex:none;font-size:11.5px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono)}
+.bnd-sum{flex:1;text-align:right;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bnd-ic{flex:none;font-size:19px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#eef2f6;border-radius:10px}
+.bnd-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bnd-k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.bnd-v{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* peaux */
+.bnd-card{gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:14px}
+.bnd-group{gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px}
+.bnd-group.open{border-color:var(--primary)}
+.bnd-sec{gap:10px;border-bottom:1px solid var(--line);padding:2px 0 12px}
+.bnd-sec .bnd-ttl{color:var(--ink);font-weight:800;font-size:12px;text-transform:none;letter-spacing:0}
+.bnd-sub{gap:10px;padding:2px 0}
+.bnd-mini{gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:8px}
+.bnd-mini .bnd-ttl{flex:1;font-size:12px;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0}
+.bnd-flat{gap:8px;padding:0;margin:0}
+.bnd-flat .bnd-chev,.bnd-band .bnd-chev{font-size:12px}
+.bnd-band{gap:10px;background:#eef2f6;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0}
+/* figé en haut : opt-in explicite via .bnd-stick, jamais par héritage de contexte.
+   Tous au MÊME z-index : à z-index égal, c'est l'ordre du DOM qui tranche, donc le
+   bandeau suivant recouvre le précédent — exactement le comportement attendu. */
+.bnd-stick.open{position:sticky;top:var(--bnd-top);z-index:12;background:var(--card)}
+.bnd-stick.open::after{content:"";position:absolute;left:-1.5px;right:-1.5px;top:100%;height:14px;background:var(--card)}
+
+/* ---------- Corps à marge spécifique ---------- */
 .wb-body{margin-top:0}
-.wb-body.collapsed{display:none}
 .wb-body>.field{margin:0;padding-top:16px;border-top:1px solid var(--line)}
 .wb-body>.field:first-child{border-top:none;padding-top:14px}
-.jprot-toggle{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:8px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
-.jprot-ttl{flex:1;font-size:12px;font-weight:700;color:var(--ink)}
-.jprot-toggle .supps-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
-.jprot-toggle.open .supps-chev{transform:rotate(180deg)}
 .jprot-body{margin-top:8px}
-.jprot-body.collapsed{display:none}
+.bnd-body>.field:last-child{margin-bottom:0}
+.supps-field{padding:0}
+.wb-group{padding:0}
 
 /* ---------- Sous-onglets Sport ---------- */
 .phase-banner{background:linear-gradient(135deg,#eef4f8,#e9f1f6);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:14px;padding:12px 14px;margin-bottom:14px}
@@ -562,22 +598,16 @@ nav.tabs .tab.on{color:var(--primary)}
 .donedate input{border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff}
 
 /* ---------- En-têtes repliables (accueil : calendrier & prochaine séance) ---------- */
-.hcol{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:14px;-webkit-tap-highlight-color:transparent}
-.hcol-ic{flex:none;font-size:19px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#eef2f6;border-radius:10px}
-.hcol-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.hcol-k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.hcol-v{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hcol-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
-.hcol.open .hcol-chev{transform:rotate(180deg)}
-.calwrap.collapsed{display:none}
+/* (peaux de bandeau : voir le patron unique .bnd plus haut) */
+
 
 /* Héro (prochaine séance) : replié = barre, ouvert = barre + détails, sur le dégradé */
 .hero{padding:0;overflow:hidden}
-.hero .hcol{background:transparent;border:none;margin:0;padding:15px 18px}
-.hero .hcol-ic{background:rgba(255,255,255,.16)}
-.hero .hcol-k{color:rgba(255,255,255,.72)}
-.hero .hcol-v{color:#fff}
-.hero .hcol-chev{color:rgba(255,255,255,.85)}
+.hero .bnd-card{background:transparent;border:none;margin:0;padding:15px 18px}
+.hero .bnd-ic{background:rgba(255,255,255,.16)}
+.hero .bnd-k{color:rgba(255,255,255,.72)}
+.hero .bnd-v{color:#fff}
+.hero .bnd-chev{color:rgba(255,255,255,.85)}
 .hero-body{padding:2px 18px 20px}
 
 /* ---------- Pills du calendrier en icônes ---------- */
@@ -601,11 +631,10 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* ---------- Blocs de séance repliables (Sport) ---------- */
 .card.pad.blockcard{padding:0;overflow:hidden}
-.blk-toggle{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:14px 16px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+.blk-toggle{gap:10px;padding:14px 16px}
 .blk-ttl{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--ink)}
 .blk-meta{flex:none;font-size:12px;font-weight:700;color:var(--primary);background:#eef4f8;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono)}
-.blk-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
-.card.pad.blockcard.open .blk-chev{transform:rotate(180deg)}
+
 .blk-body{padding:0 16px 16px}
 .blk-body.collapsed{display:none}
 
@@ -794,11 +823,7 @@ nav.tabs .tab.on{color:var(--primary)}
 
 
 /* Réglages — section aliments repliable + recherche figée + liste bornée */
-.ff-sectog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
-.ff-sectog .set-sec-h{flex:1;margin:0}
 .ff-count{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--muted);background:var(--none-bg);border-radius:999px;padding:2px 8px;flex:none}
-.ff-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
-.ff-sectog.open .hcol-chev{transform:rotate(180deg)}
 .ff-secbody{margin-top:12px}
 .ff-search{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;margin-bottom:8px}
 .ff-scroll{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px}
@@ -806,18 +831,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .meal-total-top{margin-bottom:14px}
 .meal-total-top .meal-total{margin-top:0}
 
-/* Réglages — rubriques repliables (patron générique, même look qu'Aliments & unités) */
-.set-sectog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
-.set-sectog .set-sec-h{flex:1;margin:0}
-.set-sectog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
-.set-sectog.open .hcol-chev{transform:rotate(180deg)}
+/* ---------- Réglages : peaux .bnd-flat (rubrique) et .bnd-band (groupe) ---------- */
+.set-sectog .set-sec-h,.ff-sectog .set-sec-h{flex:1;margin:0}
 .set-secbody{margin-top:12px}
 .set-grp{margin-bottom:20px}
-.set-grptog{display:flex;align-items:center;gap:10px;width:100%;background:#eef2f6;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent;font-family:inherit}
 .set-grp.open>.set-grptog{margin-bottom:12px}
 .set-grp-h{flex:1;margin:0;font-size:14px;font-weight:800;color:var(--primary)}
-.set-grptog .hcol-chev{transition:transform .2s;color:var(--muted);font-size:12px;flex:none}
-.set-grptog.open .hcol-chev{transform:rotate(180deg)}
 
 /* Variantes d'exercice (sélecteur dans le corps d'un exo) */
 .exo-var-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
@@ -889,12 +908,7 @@ nav.tabs .tab.on{color:var(--primary)}
 .add-set-std,.del-set-std{border:1.5px dashed var(--line);background:#fff;border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--primary);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .del-set-std{color:var(--muted)}
 
-/* ---- Journal : corps du jour repliable derrière un « + » ---- */
-.jform-tog{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);padding:0 0 12px;margin:0 0 12px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
 .jform-sum{flex:1;font-size:13px;color:var(--ink);font-weight:600;line-height:1.4}
-.jform-tog .hcol-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .2s}
-.jform-tog.open .hcol-chev{transform:rotate(180deg)}
-.jbody.collapsed{display:none}
 
 /* ---- Bilan kcal : saisie activités (marche/vélo) ---- */
 .bal-acts{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
@@ -960,18 +974,9 @@ nav.tabs .tab.on{color:var(--primary)}
 .rad-hubv{font-family:var(--mono);font-size:20px;font-weight:800;fill:var(--primary)}
 .rad-hubu{font-size:10px;font-weight:700;fill:var(--muted)}
 
-/* ---- Titres de bandeaux : restent visibles en haut tant que le bandeau est ouvert ---- */
-.hcol.open{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:12}
-.hcol.open::after{content:"";position:absolute;left:-1.5px;right:-1.5px;top:100%;height:15px;background:#fff}
-.hero .hcol.open{position:static;z-index:auto}
-.hero .hcol.open::after{display:none}
-.dg-toggle.open{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:14;background:var(--card)}
-.dg-toggle.open::after{content:"";position:absolute;left:-1.5px;right:-1.5px;top:100%;height:13px;background:var(--card)}
-.eg-slot .hcol.open,.dg-body .hcol.open{position:static;z-index:auto}
-.eg-slot .hcol.open::after,.dg-body .hcol.open::after{display:none}
-.wb-toggle.open{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:13;background:var(--card)}
+/* (le figé en haut est porté par .bnd-stick, voir le patron unique .bnd) */
 .eg-slot{margin-bottom:14px}
-.eg-slot .hcol{margin-bottom:0}
+.eg-slot .bnd-card{margin-bottom:0}
 .eg-slot > div:first-child{margin-bottom:12px}
 
 /* ---- Carburant contextuel dans « Prochaine séance » ---- */
@@ -1039,18 +1044,11 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Groupes repliables du formulaire du jour (Énergie & sport, Corps & mesures) */
 .dg-field{margin-bottom:14px}
-.dg-toggle{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
-.dg-toggle.open{border-color:var(--primary)}
-.dg-body{margin-top:12px}
-.dg-body.collapsed{display:none}
-.dg-body > .field:last-child{margin-bottom:0}
-.dg-meta{flex:1;text-align:right;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 
 /* ---- v122 ---- */
 .radar-det{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:2px;background:transparent;border:none;border-top:1px solid var(--line);padding:9px 0 2px;font-family:inherit;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);cursor:pointer}
-.radar-det.open .hcol-chev{transform:rotate(180deg)}
-.rp-bar{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:12;background:var(--card);padding:8px 0;margin:0 -14px;padding-left:14px;padding-right:14px}
+.rp-bar{position:sticky;top:var(--bnd-top);z-index:12;background:var(--card);padding:8px 0;margin:0 -14px;padding-left:14px;padding-right:14px}
 .lbl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .lbl-row>label{margin:0}
 .base-hint.inl{margin:0;order:0}
@@ -1058,7 +1056,7 @@ nav.tabs .tab.on{color:var(--primary)}
 .base-hint.inl>summary::-webkit-details-marker{display:none}
 .base-hint.inl[open]{order:9;width:100%}
 body.in-journal{background:#f0eef7}
-body.in-journal .card,body.in-journal .hcol{border-color:#ddd6ea}
+body.in-journal .card,body.in-journal .bnd-card{border-color:#ddd6ea}
 .datenav.past .dlabel{color:#a1521c}
 .dlabel.past::after{content:" · date passée";font-size:11.5px;font-weight:700;color:#a1521c}
 .datenav.past{background:#fdf0e4;border:1.5px solid #f0d3b4;border-radius:12px;padding:7px 10px}
