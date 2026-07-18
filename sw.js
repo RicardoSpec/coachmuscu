@@ -1,7 +1,7 @@
 /* Coach Muscu — service worker.
    Stratégie RÉSEAU D'ABORD : en ligne, on sert toujours la version fraîche (et on met le cache à jour) ;
    hors-ligne, on sert la dernière version vue. ignoreSearch permet au cache de matcher malgré les ?v=N. */
-var CACHE = "coachmuscu-runtime-v51";
+var CACHE = "coachmuscu-runtime-v52";
 
 self.addEventListener("install", function () { self.skipWaiting(); });
 
