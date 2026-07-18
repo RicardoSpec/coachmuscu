@@ -67,6 +67,31 @@
   function pAddDeadline(d){pMutate(function(o){o.deadlines.push({id:"u:"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:d.date,label:d.label,icon:d.icon||"🎯"});});}
   function pUpdateDeadline(id,patch){pMutate(function(o){o.deadlines.forEach(function(x){if(x.id===id){if(patch.date!==undefined)x.date=patch.date;if(patch.label!==undefined)x.label=patch.label;if(patch.icon!==undefined)x.icon=patch.icon;}});});}
   function pRemoveDeadline(id){pMutate(function(o){o.deadlines=o.deadlines.filter(function(x){return x.id!==id;});o.removed=o.removed||{};o.removed[id]=true;});}
+  /* Migration one-shot : renomme une échéance seedée dont le libellé a changé.
+     L'id de seed dérive du libellé ("dl:date:label") : sans ça, pEnsureSeed
+     ajouterait une 2e entrée à côté de l'ancienne. À lancer AVANT pEnsureSeed. */
+  var DL_RENAME=[{date:"2026-07-25",from:"Départ Vercors",to:"Départ Cannes"}];
+  function pRenameDeadlinesOnce(){
+    pMutate(function(o){
+      o.seeds=o.seeds||{};o.removed=o.removed||{};
+      DL_RENAME.forEach(function(r){
+        var flag="rn:"+r.date+":"+r.to;if(o.seeds[flag])return;
+        var oldId="dl:"+r.date+":"+r.from,newId="dl:"+r.date+":"+r.to;
+        var hasNew=o.deadlines.some(function(x){return x.id===newId;});
+        var kept=[];
+        o.deadlines.forEach(function(x){
+          var stale=(x.id===oldId)||(x.date===r.date&&x.label===r.from);
+          if(!stale){kept.push(x);return;}
+          if(hasNew)return;                       /* doublon : on ne garde que le nouveau */
+          if(x.label===r.from)x.label=r.to;        /* libellé perso déjà saisi : on n'y touche pas */
+          x.id=newId;hasNew=true;kept.push(x);     /* id migré : évite le doublon au prochain seed */
+        });
+        o.deadlines=kept;
+        if(o.removed[oldId])o.removed[newId]=true; /* suppression volontaire : on la respecte */
+        o.seeds[flag]=true;
+      });
+    });
+  }
   /* Migration unique : récupère les anciens états de jour stockés dans cette app
      (state.days[iso].status) vers le store partagé, sans écraser ce qui existe. */
   function pMigrateStates(){
@@ -591,12 +616,79 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     rows+='<div class="pb-tot">Total brut : '+fr1(t.prot)+' g · seules les complètes + appariées comptent vers la cible</div>';
     return '<div class="pb">'+rows+'</div>';
   }
+  /* Comble-écart protéines : à partir des g manquants, propose des quantités
+     concrètes tirées du catalogue (base_aliments.json + aliments déjà notés).
+     Filtre "protéine-forward" : au moins 25 % des calories issues des protéines
+     — sinon on proposerait du pain ou des pâtes pour combler des protéines. */
+  /* Famille d'aliment protéiné : sert à diversifier les propositions
+     (sans ça, le tri par apport décroissant ne sort que de la viande). */
+  function pfType(name){
+    var s=fqKey(name).replace(/\u0153/g,"oe");
+    if(/whey|isolat|caseine|proteine/.test(s))return "poudre";
+    if(/skyr|yaourt|fromage|cottage|faisselle|ricotta|petit-suisse|lait|kefir/.test(s))return "laitier";
+    if(/thon|saumon|poisson|cabillaud|sardine|maquereau|crevette|colin|merlu|truite|hareng/.test(s))return "poisson";
+    if(/poulet|dinde|boeuf|steak|jambon|porc|veau|agneau|viande|bavette|escalope/.test(s))return "viande";
+    if(/\boeufs?\b|omelette|blancs? d.?\s?oeuf/.test(s))return "oeuf";
+    if(/tofu|tempeh|lentille|pois chiche|haricot|soja|seitan|edamame|spiruline|huitre/.test(s))return "vegetal";
+    return "autre";
+  }
+  function protFill(remaining){
+    var cat=foodCatalog(),out=[],seen={};
+    Object.keys(cat).forEach(function(k){
+      var f=cat[k],n=f.nut;if(!n)return;
+      var base=num(n.base),prot=num(n.prot),kcal=num(n.kcal);
+      if(isNaN(base)||base<=0||isNaN(prot)||prot<=0)return;
+      if(!isNaN(kcal)&&kcal>0&&(prot*4)/kcal<0.25)return;      /* trop dilué : glucidique avant tout */
+      var nm=(""+f.name).trim();var key=fqKey(nm);if(seen[key])return;seen[key]=1;
+      var bu=(n.baseUnit||f.unit||"g"),solid=/^(g|ml)$/i.test(bu),dens=prot/base;
+      var portion=num(n.portion);
+      if(isNaN(portion)||portion<=0)portion=solid?100:1;        /* portion type de la base, sinon défaut */
+      var gives=portion*dens;
+      if(gives>50){portion=portion*(50/gives);}                 /* jamais une portion démesurée */
+      portion=solid?Math.max(10,Math.round(portion/10)*10):Math.max(1,Math.round(portion));
+      gives=portion*dens;
+      if(gives<8)return;                                        /* apport trop faible pour peser */
+      var kc=(!isNaN(kcal)&&kcal>0)?portion*(kcal/base):null;
+      var q=foodQuality(nm);
+      out.push({name:nm,qty:portion,unit:bu,prot:gives,kcal:kc,
+        complete:!!(q&&q.p===1),incomplete:!!(q&&q.p===2),ultra:!!(q&&q.n===3),
+        eff:(kc!=null&&gives>0)?kc/gives:999});
+    });
+    out.sort(function(a,b){
+      if(Math.round(b.prot)!==Math.round(a.prot))return b.prot-a.prot;  /* le plus gros apport d'abord */
+      if(a.ultra!==b.ultra)return a.ultra?1:-1;                 /* à apport égal : le moins transformé */
+      return a.eff-b.eff;                                       /* puis le moins calorique */
+    });
+    var byType={},varied=[];                                    /* 1 par famille : évite 4 viandes d'affilée */
+    out.forEach(function(o){var t=pfType(o.name);if(byType[t])return;byType[t]=1;varied.push(o);});
+    while(varied.length<4&&varied.length<out.length){
+      for(var i=0;i<out.length&&varied.length<4;i++)if(varied.indexOf(out[i])<0)varied.push(out[i]);
+    }
+    return varied.slice(0,4);
+  }
+  function protFillHTML(remaining){
+    if(!(remaining>0))return "";
+    var l=protFill(remaining);
+    if(!l.length)return '<div class="pf-box"><div class="pf-h">Combler les '+remaining+' g</div><div class="pf-empty">Aucun aliment protéiné exploitable dans ta base pour l\u2019instant. Note un repas ou ouvre R\u00e9glages ▸ Aliments pour en compl\u00e9ter un.</div></div>';
+    var rows=l.map(function(o){
+      var qt=(/^(g|ml)$/i.test(o.unit)?(Math.round(o.qty)+"\u2009"+o.unit):(Math.round(o.qty)+"\u00d7"));
+      var badge=(o.complete?'<span class="pf-b">\ud83d\udcaa</span>':(o.incomplete?'<span class="pf-b">\ud83c\udf31</span>':""))+(o.ultra?'<span class="pf-b">\ud83d\udd34</span>':"");
+      var kc=o.kcal!=null?('<span class="pf-kcal">'+Math.round(o.kcal)+' kcal</span>'):"";
+      return '<div class="pf-row"><span class="pf-q">'+qt+'</span><span class="pf-n">'+esc(o.name)+badge+'</span><span class="pf-p">+'+Math.round(o.prot)+'\u2009g</span>'+kc+'</div>';
+    }).join("");
+    var best=Math.round(l[0].prot),n=Math.max(1,Math.ceil(remaining/best));
+    var howMany=n>1?('Il t\u2019en faut environ <b>'+n+'</b> de ce calibre pour combler l\u2019\u00e9cart \u2014 r\u00e9partis-les sur tes prochains repas plut\u00f4t qu\u2019en une fois : au-del\u00e0 de ~40 g par prise, le surplus sert surtout de carburant.')
+      :('Une seule portion suffit \u00e0 combler l\u2019\u00e9cart.');
+    return '<div class="pf-box"><div class="pf-h">Combler les '+remaining+' g \u00b7 portions types</div>'+rows+
+      '<div class="pf-note">'+howMany+'</div>'+
+      '<div class="pf-note">\ud83d\udcaa profil complet \u00b7 \ud83c\udf31 \u00e0 compl\u00e9ter dans la journ\u00e9e (c\u00e9r\u00e9ale + l\u00e9gumineuse) \u00b7 \ud83d\udd34 ultra-transform\u00e9 : pratique en d\u00e9pannage, pas la base.</div></div>';
+  }
   function nutriTip(tot){
     if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
     var ep=(tot.protEff!=null?tot.protEff:tot.prot);
     if(ep>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
     var r=Math.round(130-ep);
-    return 'Encore ~'+r+' g. Panier TGTG plutôt sucré/gras ? Complète avec un bloc protéiné (skyr, 2 œufs, whey) — bouton 🥡 ci-dessous.';
+    return 'Encore ~'+r+' g. Un panier TGTG penche souvent sucre/gras : le complément protéiné se choisit ci-dessous.';
   }
   function wireTgtg(bt,pn,d,afterAdd){
     if(!bt||!pn)return;
@@ -690,7 +782,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
         if(tot){
           var statTxt=eff>=130?'<span class="ok">✓ cible atteinte</span>':'<span class="low">encore '+reste+' g pour la cible</span>';
-          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(eff)+'</span><span class="nutri-u">g complètes</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+protBreakHTML(tot)+dayMealDistHTML(todayStr())+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
+          body='<div class="nutri-body"><div class="nutri-card"><div class="nutri-left"><span class="nutri-v">'+fr1(eff)+'</span><span class="nutri-u">g complètes</span></div><div class="nutri-right"><div class="nutri-kcal">'+Math.round(tot.kcal)+' kcal</div><div class="nutri-goal">cible 130–150 g · '+statTxt+'</div></div></div>'+protBreakHTML(tot)+dayMealDistHTML(todayStr())+avgLine+'<div class="nutri-tip">'+nutriTip(tot)+'</div>'+protFillHTML(reste)+'<button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }else{
           body='<div class="nutri-body"><div class="nutri-card empty">Pas encore de repas noté aujourd\'hui — ajoute-les plus bas pour suivre tes protéines (cible 130–150 g).</div>'+avgLine+'<div class="nutri-tip">'+nutriTip(null)+'</div><button type="button" class="btn ghost nutri-tgtg">🥡 J\'ai mangé un TGTG — compléter</button><div class="tgtg-panel" hidden></div></div>';
         }
@@ -1540,6 +1632,21 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function removeCR(id){if(!Array.isArray(state.customRoutines))return;state.customRoutines=state.customRoutines.filter(function(a){return a.id!==id;});Object.keys(state.days).forEach(function(d){var c=state.days[d].customRoutines;if(c&&c[id]!=null)delete c[id];});}
   function currentStreak(pred){var s=0,cur=todayStr(),g=0;if(!pred(cur))cur=isoOf(addDays(cur,-1));while(pred(cur)&&g<400){s++;cur=isoOf(addDays(cur,-1));g++;}return s;}
   function bestStreak(pred){var keys=Object.keys(state.days).filter(function(d){return /^\d{4}-\d{2}-\d{2}$/.test(d);}).sort();if(!keys.length)return 0;var cur=keys[0],end=todayStr(),best=0,run=0,g=0;while(cur<=end&&g<3000){if(pred(cur)){run++;if(run>best)best=run;}else run=0;cur=isoOf(addDays(cur,1));g++;}return best;}
+  function pxStats(nDays){
+    var L=(typeof PETITS_EXOS!=="undefined"?PETITS_EXOS:[]);
+    var since=isoOf(addDays(todayStr(),-(nDays-1))),end=todayStr();
+    var per={},tot=0,free=0,dset={};
+    L.forEach(function(r){per[r.id]=0;});
+    Object.keys(state.days).forEach(function(iso){
+      if(iso<since||iso>end)return;
+      var x=state.days[iso],n=0;
+      if(x&&x.petitsExos)L.forEach(function(r){if(x.petitsExos[r.id]){per[r.id]++;n++;}});
+      if(x&&x.petitsExosX&&x.petitsExosX.length){free+=x.petitsExosX.length;n+=x.petitsExosX.length;}
+      if(n){tot+=n;dset[iso]=1;}
+    });
+    var rows=L.map(function(r){return {icon:r.icon,name:r.name,n:per[r.id]};}).filter(function(o){return o.n>0;}).sort(function(a,b){return b.n-a.n;});
+    return {rows:rows,tot:tot,free:free,days:Object.keys(dset).length,total:L.length};
+  }
   function renderRegularity(){
     var host=document.getElementById("regularity");if(!host)return;
     var cur=currentStreak(habitDoneOn),best=bestStreak(habitDoneOn);
@@ -1551,11 +1658,19 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     customRoutines().forEach(function(a){var st=currentStreak(function(iso){return crDoneOn(a.id,iso);});if(st>0)habits.push({icon:a.icon,name:a.label,s:st});});
     habits.sort(function(a,b){return b.s-a.s;});
     var chips=habits.length?habits.map(function(h){return '<span class="hchip">'+(h.icon?esc(h.icon)+' ':'')+esc(h.name)+' <b>🔥'+h.s+'</b></span>';}).join(""):'<div class="reg-empty">Aucune série en cours — coche une habitude ou un petit exercice aujourd\'hui pour en lancer une.</div>';
+    var px=pxStats(30);
+    var pxChips=px.rows.map(function(o){return '<span class="hchip">'+(o.icon?esc(o.icon)+' ':'')+esc(o.name)+' <b>×'+o.n+'</b></span>';}).join("")+
+      (px.free?'<span class="hchip">✏️ ajouts libres <b>×'+px.free+'</b></span>':'');
+    var pxBlock='<div class="px-stat"><div class="px-stat-h">Petits exercices · 30 derniers jours</div>'+
+      (px.tot?('<div class="reg-list">'+pxChips+'</div>'+
+        '<div class="wv-note"><b>'+px.tot+'</b> coché'+(px.tot>1?"s":"")+' sur <b>'+px.days+'</b> jour'+(px.days>1?"s":"")+' · '+px.rows.length+'/'+px.total+' exercices pratiqués. Ces gestes de mobilité ne se lisent pas sur la balance, mais ce sont eux qui protègent épaules et hanches — donc ce qui te garde entraînable jusqu\'à Dinard.</div>')
+        :'<div class="reg-empty">Aucun petit exercice coché sur 30 jours. Deux minutes de mobilité par jour suffisent à lancer le compteur.</div>')+'</div>';
     host.innerHTML='<div class="card pad"><div class="sec-title">Régularité — habitudes &amp; petits exercices</div>'+
       '<div class="reg-hero"><span class="reg-flame">🔥</span><span class="reg-n">'+cur+'</span><span class="reg-u">jour'+(cur>1?"s":"")+' d\'affilée</span>'+(best>0?'<span class="reg-best">record '+best+' j</span>':'')+'</div>'+
       '<div class="reg-week">'+dots+'</div>'+
       '<div class="reg-list">'+chips+'</div>'+
-      '<div class="wv-note">Une journée compte dès qu\'une habitude ou un petit exercice est coché. La série se poursuit tant que tu ne sautes pas un jour.</div></div>';
+      '<div class="wv-note">Une journée compte dès qu\'une habitude ou un petit exercice est coché. La série se poursuit tant que tu ne sautes pas un jour.</div>'+
+      pxBlock+'</div>';
   }
   function renderProgress(){
     renderGoals();
@@ -1977,6 +2092,64 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var vs=series[0],vo2="";if(vs.raw&&vs.raw.length>=2)vo2='<div class="muted" style="font-size:12.5px;margin-top:2px">VO2max \u2248 '+fr1(vs.v0*3.5)+'\u2009\u2192\u2009'+fr1(vs.vN*3.5)+' ml/kg/min</div>';
     return intro+svg+'<div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">'+legend+' \u00b7 base 100 = 1<sup>er</sup> relev\u00e9</div>'+vo2;
   }
+  var thTestSel="vma";
+  function thTestCalc(kind,v){
+    if(kind==="vma"){
+      if(v<500||v>5000)return {err:"Distance attendue entre 500 et 5000 m."};
+      var vma=Math.round(v/100*10)/10;
+      return {key:"vma",val:vma,txt:"VMA \u2248 <b>"+fr1(vma)+"</b> km/h \u00b7 VO2max \u2248 <b>"+fr1(vma*3.5)+"</b> ml/kg/min"};
+    }
+    if(kind==="ftp"){
+      if(v<50||v>600)return {err:"Puissance attendue entre 50 et 600 W."};
+      var ftp=Math.round(v*0.95),w=lastWeight();
+      return {key:"ftp",val:ftp,txt:"FTP \u2248 <b>"+ftp+"</b> W"+(w!=null?(" \u00b7 "+fr1(ftp/w)+" W/kg"):"")};
+    }
+    if(v<120||v>230)return {err:"FC max attendue entre 120 et 230 bpm."};
+    return {key:"fcmax",val:Math.round(v),txt:"FC max = <b>"+Math.round(v)+"</b> bpm"};
+  }
+  function thTestHTML(){
+    var age=num(profileGet().age);
+    var tabs=[["vma","\ud83c\udfc3 VMA"],["ftp","\ud83d\udeb4 FTP"],["fcmax","\u2764\ufe0f FC max"]].map(function(t){
+      return '<button type="button" class="th-test-tab seg'+(thTestSel===t[0]?" on":"")+'" data-tt="'+t[0]+'">'+t[1]+'</button>';}).join("");
+    var why,steps,lbl,ph,note;
+    if(thTestSel==="vma"){
+      why="La VMA est la vitesse \u00e0 laquelle tu consommes le maximum d\u2019oxyg\u00e8ne. C\u2019est l\u2019\u00e9talon de toutes tes allures : une fois connue, l\u2019app en d\u00e9duit endurance, seuil et fractionn\u00e9.";
+      steps=["\u00c0 faire repos\u00e9 \u2014 pas au lendemain d\u2019une grosse s\u00e9ance.",
+        "\u00c9chauffement : 15 min en aisance respiratoire, puis 3 acc\u00e9l\u00e9rations de 20 s.",
+        "Sur piste (400 m) ou parcours plat mesur\u00e9 \u00e0 la montre.",
+        "Cours <b>6 min</b> \u00e0 l\u2019allure maximale que tu peux tenir <b>r\u00e9guli\u00e8rement</b> : l\u2019erreur classique est de partir trop vite et de s\u2019\u00e9crouler \u00e0 mi-parcours.",
+        "Rel\u00e8ve la distance, puis 10 min de retour au calme."];
+      lbl="Distance parcourue en 6 min (m)";ph="ex : 1500";
+      note="Calcul : VMA = distance \u00f7 100. Rep\u00e8re : 1500 m \u2192 15 km/h.";
+    }else if(thTestSel==="ftp"){
+      why="Le FTP est la puissance que tu tiens environ 1 h \u00e0 v\u00e9lo. C\u2019est lui qui d\u00e9coupe tes zones de puissance \u2014 le rep\u00e8re pour ne pas griller la partie v\u00e9lo et arriver cuit \u00e0 la course.";
+      steps=["Il te faut un capteur de puissance (home-trainer connect\u00e9 ou capteur p\u00e9dalier).",
+        "\u00c9chauffement : 20 min, dont 3 \u00d7 1 min vive.",
+        "Roule <b>20 min</b> \u00e0 la puissance maximale tenable, la plus <b>r\u00e9guli\u00e8re</b> possible.",
+        "Rel\u00e8ve la puissance moyenne des 20 min, puis 10 min de retour au calme."];
+      lbl="Puissance moyenne sur 20 min (W)";ph="ex : 235";
+      note="Calcul : FTP = moyenne 20 min \u00d7 0,95 \u2014 20 min se tiennent un peu plus fort qu\u2019une heure.";
+    }else{
+      why="La FC max borne tes zones cardio. Contrairement \u00e0 la VMA et au FTP, elle ne s\u2019entra\u00eene pas : c\u2019est un plafond largement g\u00e9n\u00e9tique. Ne cherche pas \u00e0 la faire monter.";
+      steps=["Le plus fiable : la FC la plus haute vue sur la derni\u00e8re minute d\u2019un test VMA ou d\u2019une c\u00f4te courue \u00e0 fond.",
+        "Avec une ceinture cardio de pr\u00e9f\u00e9rence : au poignet, la mesure d\u00e9croche souvent sur effort maximal.",
+        "Ne force pas ce test si tu es malade, fatigu\u00e9, ou au moindre doute m\u00e9dical."];
+      lbl="FC max relev\u00e9e (bpm)";ph="ex : 192";
+      note=(!isNaN(age)&&age>0)?("\u00c0 d\u00e9faut, estimation par l\u2019\u00e2ge (formule de Tanaka) : <b>"+Math.round(208-0.7*age)+" bpm</b> \u2014 mais compte \u00b110 bpm d\u2019erreur, une mesure r\u00e9elle vaut mieux.")
+        :"\u00c0 d\u00e9faut, une estimation par l\u2019\u00e2ge est possible : renseigne ton \u00e2ge dans \u00ab Profil &amp; m\u00e9tabolisme \u00bb.";
+    }
+    return '<div class="th-test-h">\ud83e\uddea Mesurer mes seuils</div>'+
+      '<p class="set-note">Ces cases ne se remplissent pas au hasard : voici les tests de terrain qui donnent les valeurs. Le r\u00e9sultat s\u2019inscrit tout seul et alimente aussit\u00f4t tes zones et ta courbe.</p>'+
+      '<div class="fuel-seg">'+tabs+'</div>'+
+      '<div class="th-test-card">'+
+        '<div class="th-test-why">'+why+'</div>'+
+        '<ol class="th-test-steps">'+steps.map(function(s){return '<li>'+s+'</li>';}).join("")+'</ol>'+
+        '<div class="th-test-note">'+note+'</div>'+
+        '<div class="th-test-row"><label class="th-test-lbl">'+lbl+'<input type="number" inputmode="decimal" step="0.1" class="th-test-in" placeholder="'+ph+'"></label>'+
+        '<button type="button" class="btn accent th-test-save">Enregistrer</button></div>'+
+        '<div class="th-test-out"></div>'+
+      '</div>';
+  }
    function fuelPlanGet(){if(!state.fuelPlan)state.fuelPlan={type:"course",dur:60};if(!state.fuelPlan.type)state.fuelPlan.type="course";if(!state.fuelPlan.dur)state.fuelPlan.dur=60;return state.fuelPlan;}
   function fMPP(n,key){var base=num(n.base);if(isNaN(base)||base<=0)base=1;var por=num(n.portion);if(isNaN(por)||por<=0)por=base;var v=num(n[key]);if(isNaN(v))return 0;return v*por/base;}
   function fuelFoods(kind){var cat=foodCatalog(),arr=[],seen={};
@@ -2147,7 +2320,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<label>FTP v\u00e9lo (W)<input type="number" inputmode="numeric" class="th-ftp" value="'+esc(_th.ftp||"")+'" placeholder="ex : 220"></label>'+
       '</div>'+
       '<div class="seuils-out">'+zonesHTML(_th)+'</div>'+
-      '<div class="th-hist">'+thHistChartHTML()+'</div>';
+      '<div class="th-hist">'+thHistChartHTML()+'</div>'+
+      '<div class="th-test">'+thTestHTML()+'</div>';
     var fuelInner='<p class="set-note">Un guide pour caler ton alimentation autour de la s\u00e9ance, selon son type et sa dur\u00e9e. Ce sont des rep\u00e8res, pas des r\u00e8gles.</p><div class="fuel-wrap">'+fuelWrapHTML()+'</div>';  
     var _ffOpen=settingsFoodOpen||!!settingsFoodSel||settingsFoodNew;
     host.innerHTML=
@@ -2187,6 +2361,21 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var v=host.querySelector(".th-vma");if(v)v.oninput=function(){t.vma=v.value;save();ref();};
       var f=host.querySelector(".th-fcmax");if(f)f.oninput=function(){t.fcmax=f.value;save();ref();};
       var p=host.querySelector(".th-ftp");if(p)p.oninput=function(){t.ftp=p.value;save();ref();};
+    })();
+    (function(){var box=host.querySelector(".th-test");if(!box)return;
+      function wire(){
+        box.querySelectorAll(".th-test-tab").forEach(function(b){b.onclick=function(){thTestSel=b.getAttribute("data-tt");box.innerHTML=thTestHTML();wire();};});
+        var inp=box.querySelector(".th-test-in"),out=box.querySelector(".th-test-out"),btn=box.querySelector(".th-test-save");
+        function res(){var v=num(inp?inp.value:"");if(isNaN(v)||v<=0)return null;return thTestCalc(thTestSel,v);}
+        function preview(){if(!out)return;var r=res();out.innerHTML=!r?"":(r.err?('<span class="th-test-err">'+r.err+'</span>'):('<span class="th-test-ok">'+r.txt+'</span>'));}
+        if(inp)inp.oninput=preview;
+        if(btn)btn.onclick=function(){var r=res();if(!r||r.err){preview();return;}
+          var t=thresholdsGet();t[r.key]=r.val;save();thHistSync();
+          if(typeof renderOnboard==="function")renderOnboard();
+          renderSettings();};
+        preview();
+      }
+      wire();
     })();
     (function(){var wrap=host.querySelector(".fuel-wrap");if(!wrap)return;
       function bind(){var p=fuelPlanGet();
@@ -2314,7 +2503,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();wireFqTaps();
+    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();wireFqTaps();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-today");
   }
