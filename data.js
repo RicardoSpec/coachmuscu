@@ -187,7 +187,7 @@ var PLAN_SEED = {
 
 /* ---------- Échéances marquées sur le calendrier ---------- */
 var DEADLINES = [
-  {date:"2026-07-25", label:"Départ Vercors",          icon:"🚆", short:"Départ"},
+  {date:"2026-07-25", label:"Départ Cannes",          icon:"🚆", short:"Départ"},
   {date:"2026-07-27", label:"Objectif forme / plage",  icon:"🏖️", short:"Forme"},
   {date:"2026-09-11", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
 ];
