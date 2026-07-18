@@ -491,6 +491,22 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Heures de révision d'un jour (même règle que l'app DSCG) — pour le repère 📚. */
   function studyHoursOf(iso){var st=getDayState(iso);if(st==="indispo")return 0;if(st==="conge")return 6;if(st==="cours")return 0.5;var wd=new Date(iso+"T00:00:00").getDay();return (wd===0||wd===6)?6:0.5;}
   /* Heures de révision RÉELLES saisies dans Mouche-Université (clé memoDSCG_v1 — LECTURE SEULE, jamais d'écriture). */
+  /* Raccourci vers l'app de révisions (URL prise dans APPS, pas de duplication).
+     memoDSCG_v1 reste en LECTURE SEULE : on affiche, on n'écrit jamais. */
+  function dscgApp(){var L=(typeof APPS!=="undefined"?APPS:[]);for(var i=0;i<L.length;i++)if(L[i]&&L[i].ready&&L[i].url&&/mouche/i.test(L[i].url))return L[i];return null;}
+  function dscgLineTxt(iso){
+    var r=dscgDone(),h=r.hasOwnProperty(iso)?r[iso]:null,t=studyHoursOf(iso);
+    if(h!=null)return "\u2713 "+nFmt(h)+" h r\u00e9vis\u00e9e"+(h>=2?"s":"")+(t>0?(" \u00b7 objectif "+nFmt(t)+" h"):"");
+    return t>0?("Objectif du jour : "+nFmt(t)+" h"):"Pas de r\u00e9vision pr\u00e9vue aujourd\u2019hui";
+  }
+  function dscgBlockHTML(iso){
+    var a=dscgApp();if(!a)return "";
+    var r=dscgDone(),done=r.hasOwnProperty(iso)&&r[iso]>0;
+    return '<div class="field supps-field">'+
+      '<a class="dscg-link'+(done?" done":"")+'" href="'+esc(a.url)+'"><span class="dscg-ic">\ud83d\udcda</span>'+
+      '<span class="dscg-txt"><span class="dscg-ttl">R\u00e9visions DSCG</span><span class="dscg-sub">'+esc(dscgLineTxt(iso))+'</span></span>'+
+      '<span class="dscg-arrow">\u203a</span></a></div>';
+  }
   function dscgDone(){
     try{
       var o=JSON.parse(localStorage.getItem("memoDSCG_v1")||"{}");var d=o&&o.done;
@@ -1344,6 +1360,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<button type="button" class="tr-toggle supps-toggle'+(transitOpen?' open':'')+'"><span class="supps-ttl">Transit — passages à la selle</span><span class="supps-meta tr-meta"></span><span class="supps-chev">▾</span></button>'+
           '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
         '</div>'+
+        dscgBlockHTML(d)+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
           '</div>'+
         '</div>'+
@@ -2431,9 +2448,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var ffSearch=host.querySelector(".ff-search");if(ffSearch){ffSearch.addEventListener("input",function(){settingsFoodQuery=ffSearch.value;ffFilter();});ffFilter();}
     host.querySelectorAll(".ff-pick").forEach(function(b){b.onclick=function(){settingsFoodSel=b.getAttribute("data-k");renderSettings();var ed=host.querySelector(".ff-scroll .ff-edit");if(ed&&ed.scrollIntoView)ed.scrollIntoView({block:"nearest"});};});
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
-    var ffAdd=host.querySelector(".ff-add");if(ffAdd)ffAdd.onclick=function(){settingsFoodNew=true;settingsFoodSel=null;renderSettings();var f=host.querySelector(".ff-new");if(f&&f.scrollIntoView)f.scrollIntoView({block:"nearest"});var ni=host.querySelector(".ff-newname");if(ni)ni.focus();};
-    var ffNewCancel=host.querySelector(".ff-newcancel");if(ffNewCancel)ffNewCancel.onclick=function(){settingsFoodNew=false;renderSettings();};
-    var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
     var ffAdd=host.querySelector(".ff-add");if(ffAdd)ffAdd.onclick=function(){settingsFoodNew=true;settingsFoodSel=null;renderSettings();var f=host.querySelector(".ff-new");if(f&&f.scrollIntoView)f.scrollIntoView({block:"nearest"});var ni=host.querySelector(".ff-newname");if(ni)ni.focus();};
     var ffNewCancel=host.querySelector(".ff-newcancel");if(ffNewCancel)ffNewCancel.onclick=function(){settingsFoodNew=false;renderSettings();};
     var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};save();migrateFood(k);save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
