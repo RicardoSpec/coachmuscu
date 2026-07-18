@@ -666,6 +666,26 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     return varied.slice(0,4);
   }
+   /* Comble-écart : ajout en 1 tap. Le repas cible est déduit de l'heure ; l'ajout
+     reste annulable tant qu'aucun autre n'a été fait. unit = nut.baseUnit imposé,
+     sinon scaleNut retombe sur f=1 et la quantité serait ignorée. */
+  var pfAdded=null;
+  function pfMealNow(){var h=new Date().getHours();return h<11?"pd":(h<15?"dj":(h<18?"co":(h<23?"dn":"co")));}
+  function pfMealLabel(k){return k==="pd"?"au petit-d\u00e9jeuner":(k==="dj"?"au d\u00e9jeuner":(k==="dn"?"au d\u00eener":"\u00e0 la collation"));}
+  function pfAdd(name,qty){
+    var k=(""+name).trim().toLowerCase(),c=foodCatalog()[k];if(!c||!c.nut)return;
+    var d=todayStr(),x=day(d);if(!x.mealItems)x.mealItems={};
+    var mk=pfMealNow();if(!x.mealItems[mk])x.mealItems[mk]=[];
+    var nt=c.nut,u=nt.baseUnit||c.unit||"g";
+    x.mealItems[mk].push({name:c.name,qty:String(qty),unit:u,nut:{base:nt.base,baseUnit:u,kcal:nt.kcal,prot:nt.prot,gluc:nt.gluc,lip:nt.lip,portion:nt.portion}});
+    pfAdded={n:c.name,m:mk,i:x.mealItems[mk].length-1};save();pfRefresh();
+  }
+  function pfUndo(){
+    if(!pfAdded)return;var d=todayStr(),x=day(d),a=(x.mealItems&&x.mealItems[pfAdded.m])||[];
+    if(a[pfAdded.i]&&a[pfAdded.i].name===pfAdded.n)a.splice(pfAdded.i,1);
+    pfAdded=null;save();pfRefresh();
+  }
+  function pfRefresh(){renderTodayNutri();var h=document.getElementById("todayLog");if(h&&h.innerHTML)buildDayForm(h,todayStr());if(typeof renderTodayRadar==="function")renderTodayRadar();if(typeof renderTodayBalance==="function")renderTodayBalance();}
   function protFillHTML(remaining){
     if(!(remaining>0))return "";
     var l=protFill(remaining);
@@ -674,13 +694,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var qt=(/^(g|ml)$/i.test(o.unit)?(Math.round(o.qty)+"\u2009"+o.unit):(Math.round(o.qty)+"\u00d7"));
       var badge=(o.complete?'<span class="pf-b">\ud83d\udcaa</span>':(o.incomplete?'<span class="pf-b">\ud83c\udf31</span>':""))+(o.ultra?'<span class="pf-b">\ud83d\udd34</span>':"");
       var kc=o.kcal!=null?('<span class="pf-kcal">'+Math.round(o.kcal)+' kcal</span>'):"";
-      return '<div class="pf-row"><span class="pf-q">'+qt+'</span><span class="pf-n">'+esc(o.name)+badge+'</span><span class="pf-p">+'+Math.round(o.prot)+'\u2009g</span>'+kc+'</div>';
-    }).join("");
+      return '<button type="button" class="pf-row" data-pf="'+esc(o.name)+'" data-q="'+Math.round(o.qty)+'"><span class="pf-q">'+qt+'</span><span class="pf-n">'+esc(o.name)+badge+'</span><span class="pf-p">+'+Math.round(o.prot)+'\u2009g</span>'+kc+'<span class="pf-add">\uff0b</span></button>';    }).join("");
+     var okBar=pfAdded?('<div class="pf-ok">\u2713 '+esc(pfAdded.n)+' ajout\u00e9 <b>'+pfMealLabel(pfAdded.m)+'</b><button type="button" class="pf-undo">Annuler</button></div>'):"";
     var best=Math.round(l[0].prot),n=Math.max(1,Math.ceil(remaining/best));
     var howMany=n>1?('Il t\u2019en faut environ <b>'+n+'</b> de ce calibre pour combler l\u2019\u00e9cart \u2014 r\u00e9partis-les sur tes prochains repas plut\u00f4t qu\u2019en une fois : au-del\u00e0 de ~40 g par prise, le surplus sert surtout de carburant.')
       :('Une seule portion suffit \u00e0 combler l\u2019\u00e9cart.');
-    return '<div class="pf-box"><div class="pf-h">Combler les '+remaining+' g \u00b7 portions types</div>'+rows+
-      '<div class="pf-note">'+howMany+'</div>'+
+    return '<div class="pf-box">'+okBar+'<div class="pf-h">Combler les '+remaining+' g \u00b7 portions types</div>'+rows+      '<div class="pf-note">'+howMany+'</div>'+
       '<div class="pf-note">\ud83d\udcaa profil complet \u00b7 \ud83c\udf31 \u00e0 compl\u00e9ter dans la journ\u00e9e (c\u00e9r\u00e9ale + l\u00e9gumineuse) \u00b7 \ud83d\udd34 ultra-transform\u00e9 : pratique en d\u00e9pannage, pas la base.</div></div>';
   }
   function nutriTip(tot){
@@ -789,8 +808,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }
       nut.innerHTML=head+body;
       nut.querySelector(".nutri-toggle").onclick=function(){nutriOpen=!nutriOpen;renderTodayNutri();};
-      nut.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");renderTodayNutri();};});
-      var tg=nut.querySelector(".nutri-tgtg"),tp=nut.querySelector(".tgtg-panel");if(tg&&tp)wireTgtg(tg,tp,todayStr(),function(){renderTodayNutri();buildDayForm(document.getElementById("todayLog"),todayStr());});
+     nut.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");renderTodayNutri();};});
+      nut.querySelectorAll(".pf-row").forEach(function(b){b.onclick=function(){pfAdd(b.getAttribute("data-pf"),b.getAttribute("data-q"));};});
+      var pu=nut.querySelector(".pf-undo");if(pu)pu.onclick=function(){pfUndo();};      var tg=nut.querySelector(".nutri-tgtg"),tp=nut.querySelector(".tgtg-panel");if(tg&&tp)wireTgtg(tg,tp,todayStr(),function(){renderTodayNutri();buildDayForm(document.getElementById("todayLog"),todayStr());});
     }
     var sp=document.getElementById("stickyProt");
     if(sp){
