@@ -2058,30 +2058,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.getElementById("bilanText").value=buildWeeklySummary();
   }
 
-  /* ---------------- Export / Import / Reset ---------------- */
-  function exportData(){
-    try{
-      var blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
-      var url=URL.createObjectURL(blob);
-      var a=document.createElement("a");a.href=url;a.download="suivi-muscu-sauvegarde-"+todayStr()+".json";
-      document.body.appendChild(a);a.click();
-      setTimeout(function(){URL.revokeObjectURL(url);a.remove();},0);
-    }catch(e){alert("Export impossible sur ce navigateur.");}
-  }
-  function importData(file){
-    var fr=new FileReader();
-    fr.onload=function(){
-      try{
-        var data=JSON.parse(fr.result);
-        if(typeof data!=="object"||!data)throw 0;
-        state=data;if(!state.sessions)state.sessions={};if(!state.days)state.days={};if(!state.tri)state.tri={};
-        save();currentSel=null;currentTri=null;
-        activateTab("v-prog2");
-        alert("Données importées ✓");
-      }catch(e){alert("Fichier invalide.");}
-    };
-    fr.readAsText(file);
-  }
+  /* Export / import / remise à zéro : un seul système, dans Réglages ▸ Données.
+     (exportData/importData ont été retirés : format incompatible avec exportBackup,
+      pas de confirmation à l'import, et le planning partagé n'était pas sauvegardé.) */
 
   /* ---------------- Menu lanceur d'apps ---------------- */
   function renderApps(){
@@ -2627,6 +2606,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var bkpInner='<p class="set-note">Tes données vivent dans ce navigateur. Exporte-les de temps en temps : si tu changes de téléphone ou vides le cache, tu pourras tout réimporter.</p>'+
       '<button class="btn accent bkp-btn" id="bkpExport">⬇️ Exporter mes données</button>'+
       '<button class="btn ghost bkp-btn" id="bkpImport">⬆️ Importer une sauvegarde</button>'+
+      '<button class="btn danger bkp-btn" id="bkpReset">🗑️ Tout effacer</button>'+ 
       '<div class="bkp-when">'+((state.config&&state.config.lastBackup)?('Dernière sauvegarde : '+esc(frDateShort(state.config.lastBackup))+((backupStaleDays()>=7)?' · <span class="low">pense à en refaire une</span>':'')):'<span class="low">Aucune sauvegarde encore — fais-en une.</span>')+'</div>';
     var pf=profileGet();var pfBmr=bmr(),pfW=lastWeight();
     var profilInner='<p class="set-note">Sert au bilan énergétique (métabolisme de base — formule Mifflin-St Jeor). Reste sur ton téléphone.</p>'+
@@ -2689,6 +2669,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
     var bi=document.getElementById("bkpImport");if(bi)bi.onclick=pickImport;
+    var brs=document.getElementById("bkpReset");if(brs)brs.onclick=function(){
+      if(!confirm("Tout effacer ? Action irréversible — exporte d'abord tes données."))return;
+      if(!confirm("Dernière confirmation : toutes tes journées, séances et repas seront perdus."))return;
+      state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;
+      closeSettings();activateTab("v-today");};  
     (function(){var pf=profileGet();
       function pfRefresh(){var el=host.querySelector(".pf-bmr");if(!el)return;var b=bmr(),w=lastWeight();el.innerHTML=(b!=null?('Métabolisme de base : <b>'+Math.round(b)+' kcal/j</b>'+(w!=null?(' · poids '+fr1(w)+' kg'):'')):'<span class="low">Complète taille + âge pour le calcul.</span>');}
       var sx=host.querySelector(".pf-sex");if(sx)sx.onchange=function(){pf.sex=sx.value;save();pfRefresh();};
@@ -2839,9 +2824,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.addEventListener("visibilitychange",function(){if(!document.hidden)renderCalendars();});
     window.addEventListener("focus",function(){renderCalendars();});
     window.addEventListener("storage",function(e){if(e.key===PKEY||e.key==="memoDSCG_v1")renderCalendars();});
-    var be=document.getElementById("btnExport");if(be)be.addEventListener("click",exportData);
-    var fi=document.getElementById("fileImport");if(fi)fi.addEventListener("change",function(){if(this.files&&this.files[0])importData(this.files[0]);this.value="";});
-    var br=document.getElementById("btnReset");if(br)br.addEventListener("click",function(){if(confirm("Tout effacer ? Action irréversible (pense à exporter avant).")){state={sessions:{},days:{},tri:{}};save();currentSel=null;currentTri=null;activateTab("v-today");}});
+    var dg=document.getElementById("dataGo");if(dg)dg.addEventListener("click",function(){openSettingsAt("g_data","backup");});
     var bc=document.getElementById("bilanCopy");if(bc)bc.addEventListener("click",function(){
       var ta=document.getElementById("bilanText");var txt=ta.value;
       function ok(){bc.textContent="Bilan copié ✓";setTimeout(function(){bc.textContent="Copier le bilan";},1600);}
