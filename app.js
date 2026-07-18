@@ -378,6 +378,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(x.sleep===undefined)x.sleep="";
     if(!x.stools)x.stools=[];
     if(x.water===undefined)x.water=0;
+    if(!x.wAdd||typeof x.wAdd!=="object")x.wAdd={}; 
     if(!x.supps)x.supps={};
     if(x.status===undefined)x.status="";
     if(!x.mealItems){x.mealItems={pd:[],dj:[],dn:[],co:[]};["pd","dj","dn","co"].forEach(function(kk){var t=(x.meals&&x.meals[kk])||"";if((""+t).trim())x.mealItems[kk].push({name:(""+t).trim(),qty:"",unit:"g",nut:null});});}
@@ -1297,6 +1298,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     sc.sort(function(a,b){return (b.age-a.age)||(a.tb-b.tb);});
     return sc.map(function(o,i){var c={};for(var q in o.r)c[q]=o.r[q];c._px=(i<PX_PER_DAY);c._age=o.age;return c;});
   }
+  var WADDS=[{id:"lem",emo:"\ud83c\udf4b",lbl:"Citron"},{id:"sel",emo:"\ud83e\uddc2",lbl:"Sel"},{id:"gin",emo:"\ud83e\udedb",lbl:"Gingembre"}];
+  function wAddEmo(x){var e=WADDS.filter(function(a){return x.wAdd&&x.wAdd[a.id];}).map(function(a){return a.emo;}).join("");return e?(" "+e):"";}
+  function wAddHTML(x){
+    return '<div class="wadd">'+WADDS.map(function(a){return '<button type="button" class="wchip'+((x.wAdd&&x.wAdd[a.id])?' on':'')+'" data-wadd="'+a.id+'">'+a.emo+' '+a.lbl+'</button>';}).join("")+'</div>'+
+      '<details class="base-hint"><summary>\uff0b Eau enrichie : \u00e0 quoi \u00e7a sert\u00a0?</summary><div>Simple pense-b\u00eate du jour : rien n\'est compt\u00e9 dans tes calories ni dans tes totaux. <b>Citron</b> : un peu de vitamine C, surtout un go\u00fbt qui fait boire davantage \u2014 le vrai b\u00e9n\u00e9fice. <b>Sel</b> (une pinc\u00e9e) : le sodium aide l\'eau \u00e0 rester dans le sang au lieu de repartir aux toilettes \u2014 utile apr\u00e8s une grosse s\u00e9ance ou par forte chaleur, inutile au repos. <b>Gingembre</b> : agr\u00e9able pour la digestion, aucun effet d\u00e9montr\u00e9 sur l\'hydratation. Aucun des trois ne remplace une vraie boisson d\'effort sur un triathlon.</div></details>';
+  } 
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
@@ -1318,7 +1325,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
         '<div class="field"><label>VFC au r\u00e9veil (ms)</label><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><details class="base-hint"><summary>\uff0b VFC : \u00e0 quoi \u00e7a sert&nbsp;?</summary><div>La VFC (variabilit\u00e9 de la fr\u00e9quence cardiaque, en ms) mesure les micro-\u00e9carts entre deux battements de c\u0153ur. Plus elle est haute, mieux ton syst\u00e8me nerveux r\u00e9cup\u00e8re : bon indicateur de fatigue r\u00e9elle plut\u00f4t que ressentie. Une VFC basse le matin = corps encore fatigu\u00e9, tu peux all\u00e9ger la s\u00e9ance ou viser la r\u00e9cup\u00e9ration. Pour la relever : ta montre (Apple Watch \u2192 app Sant\u00e9 \u2192 Variabilit\u00e9 de la FC) la mesure la nuit ; note la valeur en ms chaque matin, au calme, pour comparer jour apr\u00e8s jour.</div></details><div class="hrv-trend"></div></div>'+
-        '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
+        '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div>'+wAddHTML(x)+'</div>'+
         '</div>'+
         '</div>'+
         '<div class="field"><label>Repas</label>'+
@@ -1384,7 +1391,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         var ns=(x.sports&&x.sports.length)||0;if(ns)p.push(ns+" sport"+(ns>1?"s":""));
         eg.textContent=p.join(" \u00b7 ");}
       if(cm){var q=[];if(x.weight)q.push(nFmt(num(x.weight))+" kg");if(x.sleep)q.push(nFmt(num(x.sleep))+" h");
-        if(x.hrv)q.push(x.hrv+" ms");if(x.water>0)q.push(x.water+" verre"+(x.water>1?"s":""));
+        if(x.water>0)q.push(x.water+" verre"+(x.water>1?"s":"")+wAddEmo(x));
         cm.textContent=q.join(" \u00b7 ");}
     }
     (function(){
@@ -1452,6 +1459,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       upd();
       container.querySelector(".wminus").addEventListener("click",function(){x.water=Math.max(0,x.water-1);save();upd();});
       container.querySelector(".wplus").addEventListener("click",function(){x.water=x.water+1;save();upd();});
+      container.querySelectorAll(".wchip").forEach(function(b){b.addEventListener("click",function(){var id=b.getAttribute("data-wadd");if(!x.wAdd)x.wAdd={};x.wAdd[id]=!x.wAdd[id];b.classList.toggle("on",!!x.wAdd[id]);save();});}); 
     })();
 
     renderStools(container.querySelector(".f-stools"),d);
@@ -2299,6 +2307,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       });
     var ffNewForm=settingsFoodNew?('<div class="ff-edit ff-new">'+
         '<div class="ff-name">Nouvel aliment</div>'+
+        '<button type="button" class="btn ghost ff-scan">\ud83d\udcf7 Scanner un code-barres</button>'+
+        '<input type="hidden" class="ff-gluc"><input type="hidden" class="ff-lip">'+
         '<div class="ff-grid">'+
           '<label>Nom<input type="text" class="ff-newname" placeholder="ex. Skyr vanille Lidl"></label>'+
           '<label>Unité<select class="ff-unit">'+unitOptions("g")+'</select></label>'+
@@ -2480,7 +2490,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var ffCancel=host.querySelector(".ff-cancel");if(ffCancel)ffCancel.onclick=function(){settingsFoodSel=null;renderSettings();};
     var ffAdd=host.querySelector(".ff-add");if(ffAdd)ffAdd.onclick=function(){settingsFoodNew=true;settingsFoodSel=null;renderSettings();var f=host.querySelector(".ff-new");if(f&&f.scrollIntoView)f.scrollIntoView({block:"nearest"});var ni=host.querySelector(".ff-newname");if(ni)ni.focus();};
     var ffNewCancel=host.querySelector(".ff-newcancel");if(ffNewCancel)ffNewCancel.onclick=function(){settingsFoodNew=false;renderSettings();};
-    var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};save();migrateFood(k);save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
+    var ffScan=host.querySelector(".ff-scan");if(ffScan)ffScan.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;openScanner(function(res){
+      var n=res&&res.nut?res.nut:{};function set(sel,v){var e=box.querySelector(sel);if(e)e.value=(v==null?"":v);}
+      var nm=box.querySelector(".ff-newname");if(nm&&!(""+nm.value).trim())nm.value=res.name||"";
+      var un=box.querySelector(".ff-unit");if(un)un.value="g";
+      set(".ff-base","100");set(".ff-kcal",n.kcal);set(".ff-prot",n.prot);
+      set(".ff-k100",n.kcal);set(".ff-p100",n.prot);set(".ff-gluc",n.gluc);set(".ff-lip",n.lip);
+    });};
+    var ffNewSave=host.querySelector(".ff-newsave");if(ffNewSave)ffNewSave.onclick=function(){var box=host.querySelector(".ff-new");if(!box)return;var nm=(""+box.querySelector(".ff-newname").value).trim();if(!nm){alert("Donne un nom à l'aliment.");box.querySelector(".ff-newname").focus();return;}var k=nm.toLowerCase();var fx=foodFixMap();fx[k]={name:nm,unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:(""+box.querySelector(".ff-gpu").value).trim(),uf:1};var _gl=box.querySelector(".ff-gluc"),_lp=box.querySelector(".ff-lip");if(_gl&&(""+_gl.value).trim()!=="")fx[k].gluc=(""+_gl.value).trim();if(_lp&&(""+_lp.value).trim()!=="")fx[k].lip=(""+_lp.value).trim();save();migrateFood(k);save();settingsFoodNew=false;settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};
     host.querySelectorAll(".ff-save").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");var box=b.closest(".ff-edit");if(!box)return;var gpuEl=box.querySelector(".ff-gpu");var fx=foodFixMap();var _p=fx[k]||{};var nf={unit:box.querySelector(".ff-unit").value,base:box.querySelector(".ff-base").value,kcal:box.querySelector(".ff-kcal").value,prot:box.querySelector(".ff-prot").value,gPerU:gpuEl?(""+gpuEl.value).trim():""};if(_p.uf)nf.uf=_p.uf;if(_p.name)nf.name=_p.name;fx[k]=nf;save();migrateFood(k);save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();if(typeof renderTodayBalance==="function")renderTodayBalance();};});
     host.querySelectorAll(".ff-calc").forEach(function(b){b.onclick=function(){var box=b.closest(".ff-edit");if(!box)return;var gEl=box.querySelector(".ff-gpu");var g=num(gEl?gEl.value:"");if(isNaN(g)||g<=0){alert("Renseigne d'abord « 1 unité ≈ (g) » (ex. 60).");if(gEl)gEl.focus();return;}var f=g/100;var k100=num(box.querySelector(".ff-k100").value),p100=num(box.querySelector(".ff-p100").value);var kc=box.querySelector(".ff-kcal"),pr=box.querySelector(".ff-prot"),ba=box.querySelector(".ff-base"),un=box.querySelector(".ff-unit");if(!isNaN(k100)&&kc)kc.value=""+Math.round(k100*f);if(!isNaN(p100)&&pr)pr.value=""+(Math.round(p100*f*10)/10);if(ba)ba.value="1";if(un&&(un.value==="g"||un.value==="ml"))un.value="unité";};});
     host.querySelectorAll(".ff-reset").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-k");if(state.foodFix)delete state.foodFix[k];save();settingsFoodSel=null;renderSettings();if(typeof renderTodayNutri==="function")renderTodayNutri();};});
