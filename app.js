@@ -418,7 +418,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=false, radarPeriod=30;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=true, radarPeriod=30, fuelOpen=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -539,9 +539,16 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
              '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>';
       }
     }
-    hero.className="hero"+(heroOpen?" open":" folded");
+    if(heroOpen){
+      var fp={type:muscu?"muscu":({nat:"natation",velo:"velo",course:"course"}[s.disc]||"course"),dur:60};
+      if(!muscu){var _r=(state.tri||{})[s.w+"_"+s.disc],_du=_r?num(_r.dur):NaN;if(!isNaN(_du)&&_du>0)fp.dur=Math.round(_du);}
+      body+='<button type="button" class="btn ghost hero-fuel">\ud83c\udf4c Comment m\'alimenter <b>'+(fuelOpen?"\u2212":"\uff0b")+'</b></button>'+
+        (fuelOpen?'<div class="hero-fuelbody"><div class="hf-h">'+esc(s.label)+' \u00b7 '+fp.dur+' min (estim\u00e9)</div>'+fuelHTML(fp)+'<div class="hf-more">Ajuster type / dur\u00e9e \u2192 R\u00e9glages \u25b8 Carburant de s\u00e9ance</div></div>':'');
+    }
+     hero.className="hero"+(heroOpen?" open":" folded");
     hero.innerHTML='<button class="hcol hero-toggle'+(heroOpen?" open":"")+'"><span class="hcol-ic">'+icon+'</span><span class="hcol-txt"><span class="hcol-k">Prochaine séance</span><span class="hcol-v">'+esc(s.label)+' · '+when+'</span></span><span class="hcol-chev">▾</span></button>'+(heroOpen?'<div class="hero-body">'+body+'</div>':'');
     hero.querySelector(".hero-toggle").onclick=function(){heroOpen=!heroOpen;renderHero();};
+    var _hf=hero.querySelector(".hero-fuel");if(_hf)_hf.onclick=function(){fuelOpen=!fuelOpen;renderHero();}; 
     if(heroOpen){
       if(muscu){
         var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
@@ -861,7 +868,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(exp!=null){var net=adjIntake(d)-exp;var goal=num(state.kcalGoal);if(isNaN(goal)||goal===0)goal=300;var rr=goal>0?net/goal:0;axes.push({ic:"\u2696\ufe0f",lab:"Bilan kcal",r:clamp(rr),pct:Math.max(0,Math.round(clamp(rr)*100)),met:(goal>0&&net>=goal*0.9),valTxt:(net>0?"+":"")+Math.round(net)+" / "+(goal>0?"+":"")+Math.round(goal)+" kcal"});}
     return axes;
   }
-  function radarSVG(A){
+  function radarSVG(A,pct){
     var N=A.length,cx=130,cy=104,R=64,LR=R+20;
     function pt(i,rr){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+R*rr*Math.cos(a),cy+R*rr*Math.sin(a)];}
     function poly(fn){return A.map(function(_,i){var p=pt(i,fn(i));return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ");}
@@ -871,14 +878,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var real='<polygon class="rad-real" points="'+poly(function(i){return A[i].r;})+'"/>';
     var dots=A.map(function(a,i){var p=pt(i,a.r);return '<circle class="rad-dot'+(a.met?' met':'')+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6"/>';}).join("");
     var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);return '<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
-    return '<svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar">'+rings+outer+spokes+real+dots+labs+'</svg>';
+    var hub=(pct==null)?'':'<circle class="rad-hub" cx="'+cx+'" cy="'+cy+'" r="22"/><text class="rad-hubv" x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle">'+pct+'<tspan class="rad-hubu">%</tspan></text>';
+    return '<svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar">'+rings+outer+spokes+real+dots+hub+labs+'</svg>';
   }
   function radarBlockHTML(d){
     var A=radarDay(d);
     var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/A.length*100);
     var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
     var head='<button type="button" class="hcol radar-toggle'+(radarOpen?' open':'')+'"><span class="hcol-ic">\ud83d\udd78\ufe0f</span><span class="hcol-txt"><span class="hcol-k">Ma journ\u00e9e</span><span class="hcol-v">'+overall+' %</span></span><span class="hcol-chev">\u25be</span></button>';
-    var body=radarOpen?('<div class="radar-body"><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div>'+radarSVG(A)+'<div class="radar-legend">'+legend+'</div></div>'):'';
+    var body=radarOpen?('<div class="radar-body">'+radarSVG(A,overall)+'<div class="radar-legend">'+legend+'</div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div></div>'):'';
     return head+body;
   }
   function renderTodayRadar(){var h=document.getElementById("todayRadar");if(!h)return;h.innerHTML=radarBlockHTML(todayStr());var t=h.querySelector(".radar-toggle");if(t)t.onclick=function(){radarOpen=!radarOpen;renderTodayRadar();};}
@@ -895,7 +903,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var head='<div class="radar-head"><div class="sec-title">Moyenne par dimension</div>'+(pr.days?'<div class="radar-score">'+Math.round(pr.axes.reduce(function(s,a){return s+a.r;},0)/pr.axes.length*100)+'<span>%</span></div>':'')+'</div>';
     var selBar='<div class="fuel-seg rp-bar">'+sels+'</div>';
     if(!pr.days)return '<div class="card pad radar-card">'+head+selBar+'<div class="zn-hint">Pas encore de donn\u00e9es sur cette p\u00e9riode.</div></div>';
-    var legend=pr.axes.map(function(a){return '<div class="rl-item"><span class="rl-ic">'+a.ic+'</span><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
+    var legend=pr.axes.map(function(a){return '<div class="rl-item"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span></span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
     return '<div class="card pad radar-card">'+head+selBar+'<div class="radar-sub">Moyenne sur '+per+' j \u00b7 '+pr.days+' jour(s) suivi(s). Chaque axe = ta moyenne vs objectif.</div>'+radarSVG(pr.axes)+'<div class="radar-legend">'+legend+'</div></div>';
   }
   function renderProgressRadar(){var h=document.getElementById("progRadar");if(!h)return;h.innerHTML=radarPeriodHTML();h.querySelectorAll(".rp-per").forEach(function(b){b.onclick=function(){radarPeriod=parseInt(b.getAttribute("data-p"),10);renderProgressRadar();};});}
@@ -1255,7 +1263,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- Formulaire de journée ---------------- */
-  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, pxAllOpen=false, egOpen=false, cmOpen=false, wbOpen=false, crOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi ; cr = ancrages */
+  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, pxAllOpen=false, egOpen=true, cmOpen=false, wbOpen=false, crOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi ; cr = ancrages */
   function journalSummary(x,d){
     var t=dayTotals(d),ef=t?Math.round(t.protEff!=null?t.protEff:t.prot):0;
     var sp=(x.sports&&x.sports.length)?x.sports.join(" · "):"repos";
@@ -1315,6 +1323,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field dg-field">'+
           '<button type="button" class="dg-toggle eg-toggle'+(egOpen?' open':'')+'"><span class="supps-ttl">\u26a1 \u00c9nergie &amp; sport</span><span class="dg-meta eg-meta"></span><span class="supps-chev">\u25be</span></button>'+
           '<div class="dg-body eg-body'+(egOpen?'':' collapsed')+'">'+
+        '<div class="eg-slot">'+(isJournal?'':'<div id="todayNutri"></div><div id="todayBalance"></div>')+'</div>'+
         (isJournal?jBalHTML(x,d):'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '</div>'+
@@ -1554,6 +1563,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         if(teScan)teScan.addEventListener("click",function(){openScanner(function(res){ensureNut();if(!item.name||item.name==="")item.name=res.name;item.unit="g";item.nut.base="100";item.nut.baseUnit="g";item.nut.kcal=res.nut.kcal;item.nut.prot=res.nut.prot;item.nut.gluc=res.nut.gluc;item.nut.lip=res.nut.lip;if(!item.qty||item.qty==="")item.qty="100";save();renderMeal(mk);recalcTotals();});});
       }
     }
+    if(container.id==="todayLog"){renderTodayNutri();renderTodayBalance();} 
     MEALS.forEach(function(m){renderMeal(m.k);});
     container.querySelectorAll(".meal-h").forEach(function(hh){hh.onclick=function(){var mk=hh.getAttribute("data-mk");mealOpen[mk]=!mealOpen[mk];var meal=hh.parentNode;if(meal)meal.classList.toggle("open",!!mealOpen[mk]);};});
     recalcTotals();
