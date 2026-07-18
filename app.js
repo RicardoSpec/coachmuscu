@@ -416,9 +416,53 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Navigation onglets ---------------- */
   var currentSel=null, currentTri=null, journalDate=todayStr();
-  var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
+  /* ===== BANDEAU REPLIABLE — PATRON UNIQUE =====
+     bndOpen  : registre UNIQUE de l'état ouvert/fermé de TOUS les bandeaux.
+     bndHead  : génère le bouton-titre (peau + data-bnd) — ne jamais écrire ce <button> à la main.
+     bndBody  : génère le corps repliable (data-bndb, .collapsed).
+     wireBnd  : UN seul écouteur de clic, délégué sur document, posé une fois au démarrage.
+     Ajouter un bandeau = 1 clé dans bndOpen + 1 appel à bndHead/bndBody. Rien d'autre. */
+  var bndOpen={homecal:false,hero:false,radar:true,nutri:false,bal:false,
+              eg:true,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false};
+  var BND_RENDER={};
+  function bndHead(key,skin,o){
+    o=o||{};
+    var cls="bnd bnd-"+skin+(o.stick?" bnd-stick":"")+(bndOpen[key]?" open":"");
+    var inner;
+    if(o.ic!=null){
+      inner='<span class="bnd-ic">'+o.ic+'</span><span class="bnd-txt"><span class="bnd-k">'+o.k+'</span><span class="bnd-v">'+o.v+'</span></span>';
+    }else{
+      inner='<span class="bnd-ttl">'+o.ttl+'</span>'
+           +(o.sum!=null ?'<span class="bnd-sum'+(o.cls?" "+o.cls:"")+'">'+o.sum+'</span>':"")
+           +(o.meta!=null?'<span class="bnd-meta'+(o.cls?" "+o.cls:"")+'">'+o.meta+'</span>':"");
+    }
+    return '<button type="button" class="'+cls+'" data-bnd="'+key+'"'
+         +(o.render?' data-bndr="'+o.render+'"':"")+(o.attrs||"")+'>'
+         +inner+'<span class="bnd-chev">\u25be</span></button>';
+  }
+  function bndBody(key,cls,inner){
+    return '<div class="bnd-body'+(cls?" "+cls:"")+(bndOpen[key]?"":" collapsed")+'" data-bndb="'+key+'">'+(inner||"")+'</div>';
+  }
+  function wireBnd(){
+    BND_RENDER={homecal:renderCalendars,hero:renderHero,bal:renderTodayBalance,
+               nutri:renderTodayNutri,todayRadar:renderTodayRadar,journalRadar:renderJournalRadar};
+    document.addEventListener("click",function(e){
+      var b=e.target&&e.target.closest?e.target.closest("[data-bnd]"):null;
+      if(!b)return;
+      var k=b.getAttribute("data-bnd");
+      bndOpen[k]=!bndOpen[k];
+      var r=b.getAttribute("data-bndr");
+      if(r){var fn=BND_RENDER[r];if(fn)fn();return;}
+      b.classList.toggle("open",bndOpen[k]);
+      /* le corps est cherché dans le conteneur du bandeau cliqué : Aujourd'hui et
+         Journal affichent le même formulaire, il ne faut pas viser celui d'à côté. */
+      var scope=(b.closest&&b.closest("[data-bndscope]"))||document;
+      var body=scope.querySelector('[data-bndb="'+k+'"]');
+      if(body)body.classList.toggle("collapsed",!bndOpen[k]);
+    });
+  }
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=true, radarPeriod=30, fuelOpen=false, radarDetail=false;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var radarPeriod=30, fuelOpen=false, radarDetail=false;
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -530,7 +574,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var icon=muscu?"🏋️":triIcon(s.disc);
     var when=whenLabel(next.iso);
     var body="";
-    if(heroOpen){
+    if(bndOpen.hero){
       if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=progOf(s.block,s.code);
         body='<div class="stitle">'+esc(blk.name)+' · Semaine '+s.w+' · '+esc(p.sub)+'</div>'+
              '<h2>'+esc(p.title.split("—")[0].trim())+' <span class="num">'+s.code+'</span></h2>'+
@@ -543,17 +587,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
              '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>';
       }
     }
-    if(heroOpen){
+    if(bndOpen.hero){
       var fp={type:muscu?"muscu":({nat:"natation",velo:"velo",course:"course"}[s.disc]||"course"),dur:60};
       if(!muscu){var _r=(state.tri||{})[s.w+"_"+s.disc],_du=_r?num(_r.dur):NaN;if(!isNaN(_du)&&_du>0)fp.dur=Math.round(_du);}
       body+='<button type="button" class="btn ghost hero-fuel">\ud83c\udf4c Comment m\'alimenter <b>'+(fuelOpen?"\u2212":"\uff0b")+'</b></button>'+
         (fuelOpen?'<div class="hero-fuelbody"><div class="hf-h">'+esc(s.label)+' \u00b7 '+fp.dur+' min (estim\u00e9)</div>'+fuelHTML(fp)+'<div class="hf-more">Ajuster type / dur\u00e9e \u2192 R\u00e9glages \u25b8 Carburant de s\u00e9ance</div></div>':'');
     }
-    hero.className="hero"+(heroOpen?" open":" folded");
-    hero.innerHTML='<button class="hcol hero-toggle'+(heroOpen?" open":"")+'"><span class="hcol-ic">'+icon+'</span><span class="hcol-txt"><span class="hcol-k">Prochaine séance</span><span class="hcol-v">'+esc(s.label)+' · '+when+'</span></span><span class="hcol-chev">▾</span></button>'+(heroOpen?'<div class="hero-body">'+body+'</div>':'');
-    hero.querySelector(".hero-toggle").onclick=function(){heroOpen=!heroOpen;renderHero();};
+    hero.className="hero"+(bndOpen.hero?" open":" folded");
+    hero.innerHTML=bndHead("hero","card",{render:"hero",ic:icon,k:"Prochaine séance",v:esc(s.label)+' · '+when})
+      +(bndOpen.hero?'<div class="hero-body">'+body+'</div>':'');
     var _hf=hero.querySelector(".hero-fuel");if(_hf)_hf.onclick=function(){fuelOpen=!fuelOpen;renderHero();};
-    if(heroOpen){
+    if(bndOpen.hero){
       if(muscu){
         var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
         var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
@@ -596,15 +640,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function actOverride(d){var x=state.days[d];var v=x&&x.actKcal;if(v==null||v==="")return null;var n=num(v);return (isFinite(n)&&n>=0)?Math.round(n):null;}
   function expend(d){var b=bmr();if(b==null)return null;var ov=actOverride(d);if(ov!=null)return Math.round(b)+ov;return Math.round(b*actLevel(d).f)+actExtra(d);}
   function adjIntake(d){var x=state.days[d];if(x&&x.kcalAdj!=null&&x.kcalAdj!==""){var v=num(x.kcalAdj);if(!isNaN(v)&&v>=0)return Math.round(v);}var t=dayTotals(d);return t?Math.round(t.kcal):0;}
-  var balOpen=false;
+
   function renderTodayBalance(){
     var host=document.getElementById("todayBalance");if(!host)return;
     var d=todayStr(),b=bmr(),t=dayTotals(d),intake=adjIntake(d),lv=actLevel(d),out=expend(d),net=(out!=null)?(intake-out):null;
     function lab(n){return Math.abs(n)<75?" · équilibre":(n<0?" · déficit":" · surplus");}
     var hv=(b==null)?"profil à compléter":((net>0?"+":"")+net+" kcal"+lab(net));
-    var head='<button type="button" class="hcol bal-toggle'+(balOpen?" open":"")+'"><span class="hcol-ic">⚖️</span><span class="hcol-txt"><span class="hcol-k">Bilan énergie</span><span class="hcol-v">'+hv+'</span></span><span class="hcol-chev">▾</span></button>';
+    var head=bndHead("bal","card",{render:"bal",ic:"⚖️",k:"Bilan énergie",v:hv});
     var body="";
-    if(balOpen){
+    if(bndOpen.bal){
       if(b==null){
         body='<div class="bal-body"><div class="bal-empty">Ajoute ta <b>taille</b>, ton <b>âge</b> et ton <b>sexe</b> dans Réglages ▸ Profil pour estimer ta dépense.</div><div class="bal-row"><span>🍽️ Apport du jour</span><b>'+intake+' kcal</b></div></div>';
       }else{
@@ -628,7 +672,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }
     }
     host.innerHTML=head+body;
-    host.querySelector(".bal-toggle").onclick=function(){balOpen=!balOpen;renderTodayBalance();};
+
     host.querySelectorAll(".bal-lvl").forEach(function(bt){bt.onclick=function(){day(d).actLvl=bt.getAttribute("data-lvl");save();renderTodayBalance();};});
     host.querySelectorAll(".bal-a-d,.bal-a-t").forEach(function(inp){inp.onchange=function(){var kind=inp.getAttribute("data-act"),dd=day(d);if(!dd.act)dd.act={};if(!dd.act[kind])dd.act[kind]={d:"",t:""};dd.act[kind][inp.classList.contains("bal-a-d")?"d":"t"]=inp.value;save();renderTodayBalance();};});
     var wi=host.querySelector(".bal-watch-in");if(wi)wi.onchange=function(){var dd=day(d),v=wi.value.trim();if(v==="")delete dd.actKcal;else dd.actKcal=v;save();renderTodayBalance();};
@@ -822,9 +866,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var eff=tot?(tot.protEff!=null?tot.protEff:tot.prot):0;
       var reste=tot?Math.round(130-eff):130;
       var vtxt=(tot?fr1(eff):"0")+' g'+(tot?(eff>=130?' · ✓ cible':' · encore '+reste+' g'):' · à noter');
-      var head='<button type="button" class="hcol nutri-toggle'+(nutriOpen?' open':'')+'"><span class="hcol-ic">🥩</span><span class="hcol-txt"><span class="hcol-k">Protéines du jour</span><span class="hcol-v">'+vtxt+'</span></span><span class="hcol-chev">▾</span></button>';
+      var head=bndHead("nutri","card",{render:"nutri",ic:"🥩",k:"Protéines du jour",v:vtxt});
       var body="";
-      if(nutriOpen){
+      if(bndOpen.nutri){
         var a7=protAvg7();
         var avgLine=a7?'<div class="nutri-avg">Moyenne 7 j : <b>'+fr1(a7.avg)+' g</b>/j'+(a7.avg>=130?' ✓':'')+'</div>':'';
         if(tot){
@@ -835,7 +879,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         }
       }
       nut.innerHTML=head+body;
-      nut.querySelector(".nutri-toggle").onclick=function(){nutriOpen=!nutriOpen;renderTodayNutri();};
+
      nut.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");renderTodayNutri();};});
       nut.querySelectorAll(".pf-row").forEach(function(b){b.onclick=function(){pfAdd(b.getAttribute("data-pf"),b.getAttribute("data-q"));};});
       var pu=nut.querySelector(".pf-undo");if(pu)pu.onclick=function(){pfUndo();};      var tg=nut.querySelector(".nutri-tgtg"),tp=nut.querySelector(".tgtg-panel");if(tg&&tp)wireTgtg(tg,tp,todayStr(),function(){renderTodayNutri();buildDayForm(document.getElementById("todayLog"),todayStr());});
@@ -885,18 +929,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var hub=(pct==null)?'':'<circle class="rad-hub" cx="'+cx+'" cy="'+cy+'" r="22"/><text class="rad-hubv" x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle">'+pct+'<tspan class="rad-hubu">%</tspan></text>';
     return '<svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar">'+rings+outer+spokes+real+dots+hub+labs+'</svg>';
   }
-  function radarBlockHTML(d){
+  function radarBlockHTML(d,rk){
     var A=radarDay(d);
     var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/A.length*100);
     var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span></span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
-    var head='<button type="button" class="hcol radar-toggle'+(radarOpen?' open':'')+'"><span class="hcol-ic">\ud83d\udd78\ufe0f</span><span class="hcol-txt"><span class="hcol-k">Ma journ\u00e9e</span><span class="hcol-v">'+overall+' %</span></span><span class="hcol-chev">\u25be</span></button>';
-    var body=radarOpen?('<div class="radar-body">'+radarSVG(A,overall)+
-      '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="hcol-chev">\u25be</span></button>'+
+    var head=bndHead("radar","card",{render:rk,stick:true,ic:"\ud83d\udd78\ufe0f",k:"Ma journ\u00e9e",v:overall+" %"});
+    var body=bndOpen.radar?('<div class="radar-body">'+radarSVG(A,overall)+
+      '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="bnd-chev">\u25be</span></button>'+
       (radarDetail?('<div class="radar-legend">'+legend+'</div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div>'):'')+'</div>'):'';
     return head+body;
   }
-  function renderTodayRadar(){var h=document.getElementById("todayRadar");if(!h)return;h.innerHTML=radarBlockHTML(todayStr());var t=h.querySelector(".radar-toggle");if(t)t.onclick=function(){radarOpen=!radarOpen;renderTodayRadar();};var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderTodayRadar();};}
-  function renderJournalRadar(){var h=document.getElementById("journalRadar");if(!h)return;h.innerHTML=radarBlockHTML(journalDate);var t=h.querySelector(".radar-toggle");if(t)t.onclick=function(){radarOpen=!radarOpen;renderJournalRadar();};var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderJournalRadar();};}
+  function renderTodayRadar(){var h=document.getElementById("todayRadar");if(!h)return;h.innerHTML=radarBlockHTML(todayStr(),"todayRadar");var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderTodayRadar();};}
+  function renderJournalRadar(){var h=document.getElementById("journalRadar");if(!h)return;h.innerHTML=radarBlockHTML(journalDate,"journalRadar");var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderJournalRadar();};}
   function radarPeriodAxes(per){
     var accum={},order=[],days=0,end=new Date();
     for(var i=0;i<per;i++){var dt=new Date(end);dt.setDate(dt.getDate()-i);var iso=isoOf(dt);if(!state.days[iso])continue;var A=radarDay(iso);if(!A.length)continue;days++;A.forEach(function(a){if(!(a.lab in accum)){accum[a.lab]={ic:a.ic,sum:0,n:0};order.push(a.lab);}accum[a.lab].sum+=a.r;accum[a.lab].n++;});}
@@ -911,7 +955,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(!pr.days)return '<div class="card pad radar-card">'+head+selBar+'<div class="zn-hint">Pas encore de donn\u00e9es sur cette p\u00e9riode.</div></div>';
     var legend=pr.axes.map(function(a){return '<div class="rl-item"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span></span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
     return '<div class="card pad radar-card">'+head+selBar+radarSVG(pr.axes,Math.round(pr.axes.reduce(function(s,a){return s+a.r;},0)/pr.axes.length*100))+
-      '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="hcol-chev">\u25be</span></button>'+
+      '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="bnd-chev">\u25be</span></button>'+
       (radarDetail?('<div class="radar-legend">'+legend+'</div><div class="radar-sub">Moyenne sur '+per+' j \u00b7 '+pr.days+' jour(s) suivi(s). Chaque axe = ta moyenne vs objectif.</div>'):'')+'</div>';
   }
   function renderProgressRadar(){var h=document.getElementById("progRadar");if(!h)return;h.innerHTML=radarPeriodHTML();
@@ -973,11 +1017,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return arr;
   }
   function jumpDay(kind){
-    wbOpen=true;
-    if(kind==="supps")suppsOpen=true;else if(kind==="rx")routinesOpen=true;else if(kind==="cr")crOpen=true;
+    bndOpen.wb=true;
+    if(kind==="supps")bndOpen.sp=true;else if(kind==="rx")bndOpen.rx=true;else if(kind==="cr")bndOpen.cr=true;
     activateTab("v-today");
     var h=document.getElementById("todayLog");if(!h)return;
-    var cls=(kind==="supps")?".sp-toggle":((kind==="rx")?".rx-toggle":".cr-toggle");
+    buildDayForm(h,todayStr()); /* l'état vient d'être changé : il faut regénérer, sinon rien ne s'ouvre à l'écran */
+    var cls='[data-bnd="'+(kind==="supps"?"sp":(kind==="rx"?"rx":"cr"))+'"]';
     var el=h.querySelector(cls);if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});
   }
   function renderOnboard(){
@@ -1030,7 +1075,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var doneN=0,totN=blk.weeks*CODES.length,ww,ii;
     for(ww=1;ww<=blk.weeks;ww++)for(ii=0;ii<CODES.length;ii++)if(sess(block,ww,CODES[ii]).done)doneN++;
     var h='<div class="card pad blockcard'+(open?" open":"")+'">'+
-      '<button type="button" class="blk-toggle" data-blk="'+block+'"><span class="blk-ttl">'+esc(blk.name)+'</span><span class="blk-meta">'+doneN+'/'+totN+'</span><span class="blk-chev">▾</span></button>'+
+      '<button type="button" class="bnd blk-toggle" data-blk="'+block+'"><span class="blk-ttl">'+esc(blk.name)+'</span><span class="blk-meta">'+doneN+'/'+totN+'</span><span class="bnd-chev">▾</span></button>'+
       '<div class="blk-body'+(open?"":" collapsed")+'">'+
       '<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
       '<table class="grid"><tr><th></th>';
@@ -1302,7 +1347,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- Formulaire de journée ---------------- */
-  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, pxAllOpen=false, egOpen=true, cmOpen=false, wbOpen=false, crOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi ; cr = ancrages */
+  var pxAllOpen=false;
   function journalSummary(x,d){
     var t=dayTotals(d),ef=t?Math.round(t.protEff!=null?t.protEff:t.prot):0;
     var sp=(x.sports&&x.sports.length)?x.sports.join(" · "):"repos";
@@ -1353,23 +1398,24 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function buildDayForm(container,d){
     var x=day(d);
+    container.setAttribute("data-bndscope","1"); /* borne la recherche du corps au bon formulaire */
     var dlId="foodlist-"+(container.id||"x");
     var chips='<div class="chips">'+SPORTS.map(function(sp){return '<button type="button" class="chip'+(x.sports.indexOf(sp)>-1?' on':'')+'" data-sport="'+sp+'">'+sp+'</button>';}).join("")+'</div>';
     var isJournal=container.id==="journalLog";
     container.innerHTML=
       '<div class="card pad">'+
-        (isJournal?'<div class="meal-total-top"><div class="meal-total"></div><button type="button" class="jprot-toggle'+(jprotOpen?' open':'')+'" hidden><span class="jprot-ttl">🥩 Détail protéines</span><span class="supps-chev">▾</span></button><div class="jprot-body'+(jprotOpen?'':' collapsed')+'"></div></div>':'')+
+        (isJournal?'<div class="meal-total-top"><div class="meal-total"></div>'+bndHead("jprot","mini",{ttl:"🥩 Détail protéines",attrs:" hidden"})+bndBody("jprot","jprot-body")+'</div>':'')+
         '<div class="field dg-field">'+
-          '<button type="button" class="dg-toggle eg-toggle'+(egOpen?' open':'')+'"><span class="supps-ttl">\u26a1 \u00c9nergie &amp; sport</span><span class="dg-meta eg-meta"></span><span class="supps-chev">\u25be</span></button>'+
-          '<div class="dg-body eg-body'+(egOpen?'':' collapsed')+'">'+
+          bndHead("eg","group",{stick:true,ttl:"\u26a1 \u00c9nergie &amp; sport",sum:"",cls:"eg-meta"})+
+          '<div class="bnd-body eg-body'+(bndOpen.eg?'':' collapsed')+'" data-bndb="eg">'+
         (isJournal?jBalHTML(x,d):'')+
         '<div class="eg-slot">'+(isJournal?'':'<div id="todayNutri"></div><div id="todayBalance"></div>')+'</div>'+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
         '</div>'+
         '</div>'+
         '<div class="field dg-field">'+
-          '<button type="button" class="dg-toggle cm-toggle'+(cmOpen?' open':'')+'"><span class="supps-ttl">\ud83d\udcca Corps &amp; mesures</span><span class="dg-meta cm-meta"></span><span class="supps-chev">\u25be</span></button>'+
-          '<div class="dg-body cm-body'+(cmOpen?'':' collapsed')+'">'+
+          bndHead("cm","group",{stick:true,ttl:"\ud83d\udcca Corps &amp; mesures",sum:"",cls:"cm-meta"})+
+          '<div class="bnd-body cm-body'+(bndOpen.cm?'':' collapsed')+'" data-bndb="cm">'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div>'+wAddHTML(x)+'</div>'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
 '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
@@ -1381,11 +1427,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           (isJournal?'':'<div class="meal-total"></div>')+
         '</div>'+
         '<div class="field supps-field wb-group">'+
-          '<button type="button" class="wb-toggle'+(wbOpen?' open':'')+'"><span class="supps-ttl">Bien-être &amp; suivi</span><span class="supps-chev">▾</span></button>'+
-          '<div class="wb-body'+(wbOpen?'':' collapsed')+'">'+
+          bndHead("wb","sec",{stick:true,ttl:"Bien-être &amp; suivi"})+
+          '<div class="bnd-body wb-body'+(bndOpen.wb?'':' collapsed')+'" data-bndb="wb">'+
         '<div class="field supps-field">'+
-          '<button type="button" class="sp-toggle supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments alimentaires</span><span class="supps-meta sp-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
-          '<div class="supps-body'+(suppsOpen?'':' collapsed')+'">'+
+          bndHead("sp","sub",{ttl:"Compléments alimentaires",cls:"sp-meta",meta:+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)})+
+          bndBody("sp","",'')+
             (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
               var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
               if(!items.length)return "";
@@ -1397,8 +1443,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          '<button type="button" class="rx-toggle supps-toggle'+(routinesOpen?' open':'')+'"><span class="supps-ttl">Ce qui te fait du bien</span><span class="supps-meta rx-meta"></span><span class="supps-chev">▾</span></button>'+
-          '<div class="rx-body supps-body'+(routinesOpen?'':' collapsed')+'">'+
+          bndHead("rx","sub",{ttl:"Ce qui te fait du bien",cls:"rx-meta",meta:""})+
+          '<div class="bnd-body rx-body'+(bndOpen.rx?'':' collapsed')+'" data-bndb="rx">'+
             (typeof ROUTINES!=="undefined"?ROUTINES:[]).map(function(r){var info=r.link?'<button type="button" class="rx-info" data-rx="'+r.id+'" aria-label="Infos">i</button>':'';var help=r.link?'<div class="rx-help" id="rxhelp-'+r.id+'"><a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.linkLabel||"Ouvrir")+' ↗</a></div>':'';return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-rx" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span>'+info+'</label>'+help+'</div>';}).join("")+
             '<div class="xtras rx-x">'+((x.routinesX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="rx" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
             '<input class="x-in rx-xin" placeholder="Autre activité puis Entrée…">'+
@@ -1406,8 +1452,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          '<button type="button" class="px-toggle supps-toggle'+(pxOpen?' open':'')+'"><span class="supps-ttl">Petits exercices — mobilité &amp; santé</span><span class="supps-meta px-meta"></span><span class="supps-chev">▾</span></button>'+
-          '<div class="px-body supps-body'+(pxOpen?'':' collapsed')+'">'+
+          bndHead("px","sub",{ttl:"Petits exercices — mobilité &amp; santé",cls:"px-meta",meta:""})+
+          '<div class="bnd-body px-body'+(bndOpen.px?'':' collapsed')+'" data-bndb="px">'+
             pxOrder(d).map(function(r){var info=r.link?'<button type="button" class="rx-info" data-rx="px-'+r.id+'" aria-label="Infos">i</button>':'';var help=r.link?'<div class="rx-help" id="rxhelp-px-'+r.id+'"><a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.linkLabel||"Ouvrir")+' ↗</a></div>':'';return '<div class="rx-item'+(r._px?'':' px-hid')+'"><label class="supp"><input type="checkbox" class="f-px" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span>'+info+'</label>'+help+'</div>';}).join("")+
             '<button type="button" class="px-more'+(pxAllOpen?' open':'')+'">'+(pxAllOpen?'Masquer les autres':'Voir les autres exercices')+'</button>'+
             '<div class="xtras px-x">'+((x.petitsExosX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="px" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
@@ -1416,14 +1462,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          '<button type="button" class="cr-toggle supps-toggle'+(crOpen?' open':'')+'"><span class="supps-ttl">Ancrages — habitudes à tenir</span><span class="supps-meta cr-meta"></span><span class="supps-chev">▾</span></button>'+
-          '<div class="cr-body supps-body'+(crOpen?'':' collapsed')+'">'+
+          bndHead("cr","sub",{ttl:"Ancrages — habitudes à tenir",cls:"cr-meta",meta:""})+
+          '<div class="bnd-body cr-body'+(bndOpen.cr?'':' collapsed')+'" data-bndb="cr">'+
             (customRoutines().length?customRoutines().map(function(a){return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-cr" data-id="'+a.id+'"><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span></label></div>';}).join(""):'<div class="supp-hint">Cr\u00e9e tes ancrages dans R\u00e9glages \u25b8 Ancrages de routines.</div>')+
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          '<button type="button" class="tr-toggle supps-toggle'+(transitOpen?' open':'')+'"><span class="supps-ttl">Transit — passages à la selle</span><span class="supps-meta tr-meta"></span><span class="supps-chev">▾</span></button>'+
-          '<div class="tr-body supps-body'+(transitOpen?'':' collapsed')+'"><div class="stools f-stools"></div></div>'+
+          bndHead("tr","sub",{ttl:"Transit — passages à la selle",cls:"tr-meta",meta:""})+
+          '<div class="bnd-body tr-body'+(bndOpen.tr?'':' collapsed')+'" data-bndb="tr"><div class="stools f-stools"></div></div>'+
         '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
           '</div>'+
@@ -1442,10 +1488,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         cm.textContent=q.join(" \u00b7 ");}
     }
     (function(){
-      var eg=container.querySelector(".eg-toggle");
-      if(eg)eg.addEventListener("click",function(){egOpen=!egOpen;eg.classList.toggle("open",egOpen);var b=container.querySelector(".eg-body");if(b)b.classList.toggle("collapsed",!egOpen);});
-      var cm=container.querySelector(".cm-toggle");
-      if(cm)cm.addEventListener("click",function(){cmOpen=!cmOpen;cm.classList.toggle("open",cmOpen);var b=container.querySelector(".cm-body");if(b)b.classList.toggle("collapsed",!cmOpen);});
       /* résumé d'en-tête tenu à jour sans toucher aux handlers existants */
       container.addEventListener("input",dgMeta);
       container.addEventListener("change",dgMeta);
@@ -1454,7 +1496,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     dgMeta();
     var hrvIn=container.querySelector(".f-hrv");if(hrvIn)hrvIn.value=x.hrv||"";
     container.querySelector(".f-note").value=x.note||"";
-    (function(){var jt=container.querySelector(".jform-tog");if(!jt)return;jt.addEventListener("click",function(){journalOpen=!journalOpen;jt.classList.toggle("open",journalOpen);var jb=container.querySelector(".jbody");if(jb)jb.classList.toggle("collapsed",!journalOpen);});})();
 
     container.querySelector(".f-weight").addEventListener("input",function(){x.weight=this.value;save();});
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
@@ -1467,19 +1508,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       cb.checked=!!((x.routines&&x.routines[id])||(id==="medit"&&x.meditation));
       cb.addEventListener("change",function(){if(!x.routines)x.routines={};x.routines[id]=cb.checked;if(id==="medit")x.meditation=cb.checked;save();updRxMeta();});
     });
-    (function(){var tg=container.querySelector(".rx-toggle");if(!tg)return;tg.addEventListener("click",function(){routinesOpen=!routinesOpen;tg.classList.toggle("open",routinesOpen);var body=container.querySelector(".rx-body");if(body)body.classList.toggle("collapsed",!routinesOpen);});})();
     container.querySelectorAll(".rx-info").forEach(function(bt){bt.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();var h=container.querySelector("#rxhelp-"+bt.getAttribute("data-rx"));if(h)h.classList.toggle("open");});});
     container.querySelectorAll(".f-px").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.petitsExos&&x.petitsExos[id]);cb.addEventListener("change",function(){if(!x.petitsExos)x.petitsExos={};x.petitsExos[id]=cb.checked;save();updPxMeta();});});
     function updCrMeta(){var m=container.querySelector(".cr-meta");if(!m)return;var l=customRoutines();var f=l.filter(function(a){return x.customRoutines&&x.customRoutines[a.id];}).length;m.textContent=l.length?f+"/"+l.length:"";}
     container.querySelectorAll(".f-cr").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.customRoutines&&x.customRoutines[id]);cb.addEventListener("change",function(){if(!x.customRoutines)x.customRoutines={};if(cb.checked)x.customRoutines[id]=true;else delete x.customRoutines[id];save();updCrMeta();});});
     updCrMeta();
     container.querySelectorAll(".px-n").forEach(function(ni){var id=ni.getAttribute("data-id");if(x.petitsExosN&&x.petitsExosN[id]!=null&&x.petitsExosN[id]!=="")ni.value=x.petitsExosN[id];ni.addEventListener("input",function(){if(!x.petitsExosN)x.petitsExosN={};var v=(ni.value||"").trim();if(v==="")delete x.petitsExosN[id];else x.petitsExosN[id]=v;save();});});
-    (function(){var tg=container.querySelector(".px-toggle");if(!tg)return;tg.addEventListener("click",function(){pxOpen=!pxOpen;tg.classList.toggle("open",pxOpen);var body=container.querySelector(".px-body");if(body)body.classList.toggle("collapsed",!pxOpen);});})();
     (function(){var b=container.querySelector(".px-more");if(!b)return;b.addEventListener("click",function(){pxAllOpen=!pxAllOpen;b.classList.toggle("open",pxAllOpen);b.textContent=pxAllOpen?"Masquer les autres":"Voir les autres exercices";var bd=container.querySelector(".px-body");if(bd)bd.classList.toggle("px-all",pxAllOpen);});})();
-    (function(){var tg=container.querySelector(".cr-toggle");if(!tg)return;tg.addEventListener("click",function(){crOpen=!crOpen;tg.classList.toggle("open",crOpen);var body=container.querySelector(".cr-body");if(body)body.classList.toggle("collapsed",!crOpen);});})();
     renderHrvTrend(container,d);
-    (function(){var tg=container.querySelector(".wb-toggle");if(!tg)return;tg.addEventListener("click",function(){wbOpen=!wbOpen;tg.classList.toggle("open",wbOpen);var body=container.querySelector(".wb-body");if(body)body.classList.toggle("collapsed",!wbOpen);});})();
-    (function(){var tg=container.querySelector(".tr-toggle");if(!tg)return;var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";tg.addEventListener("click",function(){transitOpen=!transitOpen;tg.classList.toggle("open",transitOpen);var body=container.querySelector(".tr-body");if(body)body.classList.toggle("collapsed",!transitOpen);});})();
+    (function(){var m=container.querySelector(".tr-meta");if(m)m.textContent=(x.stools&&x.stools.length)?x.stools.length:"";})();
     (function(){var si=container.querySelector(".supps-xin");if(si)si.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(si.value||"").trim();if(!v)return;if(!x.suppsX)x.suppsX=[];x.suppsX.push(v);save();buildDayForm(container,d);}});
       var ri=container.querySelector(".rx-xin");if(ri)ri.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(ri.value||"").trim();if(!v)return;if(!x.routinesX)x.routinesX=[];x.routinesX.push(v);save();buildDayForm(container,d);}});
       var pi=container.querySelector(".px-xin");if(pi)pi.addEventListener("keydown",function(e){if(e.key==="Enter"){var v=(pi.value||"").trim();if(!v)return;if(!x.petitsExosX)x.petitsExosX=[];x.petitsExosX.push(v);save();buildDayForm(container,d);}});
@@ -1487,7 +1524,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     })();
     container.querySelector(".f-note").addEventListener("input",function(){x.note=this.value;save();});
     (function(){var ka=container.querySelector(".f-kcaladj");if(!ka)return;ka.addEventListener("change",function(){var v=(ka.value||"").trim();if(v==="")delete x.kcalAdj;else x.kcalAdj=v;save();buildDayForm(container,d);if(d===todayStr())renderTodayBalance();});})();
-    (function(){var tg=container.querySelector(".jprot-toggle");if(!tg)return;tg.addEventListener("click",function(){jprotOpen=!jprotOpen;tg.classList.toggle("open",jprotOpen);var b=container.querySelector(".jprot-body");if(b)b.classList.toggle("collapsed",!jprotOpen);});})();
     container.querySelectorAll(".f-supp").forEach(function(cb){
       var id=cb.getAttribute("data-id");
       cb.checked=!!(x.supps&&x.supps[id]);
@@ -1497,7 +1533,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelectorAll(".supp-x2").forEach(function(bt){
       bt.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();var id=bt.getAttribute("data-x2");if(!x.supps2)x.supps2={};x.supps2[id]=!x.supps2[id];bt.classList.toggle("on",x.supps2[id]);save();if(x.supps&&x.supps[id])recalcTotals();});
     });
-    (function(){var tg=container.querySelector(".sp-toggle");if(!tg)return;tg.addEventListener("click",function(){suppsOpen=!suppsOpen;tg.classList.toggle("open",suppsOpen);var body=container.querySelector(".supps-body");if(body)body.classList.toggle("collapsed",!suppsOpen);});})();
     container.querySelectorAll(".chip").forEach(function(ch){ch.addEventListener("click",function(){var sp=ch.getAttribute("data-sport");var arr=x.sports;var i=arr.indexOf(sp);if(i>-1){arr.splice(i,1);ch.classList.remove("on");}else{arr.push(sp);ch.classList.add("on");}save();});});
 
     (function(){
@@ -1513,7 +1548,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     renderHrvTrend(container,d);
 
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
-    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Jour · "+Math.round(t.kcal)+" kcal · "+fr1(pEff(t))+" g prot.";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}var jt=container.querySelector(".jprot-toggle"),jb=container.querySelector(".jprot-body");if(jt&&jb){if(t){jt.hidden=false;jb.innerHTML=protBreakHTML(t)+dayMealDistHTML(d);jb.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");recalcTotals();};});}else{jt.hidden=true;jb.innerHTML="";}}if(d===todayStr())renderTodayNutri();}
+    function recalcTotals(){var t=dayTotals(d);var el=container.querySelector(".meal-total");if(el){if(t){el.textContent="Jour · "+Math.round(t.kcal)+" kcal · "+fr1(pEff(t))+" g prot.";el.className="meal-total on";}else{el.textContent="Tape un aliment puis Entrée. Touche une étiquette pour ses valeurs nutritionnelles.";el.className="meal-total";}}var jt=container.querySelector('[data-bnd="jprot"]'),jb=container.querySelector(".jprot-body");if(jt&&jb){if(t){jt.hidden=false;jb.innerHTML=protBreakHTML(t)+dayMealDistHTML(d);jb.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");recalcTotals();};});}else{jt.hidden=true;jb.innerHTML="";}}if(d===todayStr())renderTodayNutri();}
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1};
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
@@ -2059,8 +2094,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function renderCalendars(){
     rebuildSchedule();
-    var h=document.getElementById("homeCal");if(h){renderCalendarInto(h);h.classList.toggle("collapsed",!homeCalOpen);}
-    var tg=document.getElementById("homeCalToggle");if(tg)tg.classList.toggle("open",homeCalOpen);
+    var h=document.getElementById("homeCal");if(h){renderCalendarInto(h);h.classList.toggle("collapsed",!bndOpen.homecal);}
+    var tg=document.getElementById("homeCalToggle");if(tg)tg.classList.toggle("open",bndOpen.homecal);
     var sum=document.getElementById("homeCalSummary");if(sum)sum.textContent=calSummary();
   }
 
@@ -2142,8 +2177,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
    var settingsQualSel=null, settingsQualOpen=false, settingsQualQuery=""; /* editeur Qualite des aliments */
   var settingsSecOpen={};  /* rubriques Réglages repliées par défaut (par id) */
   var settingsGrpOpen={};  /* groupes Réglages (titres) repliés par défaut (par id) */ 
-  function settingsSec(id,title,inner,open){return '<div class="set-sec"><button type="button" class="set-sectog'+(open?" open":"")+'" data-sec="'+id+'"><span class="set-sec-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-secbody">'+inner+'</div>':"")+'</div>';}
-  function settingsGroup(id,title,inner,open){return '<div class="set-grp'+(open?" open":"")+'"><button type="button" class="set-grptog'+(open?" open":"")+'" data-grp="'+id+'"><span class="set-grp-h">'+title+'</span><span class="hcol-chev">▾</span></button>'+(open?'<div class="set-grpbody">'+inner+'</div>':"")+'</div>';} 
+  function settingsSec(id,title,inner,open){return '<div class="set-sec"><button type="button" class="bnd bnd-flat set-sectog'+(open?" open":"")+'" data-sec="'+id+'"><span class="set-sec-h">'+title+'</span><span class="bnd-chev">▾</span></button>'+(open?'<div class="set-secbody">'+inner+'</div>':"")+'</div>';}
+  function settingsGroup(id,title,inner,open){return '<div class="set-grp'+(open?" open":"")+'"><button type="button" class="bnd bnd-band set-grptog'+(open?" open":"")+'" data-grp="'+id+'"><span class="set-grp-h">'+title+'</span><span class="bnd-chev">▾</span></button>'+(open?'<div class="set-grpbody">'+inner+'</div>':"")+'</div>';} 
   function sessExoRow(ex,i){
     return '<div class="sx-row"><div class="sx-line"><input class="sx-name" data-i="'+i+'" value="'+esc(ex.name||"")+'" placeholder="Nom de l\'exercice"><button class="sx-del" data-i="'+i+'" aria-label="Supprimer">×</button></div>'+
       '<div class="sx-line2"><input class="sx-target" data-i="'+i+'" value="'+esc(ex.target||"")+'" placeholder="ex. 4 × 8-10"><label class="sx-setslbl">séries <input type="number" min="1" max="12" class="sx-sets" data-i="'+i+'" value="'+(ex.sets||3)+'"></label></div></div>';
@@ -2382,7 +2417,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="ff-actions"><button class="btn accent ff-newsave">Créer l\'aliment</button><button class="btn ghost ff-newcancel">Annuler</button></div>'+
       '</div>'):"";
     var fixSec='<div class="set-sec">'+
-      '<button type="button" class="ff-sectog'+(ffOpen?" open":"")+'"><span class="set-sec-h">Aliments &amp; unités</span>'+(_allf.length?'<span class="ff-count">'+_allf.length+'</span>':"")+'<span class="hcol-chev">▾</span></button>'+
+      '<button type="button" class="bnd bnd-flat ff-sectog'+(ffOpen?" open":"")+'"><span class="set-sec-h">Aliments &amp; unités</span>'+(_allf.length?'<span class="ff-count">'+_allf.length+'</span>':"")+'<span class="bnd-chev">▾</span></button>'+
       (ffOpen?'<div class="ff-secbody"><p class="set-note">Corrige l\'unité et les valeurs d\'un aliment que tu logges (ex. œuf : compté par pièce, pas par gramme), ou <b>ajoute tes propres aliments</b> (tes courses) pour les retrouver au moment de logger.</p>'+
         '<button type="button" class="btn ghost ff-add">＋ Ajouter un aliment</button>'+
         ffNewForm+
@@ -2625,7 +2660,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});wireSwipe();
     window.addEventListener("resize",function(){if(currentSel)setExoStickyTop();});
-    var hct=document.getElementById("homeCalToggle");if(hct)hct.addEventListener("click",function(){homeCalOpen=!homeCalOpen;renderCalendars();});
+    wireBnd();
     var tpt=document.getElementById("triPlanToggle");if(tpt)tpt.addEventListener("click",function(){var c=document.getElementById("triPlanCard"),b=document.getElementById("triPlanBody");var open=!c.classList.contains("open");c.classList.toggle("open",open);b.classList.toggle("collapsed",!open);});
     (function(){var card=document.getElementById("todayNutri"),sp=document.getElementById("stickyProt");
       if(card&&sp&&"IntersectionObserver" in window){
