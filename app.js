@@ -501,7 +501,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
    /* ---- Navigation par glissement horizontal entre onglets (aujourd'hui / sport / journal / progrès) ---- */
   function swipeOverlayOpen(){
-    var ids=["drawer","settings","calSheet"];for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el&&el.classList.contains("open"))return true;}
+    var ids=["drawer","settings","calSheet","axisView"];for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el&&el.classList.contains("open"))return true;}
     var sc=document.getElementById("crsScanModal");if(sc&&!sc.hidden)return true;return false;
   }
   function swipeInHScroll(el){
@@ -925,14 +925,19 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var spokes=A.map(function(_,i){var p=pt(i,1);return '<line class="rad-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'"/>';}).join("");
     var real='<polygon class="rad-real" points="'+poly(function(i){return A[i].r;})+'"/>';
     var dots=A.map(function(a,i){var p=pt(i,a.r);return '<circle class="rad-dot'+(a.met?' met':'')+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6"/>';}).join("");
-    var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);return '<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
-    var hub=(pct==null)?'':'<circle class="rad-hub" cx="'+cx+'" cy="'+cy+'" r="22"/><text class="rad-hubv" x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle">'+pct+'<tspan class="rad-hubu">%</tspan></text>';
+    /* Chaque logo est une zone de tap de 15 px de rayon (un <text> seul est trop
+       petit au doigt) : le cercle transparent porte le data-ax, le texte le laisse passer. */
+    var labs=A.map(function(a,i){var an=-Math.PI/2+i*2*Math.PI/N,lx=cx+LR*Math.cos(an),ly=cy+LR*Math.sin(an);
+      return '<circle class="rad-hit" cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="15" data-ax="'+esc(a.lab)+'"/>'
+           +'<text class="rad-ilab" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+a.ic+'</text>';}).join("");
+    var weak=A.slice().sort(function(p,q){return p.r-q.r;})[0];
+    var hub=(pct==null)?'':'<circle class="rad-hub" cx="'+cx+'" cy="'+cy+'" r="22" data-ax="'+esc(weak?weak.lab:"")+'"/><text class="rad-hubv" x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle" data-ax="'+esc(weak?weak.lab:"")+'">'+pct+'<tspan class="rad-hubu">%</tspan></text>';
     return '<svg class="radar-svg" viewBox="0 0 260 208" role="img" aria-label="Radar">'+rings+outer+spokes+real+dots+hub+labs+'</svg>';
   }
   function radarBlockHTML(d,rk){
     var A=radarDay(d);
     var overall=Math.round(A.reduce(function(s,a){return s+a.r;},0)/A.length*100);
-    var legend=A.map(function(a){return '<div class="rl-item'+(a.met?' met':'')+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span></span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
+    var legend=A.map(function(a){return '<div class="rl-item tapp'+(a.met?' met':'')+'" data-ax="'+esc(a.lab)+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span><span class="rl-val">'+esc(a.valTxt)+'</span></span><span class="rl-chk">'+(a.met?"\u2713":(a.pct+"%"))+'</span></div>';}).join("");
     var head=bndHead("radar","card",{render:rk,stick:true,ic:"\ud83d\udd78\ufe0f",k:"Ma journ\u00e9e",v:overall+" %"});
     var body=bndOpen.radar?('<div class="radar-body">'+radarSVG(A,overall)+
       '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="bnd-chev">\u25be</span></button>'+
@@ -949,11 +954,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function radarPeriodHTML(){
     var per=radarPeriod||30;var pr=radarPeriodAxes(per);
-    var sels=[7,30,90].map(function(p){return '<button type="button" class="seg rp-per'+(per===p?" on":"")+'" data-p="'+p+'">'+p+' j</button>';}).join("");
+    var sels=[1,7,30,90].map(function(p){return '<button type="button" class="seg rp-per'+(per===p?" on":"")+'" data-p="'+p+'">'+p+' j</button>';}).join("");
     var head='<div class="radar-head"><div class="sec-title">Moyenne par dimension</div>'+(pr.days?'<div class="radar-score">'+Math.round(pr.axes.reduce(function(s,a){return s+a.r;},0)/pr.axes.length*100)+'<span>%</span></div>':'')+'</div>';
     var selBar='<div class="fuel-seg rp-bar">'+sels+'</div>';
     if(!pr.days)return '<div class="card pad radar-card">'+head+selBar+'<div class="zn-hint">Pas encore de donn\u00e9es sur cette p\u00e9riode.</div></div>';
-    var legend=pr.axes.map(function(a){return '<div class="rl-item"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span></span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
+    var legend=pr.axes.map(function(a){return '<div class="rl-item tapp" data-ax="'+esc(a.lab)+'"><span class="rl-ic">'+a.ic+'</span><span class="rl-txt"><span class="rl-lab">'+esc(a.lab)+'</span></span><span class="rl-chk">'+a.pct+'%</span></div>';}).join("");
     return '<div class="card pad radar-card">'+head+selBar+radarSVG(pr.axes,Math.round(pr.axes.reduce(function(s,a){return s+a.r;},0)/pr.axes.length*100))+
       '<button type="button" class="radar-det'+(radarDetail?' open':'')+'">D\u00e9tail<span class="bnd-chev">\u25be</span></button>'+
       (radarDetail?('<div class="radar-legend">'+legend+'</div><div class="radar-sub">Moyenne sur '+per+' j \u00b7 '+pr.days+' jour(s) suivi(s). Chaque axe = ta moyenne vs objectif.</div>'):'')+'</div>';
@@ -961,6 +966,165 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function renderProgressRadar(){var h=document.getElementById("progRadar");if(!h)return;h.innerHTML=radarPeriodHTML();
     h.querySelectorAll(".rp-per").forEach(function(b){b.onclick=function(){radarPeriod=parseInt(b.getAttribute("data-p"),10);renderProgressRadar();renderStatGrid();};});
     var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderProgressRadar();};}
+
+  /* ================== VUE DÉTAIL D'UNE DIMENSION DU RADAR ==================
+     Ouverte en tapant un logo du radar, le centre du radar (→ axe le plus faible)
+     ou une ligne de la légende. État : quel axe, quelle fenêtre, quel jour de fin.
+     axPeriod=1 équivaut à « ce jour précis », choisi via le calendrier. */
+  var axLab=null, axPeriod=7, axDate=null, axCal=null, axShown=false;
+
+  var AXIS_HELP={
+    "Sport":{q:"Le nombre d'activit\u00e9s enregistr\u00e9es dans la journ\u00e9e : les sports coch\u00e9s, plus une s\u00e9ance de muscu ou de triathlon marqu\u00e9e comme faite. Objectif\u00a0: au moins une.",
+      w:"Sur un objectif mixte muscu + triathlon, c'est la <b>r\u00e9gularit\u00e9</b> qui construit la forme, pas l'intensit\u00e9 d'une s\u00e9ance isol\u00e9e. Une semaine \u00e0 5 jours actifs mod\u00e9r\u00e9s vaut mieux que 2 jours tr\u00e8s durs suivis de 5 jours vides\u00a0: le corps s'adapte pendant la r\u00e9cup\u00e9ration, mais seulement si le signal revient assez souvent.",
+      h:"Une marche rapide, une s\u00e9ance de mobilit\u00e9 ou 20 min de v\u00e9lo comptent. Vise \u00e0 ne jamais laisser deux jours vides d'affil\u00e9e."},
+    "Prot\u00e9ines":{q:"Les prot\u00e9ines <b>efficaces</b> du jour (protEff)\u00a0: les prot\u00e9ines compl\u00e8tes, plus les compl\u00e9mentarit\u00e9s c\u00e9r\u00e9ale + l\u00e9gumineuse qui comptent double. Cible\u00a0: 130 g.",
+      w:"130 g pour ~74 kg, c'est environ <b>1,75 g par kilo</b>\u00a0: la zone o\u00f9 la prise de muscle est maximale sans exc\u00e8s inutile. En dessous de ~1,4 g/kg, l'entra\u00eenement construit moins\u00a0; au-dessus de ~2,2 g/kg, le surplus est simplement br\u00fbl\u00e9.",
+      h:"R\u00e9partis en 3 \u00e0 4 prises de 30\u201340 g plut\u00f4t qu'un gros repas\u00a0: la synth\u00e8se prot\u00e9ique sature au-del\u00e0 de ~40 g par prise. C'est l'axe le plus souvent en retard quand les repas viennent de r\u00e9cup\u00e9rations surprise, tr\u00e8s glucidiques."},
+    "Sommeil":{q:"Les heures de sommeil not\u00e9es le matin. Cible\u00a0: 8 h.",
+      w:"C'est pendant le sommeil profond que se fait l'essentiel de la <b>r\u00e9paration musculaire</b> et de la r\u00e9cup\u00e9ration nerveuse. Dormir 6 h au lieu de 8 fait chuter la synth\u00e9se prot\u00e9ique et augmente la sensation d'effort \u00e0 charge \u00e9gale\u00a0: la m\u00eame s\u00e9ance co\u00fbte plus cher.",
+      h:"Croise cet axe avec ta VFC du matin\u00a0: deux nuits courtes de suite + une VFC basse = jour \u00e0 all\u00e9ger plut\u00f4t qu'\u00e0 forcer."},
+    "Eau":{q:"Les verres d'eau compt\u00e9s dans la journ\u00e9e (1 verre \u2248 25 cl). Cible\u00a0: 8 verres, soit environ 2 L.",
+      w:"Perdre <b>2\u00a0% de son poids en eau</b> suffit \u00e0 d\u00e9grader nettement l'endurance et la force. \u00c0 74 kg, cela repr\u00e9sente \u00e0 peine 1,5 L\u00a0\u2014 c'est-\u00e0-dire une s\u00e9ance chaude sans boire.",
+      h:"Les jours de grosse s\u00e9ance ou de chaleur, la cible monte\u00a0: ajoute l'\u00e9quivalent de ce que tu as transpir\u00e9. Une pinc\u00e9e de sel aide l'eau \u00e0 rester dans le sang apr\u00e8s un gros effort."},
+    "\u00c0-c\u00f4t\u00e9s":{q:"Tes ancrages du jour\u00a0: les habitudes que tu as choisi de tenir dans \u00ab\u00a0Bien-\u00eatre & suivi\u00a0\u00bb.",
+      w:"Ce sont les petites choses qui ne se voient pas sur une s\u00e9ance mais qui d\u00e9cident du r\u00e9sultat sur trois mois. Un axe tenu \u00e0 80\u00a0% pendant 90 jours pr\u00e9dit mieux la progression qu'un pic parfait sur une semaine.",
+      h:"Si un ancrage tombe sous 50\u00a0% sur 30 jours, il est probablement mal calibr\u00e9\u00a0: r\u00e9duis-le plut\u00f4t que de l'abandonner."},
+    "Bilan kcal":{q:"Apport du jour moins d\u00e9pense estim\u00e9e (m\u00e9tabolisme de base + activit\u00e9s), compar\u00e9 \u00e0 ton objectif de surplus.",
+      w:"Prendre du muscle demande un <b>surplus l\u00e9ger et r\u00e9gulier</b>. Trop faible, la prise stagne\u00a0; trop \u00e9lev\u00e9, le gain part en gras. C'est la moyenne sur 7 \u00e0 30 jours qui compte\u00a0\u2014 un jour isol\u00e9 ne veut rien dire, d'o\u00f9 l'int\u00e9r\u00eat des fen\u00eatres longues ci-dessus.",
+      h:"Croise avec la courbe de poids\u00a0: si le bilan est positif mais que le poids ne bouge pas sur 3 semaines, c'est l'estimation de d\u00e9pense qu'il faut corriger, pas l'apport."}
+  };
+
+  function axAll(){var A=radarDay(axDate||todayStr());return A.length?A:radarDay(todayStr());}
+  function axOf(iso,lab){var A=radarDay(iso);for(var i=0;i<A.length;i++)if(A[i].lab===lab)return A[i];return null;}
+  function axWin(){var end=axDate||todayStr(),out=[];for(var i=axPeriod-1;i>=0;i--)out.push(isoOf(addDays(end,-i)));return out;}
+  function axHas(iso){return !!state.days[iso];}
+
+  function openAxis(lab){
+    if(!lab)return;
+    axLab=lab;axCal=null;
+    var v=document.getElementById("axisView");if(!v)return;
+    axShown=true;v.hidden=false;requestAnimationFrame(function(){v.classList.add("open");});
+    renderAxis();
+  }
+  function closeAxis(){
+    var v=document.getElementById("axisView");if(!v)return;
+    axShown=false;v.classList.remove("open");setTimeout(function(){if(!axShown)v.hidden=true;},260);
+  }
+  function axisOpen(){return axShown;}
+
+  /* Barres : une par jour jusqu'\u00e0 31 j, sinon une par semaine \u2014 90 barres de 2 px
+     ne se lisent pas, une moyenne hebdomadaire oui. */
+  function axBarsHTML(win,lab){
+    var groups=[];
+    if(win.length<=31){win.forEach(function(iso){groups.push([iso]);});}
+    else{for(var i=0;i<win.length;i+=7)groups.push(win.slice(i,i+7));}
+    var bars=groups.map(function(g){
+      var s=0,n=0,met=0;
+      g.forEach(function(iso){if(!axHas(iso))return;var o=axOf(iso,lab);if(!o)return;s+=o.r;n++;if(o.met)met++;});
+      if(!n)return '<span class="axb none" title="pas de donn\u00e9e"></span>';
+      var r=s/n,h=Math.max(3,Math.round(r*100));
+      var ttl=(g.length>1?frDateShort(g[0])+" \u2192 "+frDateShort(g[g.length-1]):frDateFull(g[0]))+" \u00b7 "+Math.round(r*100)+"%";
+      return '<span class="axb'+(met===n?' met':'')+'" style="height:'+h+'%" title="'+esc(ttl)+'"></span>';
+    }).join("");
+    var f=win[0],l=win[win.length-1];
+    return '<div class="axbars">'+bars+'</div><div class="axbars-x"><span>'+esc(frDateShort(f))+'</span><span>'+esc(frDateShort(l))+'</span></div>';
+  }
+
+  function axCalHTML(){
+    var base=axCal||(axDate||todayStr());
+    var d0=new Date(base+"T00:00:00");d0.setDate(1);
+    var y=d0.getFullYear(),m=d0.getMonth();
+    var first=(d0.getDay()+6)%7, nd=new Date(y,m+1,0).getDate(),today=todayStr(),sel=axDate||todayStr();
+    var cells="";
+    for(var i=0;i<first;i++)cells+='<span class="axc-e"></span>';
+    for(var day=1;day<=nd;day++){
+      var iso=y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+      var cls="axc-d"+(iso===sel?" on":"")+(iso===today?" today":"")+(axHas(iso)?" has":"")+(dateMs(iso)>dateMs(today)?" off":"");
+      cells+='<button type="button" class="'+cls+'" data-axd="'+iso+'">'+day+'</button>';
+    }
+    return '<div class="axcal"><div class="axcal-h"><button type="button" class="axcal-nav" data-axm="-1">\u2039</button>'
+      +'<span>'+esc((MOIS[m]||"")+" "+y)+'</span>'
+      +'<button type="button" class="axcal-nav" data-axm="1">\u203a</button></div>'
+      +'<div class="axcal-w">'+["L","M","M","J","V","S","D"].map(function(x){return "<span>"+x+"</span>";}).join("")+'</div>'
+      +'<div class="axcal-g">'+cells+'</div></div>';
+  }
+
+  function renderAxis(){
+    var host=document.getElementById("axisBody"),ttl=document.getElementById("axisTitle");
+    if(!host)return;
+    var all=axAll();
+    if(axLab&&!all.some(function(a){return a.lab===axLab;})&&AXIS_HELP[axLab]==null)axLab=all[0]&&all[0].lab;
+    var cur=null;for(var i=0;i<all.length;i++)if(all[i].lab===axLab)cur=all[i];
+    if(!cur)cur=all[0]||{ic:"\ud83d\udd78\ufe0f",lab:axLab||"",r:0,pct:0,valTxt:"\u2014"};
+    axLab=cur.lab;
+    if(ttl)ttl.innerHTML='<span class="ax-tic">'+cur.ic+'</span>'+esc(cur.lab)+'<span class="ax-tnext">\u21bb</span>';
+
+    var win=axWin(),sum=0,n=0,metN=0;
+    win.forEach(function(iso){if(!axHas(iso))return;var o=axOf(iso,axLab);if(!o)return;sum+=o.r;n++;if(o.met)metN++;});
+    var avg=n?sum/n:null;
+    var isDay=(axPeriod===1);
+    var refIso=axDate||todayStr();
+    var big=isDay?(axHas(refIso)&&axOf(refIso,axLab)?Math.round(axOf(refIso,axLab).r*100)+" %":"\u2014")
+                 :(avg==null?"\u2014":Math.round(avg*100)+" %");
+    var sub=isDay?(axHas(refIso)&&axOf(refIso,axLab)?esc(axOf(refIso,axLab).valTxt):"Aucune donn\u00e9e ce jour-l\u00e0")
+                 :(n?esc(cur.valTxt)+" aujourd'hui \u00b7 moyenne sur "+n+" jour"+(n>1?"s":"")+" suivi"+(n>1?"s":""):"Aucune donn\u00e9e sur la p\u00e9riode");
+
+    var axesBar=all.map(function(x){return '<button type="button" class="ax-pick'+(x.lab===axLab?" on":"")+'" data-ax="'+esc(x.lab)+'" title="'+esc(x.lab)+'">'+x.ic+'</button>';}).join("");
+    var pers=[1,7,30,90].map(function(p){return '<button type="button" class="seg ax-per'+(axPeriod===p?" on":"")+'" data-axp="'+p+'">'+p+' j</button>';}).join("");
+    var help=AXIS_HELP[axLab]||{q:"",w:"",h:""};
+
+    host.innerHTML=
+      '<div class="ax-picks">'+axesBar+'</div>'+
+      '<div class="ax-bar"><div class="fuel-seg">'+pers+'</div>'+
+        '<button type="button" class="ax-cal'+(axCal?" on":"")+'" id="axCalBtn" aria-label="Choisir un jour">\ud83d\udcc5</button></div>'+
+      (axDate?'<div class="ax-date">Jour de r\u00e9f\u00e9rence\u00a0: <b>'+esc(frDateFull(axDate))+'</b> <button type="button" class="ax-reset" id="axReset">revenir \u00e0 aujourd\'hui</button></div>':'')+
+      (axCal?axCalHTML():'')+
+      '<div class="card pad ax-card">'+
+        '<div class="ax-big">'+big+'</div><div class="ax-sub">'+sub+'</div>'+
+        (isDay?'':axBarsHTML(win,axLab))+
+        (isDay?'':'<div class="ax-kpi"><span><b>'+metN+'</b> jour'+(metN>1?'s':'')+' \u00e0 l\'objectif</span><span><b>'+n+'</b> jour'+(n>1?'s':'')+' suivi'+(n>1?'s':'')+' / '+win.length+'</span></div>')+
+      '</div>'+
+      '<div class="card pad ax-help">'+
+        '<div class="ax-h">Ce que mesure cet axe</div><p>'+help.q+'</p>'+
+        '<div class="ax-h">Pourquoi \u00e7a compte</div><p>'+help.w+'</p>'+
+        '<div class="ax-h">Comment l\'am\u00e9liorer</div><p>'+help.h+'</p>'+
+      '</div>';
+
+    host.querySelectorAll(".ax-per").forEach(function(b){b.onclick=function(){axPeriod=parseInt(b.getAttribute("data-axp"),10);renderAxis();};});
+    var cb=host.querySelector("#axCalBtn");if(cb)cb.onclick=function(){axCal=axCal?null:(axDate||todayStr());renderAxis();};
+    var rs=host.querySelector("#axReset");if(rs)rs.onclick=function(){axDate=null;axCal=null;renderAxis();};
+    host.querySelectorAll(".axcal-nav").forEach(function(b){b.onclick=function(){
+      var base=new Date((axCal||todayStr())+"T00:00:00");base.setDate(1);base.setMonth(base.getMonth()+parseInt(b.getAttribute("data-axm"),10));
+      axCal=isoOf(base);renderAxis();};});
+    host.querySelectorAll(".axc-d").forEach(function(b){b.onclick=function(){
+      var iso=b.getAttribute("data-axd");if(dateMs(iso)>dateMs(todayStr()))return;
+      axDate=iso;axCal=null;renderAxis();};});
+    host.scrollTop=0;
+  }
+
+  /* Un seul \u00e9couteur d\u00e9l\u00e9gu\u00e9 pour toutes les ouvertures d'axe (radar, l\u00e9gende, s\u00e9lecteur). */
+  function wireAxis(){
+    document.addEventListener("click",function(e){
+      var t=e.target;
+      var el=(t&&t.closest)?t.closest("[data-ax]"):null;
+      if(!el&&t&&t.correspondingUseElement)el=null;
+      if(!el)return;
+      var lab=el.getAttribute("data-ax");
+      if(!lab)return;
+      e.preventDefault();e.stopPropagation();
+      if(axisOpen()){axLab=lab;renderAxis();}else openAxis(lab);
+    },true);
+    var bk=document.getElementById("axisBack");if(bk)bk.onclick=closeAxis;
+    var ti=document.getElementById("axisTitle");
+    if(ti)ti.onclick=function(){var all=axAll();var i=0;for(var k=0;k<all.length;k++)if(all[k].lab===axLab)i=k;
+      axLab=all[(i+1)%all.length].lab;renderAxis();};
+    /* Retour par glissement vers la droite */
+    var v=document.getElementById("axisView");
+    if(v){var sx=0,sy=0,ok=false;
+      v.addEventListener("touchstart",function(e){if(e.touches.length!==1){ok=false;return;}sx=e.touches[0].clientX;sy=e.touches[0].clientY;ok=true;},{passive:true});
+      v.addEventListener("touchend",function(e){if(!ok)return;ok=false;var t=e.changedTouches&&e.changedTouches[0];if(!t)return;
+        var dx=t.clientX-sx,dy=t.clientY-sy;if(dx>70&&Math.abs(dx)>Math.abs(dy)*1.8)closeAxis();},{passive:true});}
+  }
   function renderTodayHabits(){
     var host=document.getElementById("todayHabits");if(!host)return;
     var list=customRoutines();
@@ -2660,7 +2824,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});wireSwipe();
     window.addEventListener("resize",function(){if(currentSel)setExoStickyTop();});
-    wireBnd();
+    wireBnd();wireAxis();
     var tpt=document.getElementById("triPlanToggle");if(tpt)tpt.addEventListener("click",function(){var c=document.getElementById("triPlanCard"),b=document.getElementById("triPlanBody");var open=!c.classList.contains("open");c.classList.toggle("open",open);b.classList.toggle("collapsed",!open);});
     (function(){var card=document.getElementById("todayNutri"),sp=document.getElementById("stickyProt");
       if(card&&sp&&"IntersectionObserver" in window){
