@@ -417,7 +417,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var currentSel=null, currentTri=null, journalDate=todayStr();
   var journalOpen=false, jprotOpen=false; /* journal : corps du jour replié ; jprotOpen = détail protéines du journal */
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
-  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=true, radarPeriod=30;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
+  var homeCalOpen=false, heroOpen=false, nutriOpen=false, radarOpen=false, radarPeriod=30;  /* accueil : calendrier, prochaine séance, protéines & courses repliés par défaut */
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
@@ -1254,7 +1254,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- Formulaire de journée ---------------- */
-  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, pxAllOpen=false, wbOpen=false, crOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi ; cr = ancrages */
+  var suppsOpen=false, routinesOpen=false, transitOpen=false, pxOpen=false, pxAllOpen=false, egOpen=false, cmOpen=false, wbOpen=false, crOpen=false;  /* sous-blocs repliés ; wb = bandeau groupé Bien-être & suivi ; cr = ancrages */
   function journalSummary(x,d){
     var t=dayTotals(d),ef=t?Math.round(t.protEff!=null?t.protEff:t.prot):0;
     var sp=(x.sports&&x.sports.length)?x.sports.join(" · "):"repos";
@@ -1305,12 +1305,22 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.innerHTML=
       '<div class="card pad">'+
         (isJournal?'<div class="meal-total-top"><div class="meal-total"></div><button type="button" class="jprot-toggle'+(jprotOpen?' open':'')+'" hidden><span class="jprot-ttl">🥩 Détail protéines</span><span class="supps-chev">▾</span></button><div class="jprot-body'+(jprotOpen?'':' collapsed')+'"></div></div>':'')+
+        '<div class="field dg-field">'+
+          '<button type="button" class="dg-toggle eg-toggle'+(egOpen?' open':'')+'"><span class="supps-ttl">\u26a1 \u00c9nergie &amp; sport</span><span class="dg-meta eg-meta"></span><span class="supps-chev">\u25be</span></button>'+
+          '<div class="dg-body eg-body'+(egOpen?'':' collapsed')+'">'+
         (isJournal?jBalHTML(x,d):'')+
         '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
+        '</div>'+
+        '</div>'+
+        '<div class="field dg-field">'+
+          '<button type="button" class="dg-toggle cm-toggle'+(cmOpen?' open':'')+'"><span class="supps-ttl">\ud83d\udcca Corps &amp; mesures</span><span class="dg-meta cm-meta"></span><span class="supps-chev">\u25be</span></button>'+
+          '<div class="dg-body cm-body'+(cmOpen?'':' collapsed')+'">'+
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
         '<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
         '<div class="field"><label>VFC au r\u00e9veil (ms)</label><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><details class="base-hint"><summary>\uff0b VFC : \u00e0 quoi \u00e7a sert&nbsp;?</summary><div>La VFC (variabilit\u00e9 de la fr\u00e9quence cardiaque, en ms) mesure les micro-\u00e9carts entre deux battements de c\u0153ur. Plus elle est haute, mieux ton syst\u00e8me nerveux r\u00e9cup\u00e8re : bon indicateur de fatigue r\u00e9elle plut\u00f4t que ressentie. Une VFC basse le matin = corps encore fatigu\u00e9, tu peux all\u00e9ger la s\u00e9ance ou viser la r\u00e9cup\u00e9ration. Pour la relever : ta montre (Apple Watch \u2192 app Sant\u00e9 \u2192 Variabilit\u00e9 de la FC) la mesure la nuit ; note la valeur en ms chaque matin, au calme, pour comparer jour apr\u00e8s jour.</div></details><div class="hrv-trend"></div></div>'+
         '<div class="field"><label>Hydratation — verres d\'eau</label><div class="water"><button type="button" class="wbtn wminus">−</button><span class="wcount">0</span><button type="button" class="wbtn wplus">+</button><span class="wml"></span></div></div>'+
+        '</div>'+
+        '</div>'+
         '<div class="field"><label>Repas</label>'+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
           (isJournal?'':'<div class="meal-total"></div>')+
@@ -1319,7 +1329,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<button type="button" class="wb-toggle'+(wbOpen?' open':'')+'"><span class="supps-ttl">Bien-être &amp; suivi</span><span class="supps-chev">▾</span></button>'+
           '<div class="wb-body'+(wbOpen?'':' collapsed')+'">'+
         '<div class="field supps-field">'+
-          '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
+          '<button type="button" class="supps-toggle'+(suppsOpen?' open':'')+'"><span class="supps-ttl">Compléments — ta routine</span><span class="supps-meta sp-meta">'+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)+'</span><span class="supps-chev">▾</span></button>'+
           '<div class="supps-body'+(suppsOpen?'':' collapsed')+'">'+
             (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
               var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
@@ -1368,6 +1378,26 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
     container.querySelector(".f-weight").value=x.weight||"";
     container.querySelector(".f-sleep").value=x.sleep||"";
+    function dgMeta(){
+      var eg=container.querySelector(".eg-meta"),cm=container.querySelector(".cm-meta");
+      if(eg){var p=[],out=expend(d);if(out!=null){var net=adjIntake(d)-out;p.push((net>0?"+":"")+net+" kcal");}
+        var ns=(x.sports&&x.sports.length)||0;if(ns)p.push(ns+" sport"+(ns>1?"s":""));
+        eg.textContent=p.join(" \u00b7 ");}
+      if(cm){var q=[];if(x.weight)q.push(nFmt(num(x.weight))+" kg");if(x.sleep)q.push(nFmt(num(x.sleep))+" h");
+        if(x.hrv)q.push(x.hrv+" ms");if(x.water>0)q.push(x.water+" verre"+(x.water>1?"s":""));
+        cm.textContent=q.join(" \u00b7 ");}
+    }
+    (function(){
+      var eg=container.querySelector(".eg-toggle");
+      if(eg)eg.addEventListener("click",function(){egOpen=!egOpen;eg.classList.toggle("open",egOpen);var b=container.querySelector(".eg-body");if(b)b.classList.toggle("collapsed",!egOpen);});
+      var cm=container.querySelector(".cm-toggle");
+      if(cm)cm.addEventListener("click",function(){cmOpen=!cmOpen;cm.classList.toggle("open",cmOpen);var b=container.querySelector(".cm-body");if(b)b.classList.toggle("collapsed",!cmOpen);});
+      /* résumé d'en-tête tenu à jour sans toucher aux handlers existants */
+      container.addEventListener("input",dgMeta);
+      container.addEventListener("change",dgMeta);
+      container.addEventListener("click",function(){setTimeout(dgMeta,0);});
+    })();
+    dgMeta();
     var hrvIn=container.querySelector(".f-hrv");if(hrvIn)hrvIn.value=x.hrv||"";
     container.querySelector(".f-note").value=x.note||"";
     (function(){var jt=container.querySelector(".jform-tog");if(!jt)return;jt.addEventListener("click",function(){journalOpen=!journalOpen;jt.classList.toggle("open",journalOpen);var jb=container.querySelector(".jbody");if(jb)jb.classList.toggle("collapsed",!journalOpen);});})();
@@ -1375,7 +1405,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelector(".f-weight").addEventListener("input",function(){x.weight=this.value;save();});
     container.querySelector(".f-sleep").addEventListener("input",function(){x.sleep=this.value;save();});
     if(hrvIn)hrvIn.addEventListener("input",function(){var v=(hrvIn.value||"").trim();if(v==="")delete x.hrv;else x.hrv=v;save();renderHrvTrend(container,d);});
-    function updSuppsMeta(){var m=container.querySelector(".supps-meta:not(.rx-meta)");if(!m)return;var f=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length+(x.suppsX||[]).length;m.textContent=f+"/"+((typeof SUPPS!=="undefined"?SUPPS.length:0)+(x.suppsX||[]).length);}
+    function updSuppsMeta(){var m=container.querySelector(".sp-meta");if(!m)return;var f=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length+(x.suppsX||[]).length;m.textContent=f+"/"+((typeof SUPPS!=="undefined"?SUPPS.length:0)+(x.suppsX||[]).length);}
     function updRxMeta(){var m=container.querySelector(".rx-meta");if(!m)return;var f=(typeof ROUTINES!=="undefined"?ROUTINES:[]).filter(function(r){return (x.routines&&x.routines[r.id])||(r.id==="medit"&&x.meditation);}).length+(x.routinesX||[]).length;m.textContent=f+"/"+((typeof ROUTINES!=="undefined"?ROUTINES.length:0)+(x.routinesX||[]).length);}
     function updPxMeta(){var m=container.querySelector(".px-meta");if(!m)return;var L=pxOrder(d),sel=L.filter(function(r){return r._px;});var inSel=sel.filter(function(r){return x.petitsExos&&x.petitsExos[r.id];}).length;var extra=L.filter(function(r){return !r._px&&x.petitsExos&&x.petitsExos[r.id];}).length+(x.petitsExosX||[]).length;m.textContent=inSel+"/"+sel.length+(extra?" +"+extra:"");}    updSuppsMeta();updRxMeta();updPxMeta();
     container.querySelectorAll(".f-rx").forEach(function(cb){
