@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=121">
+  <link rel="stylesheet" href="style.css?v=122">
 </head>
 <body>
 
@@ -58,6 +58,7 @@
 
     <!-- ====================== SPORT (muscu + triathlon) ====================== -->
     <section class="view" id="v-sport">
+      <h2 class="page">Sport</h2>
       <div class="subtabs" id="sportSub"></div>
 
       <div class="sport-pane" id="sportMuscu">
@@ -80,6 +81,9 @@
         <div class="spacer"></div>
         <div id="triDetail"></div>
       </div>
+
+      <h2 class="page learn-h">Apprentissage</h2>
+      <div id="learnPane"></div>
     </section>
 
     <!-- ====================== JOURNAL ====================== -->
@@ -98,11 +102,11 @@
     <section class="view" id="v-prog2">
       <h2 class="page">Progrès</h2>
 
+      <div id="progRadar"></div>
+
       <div class="card pad">
         <div class="stat-grid" id="statGrid"></div>
       </div>
-
-      <div id="progRadar"></div>
 
       <div id="weekViz"></div>
 
@@ -164,7 +168,7 @@
     <button class="tab on" data-view="v-today">
       <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Aujourd'hui</button>
     <button class="tab" data-view="v-sport">
-      <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Sport</button>
+      <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Objectif</button>
     <button class="tab" data-view="v-journal">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
     <button class="tab" data-view="v-prog2">
@@ -187,7 +191,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=121"></script>
-  <script src="app.js?v=121"></script>
+  <script src="data.js?v=122"></script>
+  <script src="app.js?v=122"></script>
 </body>
 </html>
