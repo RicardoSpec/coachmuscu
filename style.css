@@ -976,3 +976,9 @@ nav.tabs .tab.on{color:var(--primary)}
 /* ---- Radar : bandeau repliable + période Progrès ---- */
 .radar-body{margin-top:12px}
 .rp-bar{margin:2px 0 8px}
+
+/* Petits exercices — 2 du jour visibles, le reste sur demande */
+.px-body .rx-item.px-hid{display:none}
+.px-body.px-all .rx-item.px-hid{display:block}
+.px-more{display:block;width:100%;margin-top:10px;background:transparent;border:1px dashed var(--line);border-radius:10px;padding:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:var(--muted);-webkit-tap-highlight-color:transparent}
+.px-more.open{color:var(--primary);border-style:solid}
