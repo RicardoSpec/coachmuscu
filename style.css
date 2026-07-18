@@ -998,3 +998,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .dscg-sub{font-size:12px;color:var(--muted)}
 .dscg-link.done .dscg-sub{color:var(--done-ink);font-weight:700}
 .dscg-arrow{flex:none;font-size:19px;color:var(--muted);line-height:1}
+
+/* Groupes repliables du formulaire du jour (Énergie & sport, Corps & mesures) */
+.dg-field{margin-bottom:14px}
+.dg-toggle{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+.dg-toggle.open{border-color:var(--primary)}
+.dg-body{margin-top:12px}
+.dg-body.collapsed{display:none}
+.dg-body > .field:last-child{margin-bottom:0}
+.dg-meta{flex:1;text-align:right;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
