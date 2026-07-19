@@ -143,6 +143,7 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .base-hint>summary{cursor:pointer;list-style:none;font-size:12px;font-weight:700;color:var(--primary);padding:3px 0;-webkit-tap-highlight-color:transparent}
 .base-hint>summary::-webkit-details-marker{display:none}
 .base-hint>summary::before{content:"ⓘ ";font-style:normal}
+.base-hint.plus>summary::before{content:"＋ "}
 .base-hint[open]>summary{margin-bottom:6px}
 .base-hint>div{background:#f6f9fb;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;color:#3f4f5b;line-height:1.45}
 .help.open{display:block}
@@ -187,9 +188,9 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 
 /* ---------- Navigation par date (Journal) ---------- */
 .datenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:-4px 0 14px;
-  position:sticky;top:var(--bnd-top);z-index:14;background:#f0eef7;padding:7px 10px;border-radius:12px}
+  position:sticky;top:var(--bnd-top);z-index:14;background:#eef2f6;padding:7px 10px;border-radius:12px}
 /* Deux niveaux de figé : la date reste au-dessus, les bandeaux se collent dessous. */
-body.in-journal .bnd-stick.open{top:var(--bnd-top2)}
+#v-day .bnd-stick.open{top:var(--bnd-top2)}
 .navbtn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--primary);font-size:20px;font-weight:700;cursor:pointer;line-height:1}
 .navbtn:active{background:#f3f6f9}
 .dlabel{font-weight:800;font-size:15px;min-width:150px;text-align:center}
@@ -252,14 +253,18 @@ input[type=checkbox]{accent-color:var(--primary)}
 #weightChart .empty{font-size:13px;color:var(--muted)}
 
 /* ---------- Progrès : graphique de régularité ---------- */
-#activityGraph .act-dates{display:flex;gap:3px;padding-left:66px;margin-bottom:6px}
-#activityGraph .act-date{flex:1;min-width:0;font-size:8.5px;color:var(--muted);text-align:center;line-height:1}
-#activityGraph .act-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-#activityGraph .act-label{width:60px;flex:none;font-size:11px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px;justify-content:flex-end;text-align:right}
-#activityGraph .act-cells{display:flex;gap:3px;flex:1}
-#activityGraph .act-cell{flex:1;min-width:0;height:22px;border-radius:5px;background:var(--none-bg)}
-#activityGraph .act-cell.on{background:var(--primary)}
-#activityGraph .act-cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.reg-grid .act-dates{display:flex;gap:3px;padding:0 42px 0 30px;margin-bottom:6px}
+.reg-grid .act-date{flex:1;min-width:0;font-size:8.5px;color:var(--muted);text-align:center;line-height:1}
+.reg-grid .act-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.reg-grid .act-label{width:24px;flex:none;font-size:16px;line-height:1;text-align:center;cursor:help;-webkit-tap-highlight-color:transparent}
+.reg-grid .act-cells{display:flex;gap:3px;flex:1;min-width:0}
+.reg-grid .act-cell{flex:1;min-width:0;height:22px;border-radius:5px;background:var(--none-bg)}
+.reg-grid .act-cell.on{background:var(--primary)}
+.reg-grid .act-cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.reg-grid .act-tag{width:36px;flex:none;text-align:right;font-size:11px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.reg-grid .act-tag.hot{color:var(--primary)}
+.reg-sub{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.reg-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:8px}
 
 /* ---------- Progrès : bilan hebdo ---------- */
 .bilan{width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fbfcfd;color:var(--ink);font-size:12.5px;line-height:1.55;padding:12px;resize:vertical;font-family:var(--mono);white-space:pre-wrap}
@@ -912,6 +917,8 @@ nav.tabs .tab.on{color:var(--primary)}
 .pb-row i{font-style:normal;font-size:11px;color:var(--muted)}
 .pb-pair b{color:var(--done-ink)}
 .pb-un{color:var(--muted)}
+.pb-comp{flex-wrap:wrap;align-items:center}
+.pb-comp .pb-k{flex:1;min-width:0}
 .pb-tot{font-size:11px;color:var(--muted);margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);line-height:1.35}
 
 /* ---- Ajout de série à la volée (exo standard) ---- */
@@ -1064,10 +1071,9 @@ nav.tabs .tab.on{color:var(--primary)}
 .lbl-row>label{margin:0}
 .base-hint.inl{margin:0;order:0}
 .base-hint.inl>summary{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:800;font-style:italic;display:flex;align-items:center;justify-content:center;padding:0;list-style:none}
+.base-hint.inl>summary::before{content:none}
 .base-hint.inl>summary::-webkit-details-marker{display:none}
 .base-hint.inl[open]{order:9;width:100%}
-body.in-journal{background:#f0eef7}
-body.in-journal .card,body.in-journal .bnd-card{border-color:#ddd6ea}
 .datenav.past .dlabel{color:#a1521c}
 .dlabel.past::after{content:" · date passée";font-size:11.5px;font-weight:700;color:#a1521c}
 .datenav.past{background:#fdf0e4;box-shadow:inset 0 0 0 1.5px #f0d3b4}
@@ -1137,9 +1143,10 @@ body.in-journal .card,body.in-journal .bnd-card{border-color:#ddd6ea}
 
 /* --- Hydratation : rangée de verres, un tap suffit --- */
 .hydra{margin-bottom:14px}
-.hy-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.hy-top{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:8px}
 .hy-top label{margin:0}
-.hy-sum{font-size:12.5px;font-weight:700;color:var(--primary);font-family:var(--mono)}
+.hy-lab{font-size:17px;line-height:1;cursor:help;-webkit-tap-highlight-color:transparent}
+.hy-sum{font-size:12.5px;font-weight:700;color:var(--primary);font-family:var(--mono);margin-left:auto}
 .hy-l{color:var(--muted);font-weight:400}
 .hy-glasses{display:flex;flex-wrap:wrap;gap:7px}
 .hy-g{width:34px;height:38px;flex:none;border:1.5px solid var(--line);background:#fff;cursor:pointer;
