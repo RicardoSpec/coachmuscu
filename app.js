@@ -474,6 +474,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     document.body.classList.toggle("in-journal",id==="v-journal");
+    setTimeout(syncStickTop,0);
     if(id==="v-today"){renderToday();renderCalendars();}
     else if(id==="v-sport"){renderProgram();renderTri();renderSportTabs();renderLearn();}
     else if(id==="v-journal"){renderJournal();renderCalendars();}
@@ -1061,15 +1062,27 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var bars=groups.map(function(g){
       var s=0,n=0,met=0;
       g.forEach(function(iso){if(!axHas(iso))return;var o=axOf(iso,lab);if(!o)return;s+=o.r;n++;if(o.met)met++;});
-      if(!n)return '<span class="axb none" title="pas de donn\u00e9e"></span>';
+      if(!n)return '<span class="axb none" title="pas de donn\u00e9e" data-axj="'+g[g.length-1]+'"></span>';
       var r=s/n,h=Math.max(3,Math.round(r*100));
       var ttl=(g.length>1?frDateShort(g[0])+" \u2192 "+frDateShort(g[g.length-1]):frDateFull(g[0]))+" \u00b7 "+Math.round(r*100)+"%";
-      return '<span class="axb'+(met===n?' met':'')+'" style="height:'+h+'%" title="'+esc(ttl)+'"></span>';
+      return '<span class="axb'+(met===n?' met':'')+'" style="height:'+h+'%" title="'+esc(ttl)+'" data-axj="'+g[g.length-1]+'"></span>';
     }).join("");
     var f=win[0],l=win[win.length-1];
     return '<div class="axbars">'+bars+'</div><div class="axbars-x"><span>'+esc(frDateShort(f))+'</span><span>'+esc(frDateShort(l))+'</span></div>';
   }
 
+  /* Les objectifs étant datés, on dit lequel s'applique à la fenêtre affichée —
+     et on prévient si l'objectif a changé en cours de période. */
+  function axGoalHTML(){
+    var K={"Sport":"sport","Prot\u00e9ines":"prot","Sommeil":"sleep","Eau":"water","\u00c0-c\u00f4t\u00e9s":"anchors","Bilan kcal":"kcal"}[axLab];
+    if(!K)return "";
+    var win=axWin(),vals={};
+    win.forEach(function(iso){vals[goalsAt(iso)[K]]=1;});
+    var list=Object.keys(vals);
+    var u=(GOAL_LBL[K]||["","",""])[2];
+    if(list.length>1)return '<div class="ax-goal ax-goal-warn">\u26a0\ufe0f Objectif modifi\u00e9 pendant la p\u00e9riode ('+esc(list.join(" \u2192 "))+' '+esc(u)+') \u2014 chaque jour reste jug\u00e9 sur le sien.</div>';
+    return '<div class="ax-goal">Objectif en vigueur\u00a0: <b>'+esc(list[0])+'</b> '+esc(u)+'</div>';
+  }
   function axCalHTML(){
     var base=axCal||(axDate||todayStr());
     var d0=new Date(base+"T00:00:00");d0.setDate(1);
@@ -1121,6 +1134,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       (axCal?axCalHTML():'')+
       '<div class="card pad ax-card">'+
         '<div class="ax-big">'+big+'</div><div class="ax-sub">'+sub+'</div>'+
+        axGoalHTML()+
         (isDay?'':axBarsHTML(win,axLab))+
         (isDay?'':'<div class="ax-kpi"><span><b>'+metN+'</b> jour'+(metN>1?'s':'')+' \u00e0 l\'objectif</span><span><b>'+n+'</b> jour'+(n>1?'s':'')+' suivi'+(n>1?'s':'')+' / '+win.length+'</span></div>')+
       '</div>'+
@@ -1143,6 +1157,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".axc-d").forEach(function(b){b.onclick=function(){
       var iso=b.getAttribute("data-axd");if(dateMs(iso)>dateMs(todayStr()))return;
       axDate=iso;axCal=null;renderAxis();};});
+    /* Une barre = un jour : la toucher ouvre le Journal à cette date.
+       C'est le chemin qui manquait entre « je vois un creux » et « je vais voir pourquoi ». */
+    host.querySelectorAll(".axb[data-axj]").forEach(function(b){b.onclick=function(){
+      journalDate=b.getAttribute("data-axj");
+      closeAxis();activateTab("v-journal");renderJournal();};});
     var slot=host.querySelector(".ax-dslot");
     if(slot){
       if(axLab==="Prot\u00e9ines")renderTodayNutri(slot);
@@ -1153,6 +1172,16 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* Un seul \u00e9couteur d\u00e9l\u00e9gu\u00e9 pour toutes les ouvertures d'axe (radar, l\u00e9gende, s\u00e9lecteur). */
   /* Marque .stuck les bandeaux figés effectivement arrivés en haut. */
+  /* Mesure la hauteur réelle de la barre de titre (et, dans le Journal, du bandeau
+     de date) pour que les titres figés se posent JUSTE dessous, jamais dessous-derrière. */
+  function syncStickTop(){
+    var r=document.documentElement,top=document.querySelector("header.top");
+    if(!top)return;
+    var h=Math.round(top.getBoundingClientRect().height);
+    if(h>0)r.style.setProperty("--bnd-top",h+"px");
+    var dn=document.querySelector("#v-journal .datenav"),dh=dn?Math.round(dn.getBoundingClientRect().height):0;
+    r.style.setProperty("--bnd-top2",(h+(dh>0?dh+6:48))+"px");
+  }
   function wireStick(){
     var tick=false;
     function upd(){
@@ -1164,7 +1193,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         el.classList.toggle("stuck",el.getBoundingClientRect().top<=top+0.5);
       }
     }
-    function ping(){if(!tick){tick=true;requestAnimationFrame(upd);}}
+    function ping(){if(!tick){tick=true;requestAnimationFrame(function(){syncStickTop();upd();});}}
     window.addEventListener("scroll",ping,{passive:true});
     window.addEventListener("resize",ping);
     document.addEventListener("click",function(){setTimeout(ping,0);},true);
@@ -1682,7 +1711,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return '<div class="field supps-field wb-group">'+
           bndHead("wb","sec",{stick:true,ttl:"Bien-être &amp; suivi"})+
           '<div class="bnd-body wb-body'+(bndOpen.wb?'':' collapsed')+'" data-bndb="wb">'+
-        dscgBlockHTML(d)+
         '<div class="field supps-field">'+
           bndHead("sp","sub",{ttl:"Compléments alimentaires",cls:"sp-meta",meta:+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)})+
           '<div class="bnd-body'+(bndOpen.sp?'':' collapsed')+'" data-bndb="sp">'+
@@ -1718,7 +1746,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="field supps-field">'+
           bndHead("cr","sub",{ttl:"Ancrages — habitudes à tenir",cls:"cr-meta",meta:""})+
           '<div class="bnd-body cr-body'+(bndOpen.cr?'':' collapsed')+'" data-bndb="cr">'+
-            (customRoutines().length?customRoutines().map(function(a){return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-cr" data-id="'+a.id+'"><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span></label></div>';}).join(""):'<div class="supp-hint">Cr\u00e9e tes ancrages dans R\u00e9glages \u25b8 Ancrages de routines.</div>')+
+            (customRoutines().length?customRoutines().map(function(a){
+              /* M\u00eame patron que les petits exercices : un \u00ab i \u00bb qui d\u00e9plie un lien.
+                 Sans lien saisi, on propose une recherche YouTube sur l'intitul\u00e9. */
+              var url=(a.link||"").trim(),yt=!url;
+              if(!url)url="https://www.youtube.com/results?search_query="+encodeURIComponent(a.label||"");
+              return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-cr" data-id="'+a.id+'"><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span>'+
+                '<button type="button" class="rx-info" data-rx="cr-'+a.id+'" aria-label="Infos">i</button></label>'+
+                '<div class="rx-help" id="rxhelp-cr-'+a.id+'"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+(yt?"\u25b6\ufe0e Chercher sur YouTube":"Ouvrir")+' \u2197</a></div>'+
+              '</div>';}).join(""):'<div class="supp-hint">Cr\u00e9e tes ancrages dans R\u00e9glages \u25b8 Ancrages de routines.</div>')+
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
@@ -2763,6 +2799,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<input type="text" class="cr-emoji" maxlength="3" value="'+esc(a.icon||"")+'" placeholder="🚭" style="width:52px;text-align:center;padding:9px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:18px;background:#fff">'+
         '<input type="text" class="cr-label" value="'+esc(a.label||"")+'" placeholder="Intitulé (ex : Journée sans cigarette)" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
         '<button type="button" class="set-del cr-del" aria-label="Supprimer">🗑</button>'+
+      '</div>'+
+      '<div class="cr-row2" data-id="'+esc(a.id)+'">'+
+        '<input type="text" class="cr-link" value="'+esc(a.link||"")+'" placeholder="Lien (vid\u00e9o, article\u2026) \u2014 vide = recherche YouTube">'+
       '</div>';
     }).join("");
     var anchorsInner='<p class="set-note">Crée tes propres ancrages d\'habitude. Chacun apparaît dans « Aujourd\'hui » avec une case à cocher, et sa série 🔥 se suit dans Progrès — idéal pour un suivi jour après jour (ex. « Journée sans cigarette »). Un emoji + un intitulé suffisent.</p>'+
@@ -2856,6 +2895,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".cr-row").forEach(function(row){var id=row.getAttribute("data-id");var em=row.querySelector(".cr-emoji"),lb=row.querySelector(".cr-label");
       function upd(){var a=findCR(id);if(!a)return;a.icon=(em.value||"").trim();a.label=(lb.value||"").trim();save();if(typeof renderTodayHabits==="function")renderTodayHabits();}
       if(em)em.addEventListener("input",upd);if(lb)lb.addEventListener("input",upd);
+      var lk=host.querySelector('.cr-row2[data-id="'+id+'"] .cr-link');
+      if(lk)lk.addEventListener("input",function(){var o=findCR(id);if(!o)return;var v=(lk.value||"").trim();if(v)o.link=v;else delete o.link;save();});
       var del=row.querySelector(".cr-del");if(del)del.onclick=function(){if(confirm("Supprimer cet ancrage ? Son suivi sera retiré des jours notés.")){removeCR(id);save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}};
     });
     (function(){var b=host.querySelector(".cr-addbtn");if(!b)return;function addCR(){var ei=host.querySelector(".cr-new-emoji"),li=host.querySelector(".cr-new-label");var lbl=((li&&li.value)||"").trim();if(!lbl)return;if(!Array.isArray(state.customRoutines))state.customRoutines=[];state.customRoutines.push({id:"cr"+Date.now().toString(36),icon:((ei&&ei.value)||"").trim(),label:lbl});settingsSecOpen.anchors=true;save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}
@@ -2952,7 +2993,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});wireSwipe();
     window.addEventListener("resize",function(){if(currentSel)setExoStickyTop();});
-    wireBnd();wireAxis();wireStick();
+    wireBnd();wireAxis();wireStick();syncStickTop();
     var tpt=document.getElementById("triPlanToggle");if(tpt)tpt.addEventListener("click",function(){var c=document.getElementById("triPlanCard"),b=document.getElementById("triPlanBody");var open=!c.classList.contains("open");c.classList.toggle("open",open);b.classList.toggle("collapsed",!open);});
     (function(){var card=document.getElementById("todayNutri"),sp=document.getElementById("stickyProt");
       if(card&&sp&&"IntersectionObserver" in window){
