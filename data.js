@@ -135,8 +135,8 @@ var PROGRAM2 = {
 
 /* ---------- Blocs & codes ---------- */
 var PROGRAM_BLOCKS = {
-  b1:{name:"Bloc 1 — Construction", short:"B1", weeks:5, prog:PROGRAM},
-  b2:{name:"Bloc 2 — Août (plage)", short:"B2", weeks:4, prog:PROGRAM2}
+  b1:{name:"Construction", short:"B1", weeks:5, prog:PROGRAM},
+  b2:{name:"Plage d'août", short:"B2", weeks:4, prog:PROGRAM2}
 };
 var BLOCK_ORDER = ["b1","b2"];
 var CODES = ["A","B","C","D"];
