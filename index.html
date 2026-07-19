@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=130">
+  <link rel="stylesheet" href="style.css?v=132">
 </head>
 <body>
 
@@ -44,17 +44,25 @@
   <main>
     <div id="stickyProt"></div>
 
-    <!-- ====================== AUJOURD'HUI ====================== -->
-    <section class="view active" id="v-today">
-      <div id="homeCalBlock">
-      <button class="bnd bnd-card bnd-stick" id="homeCalToggle" data-bnd="homecal" data-bndr="homecal"><span class="bnd-ic">📅</span><span class="bnd-txt"><span class="bnd-k">Calendrier</span><span class="bnd-v" id="homeCalSummary"></span></span><span class="bnd-chev">▾</span></button>
-      <div id="homeCal" class="calwrap collapsed"></div>
+    <!-- ====================== LE JOUR (aujourd'hui ou un jour passé) ======================
+         Un seul écran : la barre de dates choisit le jour, les blocs d'entête
+         (#dayHead) ne s'affichent que si ce jour est aujourd'hui. -->
+    <section class="view active" id="v-day">
+      <div class="datenav">
+        <button class="navbtn" id="dayPrev" aria-label="Jour précédent">‹</button>
+        <div class="dlabel" id="dayLabel"></div>
+        <button class="navbtn" id="dayNext" aria-label="Jour suivant">›</button>
       </div>
-      <div class="hero" id="heroCard"></div>
-      <div id="onbNudge"></div>
-      <div id="todayRadar"></div>
-      <h2 class="page">Journal du jour</h2>
-      <div id="todayLog"></div>
+      <div id="dayHead">
+        <div id="homeCalBlock">
+        <button class="bnd bnd-card bnd-stick" id="homeCalToggle" data-bnd="homecal" data-bndr="homecal"><span class="bnd-ic">📅</span><span class="bnd-txt"><span class="bnd-k">Calendrier</span><span class="bnd-v" id="homeCalSummary"></span></span><span class="bnd-chev">▾</span></button>
+        <div id="homeCal" class="calwrap collapsed"></div>
+        </div>
+        <div class="hero" id="heroCard"></div>
+        <div id="onbNudge"></div>
+      </div>
+      <div id="dayRadar"></div>
+      <div id="dayLog"></div>
       <div id="backupNudge"></div>
     </section>
 
@@ -88,18 +96,6 @@
       <div id="learnPane"></div>
     </section>
 
-    <!-- ====================== JOURNAL ====================== -->
-    <section class="view" id="v-journal">
-      <h2 class="page">Journal</h2>
-      <div class="datenav">
-        <button class="navbtn" id="dayPrev" aria-label="Jour précédent">‹</button>
-        <div class="dlabel" id="dayLabel"></div>
-        <button class="navbtn" id="dayNext" aria-label="Jour suivant">›</button>
-      </div>
-      <div id="journalRadar"></div>
-      <div id="journalLog"></div>
-    </section>
-
     <!-- ====================== PROGRÈS ====================== -->
     <section class="view" id="v-prog2">
       <h2 class="page">Progrès</h2>
@@ -122,13 +118,6 @@
       <div class="card pad">
         <div class="sec-title">Protéines</div>
         <div id="proteinChart"></div>
-      </div>
-
-      <!-- Graphique de régularité : types de séance (lignes) × 14 derniers jours (colonnes) -->
-      <div class="card pad">
-        <div class="sec-title">Activité — 14 derniers jours</div>
-        <p class="muted" style="margin:0 0 10px">Quels sports, quels jours. D'après les sports cochés dans le Journal.</p>
-        <div id="activityGraph"></div>
       </div>
 
       <!-- Bilan hebdo à copier-coller dans le chat -->
@@ -172,12 +161,10 @@
 
   <!-- ====================== NAVIGATION ====================== -->
   <nav class="tabs">
-    <button class="tab on" data-view="v-today">
-      <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Aujourd'hui</button>
+    <button class="tab on" data-view="v-day">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
     <button class="tab" data-view="v-sport">
       <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Objectif</button>
-    <button class="tab" data-view="v-journal">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
     <button class="tab" data-view="v-prog2">
       <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>Progrès</button>
   </nav>
@@ -198,7 +185,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=130"></script>
-  <script src="app.js?v=130"></script>
+  <script src="data.js?v=132"></script>
+  <script src="app.js?v=132"></script>
 </body>
 </html>
