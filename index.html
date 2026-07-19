@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=124">
+  <link rel="stylesheet" href="style.css?v=128">
 </head>
 <body>
 
@@ -126,8 +126,8 @@
 
       <!-- Graphique de régularité : types de séance (lignes) × 14 derniers jours (colonnes) -->
       <div class="card pad">
-        <div class="sec-title">Régularité — 14 derniers jours</div>
-        <p class="muted" style="margin:0 0 10px">D'après les sports cochés chaque jour dans le Journal.</p>
+        <div class="sec-title">Activité — 14 derniers jours</div>
+        <p class="muted" style="margin:0 0 10px">Quels sports, quels jours. D'après les sports cochés dans le Journal.</p>
         <div id="activityGraph"></div>
       </div>
 
@@ -139,14 +139,11 @@
         <button class="btn ghost" id="bilanCopy" style="margin-top:8px">Copier le bilan</button>
       </div>
 
-      <!-- Données / sauvegarde -->
+      <!-- Données / sauvegarde : un seul point d'entrée, dans les Réglages -->
       <div class="card pad">
         <div class="sec-title">Tes données</div>
-        <p class="muted" style="margin:0 0 10px">Sauvegarde locale (sur cet appareil uniquement). Exporte régulièrement pour garder une copie sur ton Drive.</p>
-        <button class="btn ghost" id="btnExport">Exporter (JSON)</button>
-        <label class="btn ghost" for="fileImport" style="margin-top:8px;display:block;text-align:center;cursor:pointer">Importer (JSON)</label>
-        <input type="file" id="fileImport" accept="application/json,.json" hidden>
-        <button class="btn danger" id="btnReset" style="margin-top:8px">Tout effacer</button>
+        <p class="muted" style="margin:0 0 10px">Sauvegarde locale (sur cet appareil uniquement). Export, import et remise à zéro sont regroupés au même endroit.</p>
+        <button class="btn ghost" id="dataGo">Réglages ▸ Données →</button>
       </div>
     </section>
 
@@ -201,7 +198,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=124"></script>
-  <script src="app.js?v=124"></script>
+  <script src="data.js?v=128"></script>
+  <script src="app.js?v=128"></script>
 </body>
 </html>
