@@ -1219,20 +1219,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       v.addEventListener("touchend",function(e){if(!ok)return;ok=false;var t=e.changedTouches&&e.changedTouches[0];if(!t)return;
         var dx=t.clientX-sx,dy=t.clientY-sy;if(dx>70&&Math.abs(dx)>Math.abs(dy)*1.8)closeAxis();},{passive:true});}
   }
-  function renderTodayHabits(){
-    var host=document.getElementById("todayHabits");if(!host)return;
-    var list=customRoutines();
-    if(!list.length){host.innerHTML="";return;}
-    var d=todayStr();
-    var rows=list.map(function(a){
-      var on=crDoneOn(a.id,d);
-      var st=currentStreak(function(iso){return crDoneOn(a.id,iso);});
-      var streak=st>0?'<span class="hchip" style="margin-left:auto"><b>🔥'+st+' j</b></span>':'';
-      return '<label class="supp"><input type="checkbox" class="f-cr" data-id="'+esc(a.id)+'"'+(on?' checked':'')+'><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span>'+streak+'</label>';
-    }).join("");
-    host.innerHTML='<div class="card pad"><div class="sec-title">Mes ancrages</div>'+rows+'<div class="supp-hint">Coche ce que tu tiens aujourd\'hui — chaque jour coché prolonge la série 🔥.</div></div>';
-    host.querySelectorAll(".f-cr").forEach(function(cb){cb.addEventListener("change",function(){var id=cb.getAttribute("data-id");var x=day(d);if(!x.customRoutines)x.customRoutines={};if(cb.checked)x.customRoutines[id]=true;else delete x.customRoutines[id];save();renderTodayHabits();});});
-  }
   /* ---------------- Écran du jour (date navigable) ----------------
      UN seul écran pour aujourd'hui et les jours passés : même formulaire, même radar.
      Les blocs d'entête (calendrier, prochaine séance, alertes) n'ont de sens que pour
@@ -1245,7 +1231,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var hd=document.getElementById("dayHead");if(hd)hd.hidden=!isTd;
     renderChip();
     renderHero();
-    renderTodayHabits();
     renderOnboard();
     renderDayRadar();
     renderDayNutri(d);
@@ -1763,6 +1748,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
               return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-cr" data-id="'+a.id+'"><span class="supp-txt"><span class="supp-name">'+(a.icon?esc(a.icon)+' ':'')+esc(a.label)+'</span></span>'+
                 '<button type="button" class="rx-info" data-rx="cr-'+a.id+'" aria-label="Infos">i</button></label>'+
                 '<div class="rx-help" id="rxhelp-cr-'+a.id+'"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+(yt?"\u25b6\ufe0e Chercher sur YouTube":"Ouvrir")+' \u2197</a></div>'+
+                (a.note?'<textarea class="f-crnote" data-id="'+a.id+'" rows="2" placeholder="Note du jour\u2026"></textarea>':'')+
               '</div>';}).join(""):'<div class="supp-hint">Cr\u00e9e tes ancrages dans R\u00e9glages \u25b8 Ancrages de routines.</div>')+
           '</div>'+
         '</div>'+
@@ -1823,6 +1809,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelectorAll(".f-px").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.petitsExos&&x.petitsExos[id]);cb.addEventListener("change",function(){if(!x.petitsExos)x.petitsExos={};x.petitsExos[id]=cb.checked;save();updPxMeta();});});
     function updCrMeta(){var m=container.querySelector(".cr-meta");if(!m)return;var l=customRoutines();var f=l.filter(function(a){return x.customRoutines&&x.customRoutines[a.id];}).length;m.textContent=l.length?f+"/"+l.length:"";}
     container.querySelectorAll(".f-cr").forEach(function(cb){var id=cb.getAttribute("data-id");cb.checked=!!(x.customRoutines&&x.customRoutines[id]);cb.addEventListener("change",function(){if(!x.customRoutines)x.customRoutines={};if(cb.checked)x.customRoutines[id]=true;else delete x.customRoutines[id];save();updCrMeta();});});
+    container.querySelectorAll(".f-crnote").forEach(function(ta){var id=ta.getAttribute("data-id");
+      ta.value=(x.crNote&&x.crNote[id])||"";
+      ta.addEventListener("input",function(){if(!x.crNote)x.crNote={};var v=ta.value;if(v)x.crNote[id]=v;else delete x.crNote[id];save();});});
     updCrMeta();
     container.querySelectorAll(".px-n").forEach(function(ni){var id=ni.getAttribute("data-id");if(x.petitsExosN&&x.petitsExosN[id]!=null&&x.petitsExosN[id]!=="")ni.value=x.petitsExosN[id];ni.addEventListener("input",function(){if(!x.petitsExosN)x.petitsExosN={};var v=(ni.value||"").trim();if(v==="")delete x.petitsExosN[id];else x.petitsExosN[id]=v;save();});});
     (function(){var b=container.querySelector(".px-more");if(!b)return;b.addEventListener("click",function(){pxAllOpen=!pxAllOpen;b.classList.toggle("open",pxAllOpen);b.textContent=pxAllOpen?"Masquer les autres":"Voir les autres exercices";var bd=container.querySelector(".px-body");if(bd)bd.classList.toggle("px-all",pxAllOpen);});})();
@@ -2100,6 +2089,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return false;}
   function routineDoneOn(id,iso){var x=state.days[iso];return !!(x&&((x.routines&&x.routines[id])||(id==="medit"&&x.meditation)));}
   function pxDoneOn(id,iso){var x=state.days[iso];return !!(x&&x.petitsExos&&x.petitsExos[id]);}
+  function refreshDayForm(){var h=document.getElementById("dayLog");if(h&&h.innerHTML)buildDayForm(h,dayDate);}
   function customRoutines(){return Array.isArray(state.customRoutines)?state.customRoutines:[];}
   function crDoneOn(id,iso){var x=state.days[iso];return !!(x&&x.customRoutines&&x.customRoutines[id]);}
   function findCR(id){var l=customRoutines();for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null;}
@@ -2804,16 +2794,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<button type="button" class="set-del cr-del" aria-label="Supprimer">🗑</button>'+
       '</div>'+
       '<div class="cr-row2" data-id="'+esc(a.id)+'">'+
-        '<input type="text" class="cr-link" value="'+esc(a.link||"")+'" placeholder="Lien (vid\u00e9o, article\u2026) \u2014 vide = recherche YouTube">'+
+        '<input type="text" class="cr-link" value="'+esc(a.link||"")+'" placeholder="Lien (vid\u00e9o, article\u2026), vide = recherche YouTube">'+
+        '<label class="cr-notetog"><input type="checkbox" class="cr-note"'+(a.note?" checked":"")+'><span>Bloc-note quotidien</span></label>'+
       '</div>';
     }).join("");
-    var anchorsInner='<p class="set-note">Crée tes propres ancrages d\'habitude. Chacun apparaît dans « Aujourd\'hui » avec une case à cocher, et sa série 🔥 se suit dans Progrès — idéal pour un suivi jour après jour (ex. « Journée sans cigarette »). Un emoji + un intitulé suffisent.</p>'+
+    var anchorsInner='<p class="set-note">Crée tes propres ancrages d\'habitude. Chacun apparaît dans « Aujourd\'hui » avec une case à cocher, et sa série 🔥 se suit dans Progrès — idéal pour un suivi jour après jour (ex. « Journée sans cigarette »). Un emoji + un intitulé suffisent. Coche <b>bloc-note quotidien</b> si tu veux écrire deux lignes sous l\'ancrage chaque jour (ce que tu as fait, pourquoi ça a sauté\u2026) : la note appartient à la date affichée.</p>'+
       anchorsRows+
       '<div class="cr-add" style="display:flex;gap:8px;align-items:center;margin-top:4px">'+
         '<input type="text" class="cr-new-emoji" maxlength="3" placeholder="🚭" style="width:52px;text-align:center;padding:9px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:18px;background:#fff">'+
         '<input type="text" class="cr-new-label" placeholder="Nouvel ancrage…" style="flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:#fff">'+
         '<button type="button" class="btn accent cr-addbtn" style="flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap">Ajouter</button>'+
-      '</div>';
+      '</div>'+
+      '<label class="cr-notetog cr-notetog-new"><input type="checkbox" class="cr-new-note"><span>Bloc-note quotidien</span></label>';
     var _th=thresholdsGet();thHistSync();
     var seuilsInner='<p class="set-note">Tes seuils transforment l\'intensit\u00e9 en rep\u00e8res concrets (allures, watts, pulsations). Ce sont des <b>guides</b> : la <b>VMA</b> = ta vitesse maximale a\u00e9robie en course, la <b>FC max</b> = ta fr\u00e9quence cardiaque maximale, le <b>FTP</b> = la puissance tenue ~1 h \u00e0 v\u00e9lo. Renseigne ce que tu connais (Apple Watch, test terrain) \u2014 le reste se calcule.</p>'+
       '<div class="ff-grid">'+
@@ -2896,13 +2888,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     })();
     host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderSettings();};});
     host.querySelectorAll(".cr-row").forEach(function(row){var id=row.getAttribute("data-id");var em=row.querySelector(".cr-emoji"),lb=row.querySelector(".cr-label");
-      function upd(){var a=findCR(id);if(!a)return;a.icon=(em.value||"").trim();a.label=(lb.value||"").trim();save();if(typeof renderTodayHabits==="function")renderTodayHabits();}
+      function upd(){var a=findCR(id);if(!a)return;a.icon=(em.value||"").trim();a.label=(lb.value||"").trim();save();refreshDayForm();}
       if(em)em.addEventListener("input",upd);if(lb)lb.addEventListener("input",upd);
+      var nt=host.querySelector('.cr-row2[data-id="'+id+'"] .cr-note');
+      if(nt)nt.addEventListener("change",function(){var o=findCR(id);if(!o)return;if(nt.checked)o.note=true;else delete o.note;save();refreshDayForm();});
       var lk=host.querySelector('.cr-row2[data-id="'+id+'"] .cr-link');
       if(lk)lk.addEventListener("input",function(){var o=findCR(id);if(!o)return;var v=(lk.value||"").trim();if(v)o.link=v;else delete o.link;save();});
-      var del=row.querySelector(".cr-del");if(del)del.onclick=function(){if(confirm("Supprimer cet ancrage ? Son suivi sera retiré des jours notés.")){removeCR(id);save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}};
+      var del=row.querySelector(".cr-del");if(del)del.onclick=function(){if(confirm("Supprimer cet ancrage ? Son suivi sera retiré des jours notés.")){removeCR(id);save();renderSettings();refreshDayForm();}};
     });
-    (function(){var b=host.querySelector(".cr-addbtn");if(!b)return;function addCR(){var ei=host.querySelector(".cr-new-emoji"),li=host.querySelector(".cr-new-label");var lbl=((li&&li.value)||"").trim();if(!lbl)return;if(!Array.isArray(state.customRoutines))state.customRoutines=[];state.customRoutines.push({id:"cr"+Date.now().toString(36),icon:((ei&&ei.value)||"").trim(),label:lbl});settingsSecOpen.anchors=true;save();renderSettings();if(typeof renderTodayHabits==="function")renderTodayHabits();}
+    (function(){var b=host.querySelector(".cr-addbtn");if(!b)return;function addCR(){var ei=host.querySelector(".cr-new-emoji"),li=host.querySelector(".cr-new-label");var lbl=((li&&li.value)||"").trim();if(!lbl)return;if(!Array.isArray(state.customRoutines))state.customRoutines=[];var nn=host.querySelector(".cr-new-note");var nw={id:"cr"+Date.now().toString(36),icon:((ei&&ei.value)||"").trim(),label:lbl};if(nn&&nn.checked)nw.note=true;state.customRoutines.push(nw);settingsSecOpen.anchors=true;save();renderSettings();refreshDayForm();}
       b.onclick=addCR;var li=host.querySelector(".cr-new-label");if(li)li.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addCR();}});
     })();
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
