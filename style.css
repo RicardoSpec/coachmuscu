@@ -14,6 +14,7 @@
      — le 50 px en dur passait le bandeau figé SOUS la barre de titre. */
   --bnd-top:calc(env(safe-area-inset-top) + 50px);
   --bnd-top2:calc(env(safe-area-inset-top) + 98px);
+  --bnd-top3:calc(env(safe-area-inset-top) + 98px);
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 
@@ -190,7 +191,7 @@ table.grid td.wk .wkd{display:block;font-size:9px;color:#9aa7b3;font-weight:600;
 .datenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:-4px 0 14px;
   position:sticky;top:var(--bnd-top);z-index:14;background:#eef2f6;padding:7px 10px;border-radius:12px}
 /* Deux niveaux de figé : la date reste au-dessus, les bandeaux se collent dessous. */
-#v-day .bnd-stick.open{top:var(--bnd-top2)}
+#v-day .bnd-stick.open{top:var(--bnd-top3)}
 .navbtn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--primary);font-size:20px;font-weight:700;cursor:pointer;line-height:1}
 .navbtn:active{background:#f3f6f9}
 .dlabel{font-weight:800;font-size:15px;min-width:150px;text-align:center}
@@ -620,15 +621,6 @@ nav.tabs .tab.on{color:var(--primary)}
 .pill-ck{font-size:8px;margin-left:1px}
 .cal-book{font-size:10px;line-height:1}
 
-/* ---------- Barre protéines collante (apparaît après la carte) ---------- */
-#stickyProt{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 50px);z-index:25;pointer-events:none;display:flex;justify-content:center;opacity:0;transform:translateY(-8px);transition:opacity .18s,transform .18s}
-#stickyProt.show{opacity:1;transform:translateY(0)}
-.sprot{max-width:560px;width:calc(100% - 24px);background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:0 4px 14px rgba(14,58,91,.14);padding:8px 14px;display:flex;align-items:baseline;gap:9px}
-.sprot-v{font-weight:900;color:var(--primary);font-family:var(--mono);font-size:16px}
-.sprot-goal{color:var(--muted);font-size:12px}
-.sprot-goal .low{color:#c2691f;font-weight:700}
-.sprot-goal .ok{color:#2f8a4e;font-weight:700}
-
 /* Portion affichée sur l'étiquette d'aliment */
 .tag-q{margin-left:5px;font-size:11px;font-weight:700;opacity:.72}
 
@@ -831,8 +823,6 @@ nav.tabs .tab.on{color:var(--primary)}
 .ff-search{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;margin-bottom:8px}
 .ff-scroll{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px}
 
-.meal-total-top{margin-bottom:14px}
-.meal-total-top .meal-total{margin-top:0}
 
 /* ---------- Réglages : peaux .bnd-flat (rubrique) et .bnd-band (groupe) ---------- */
 .set-sectog .set-sec-h,.ff-sectog .set-sec-h{flex:1;margin:0}
@@ -1162,3 +1152,59 @@ nav.tabs .tab.on{color:var(--primary)}
 .f-crnote{display:block;width:100%;margin-top:7px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:13px;line-height:1.4;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box}
 .f-crnote::placeholder{color:var(--muted)}
 .f-crnote:focus{outline:none;border-color:var(--primary)}
+
+
+/* ---------- v=134 ---------- */
+/* Bande de pastilles : figée sous la date, elle porte à elle seule le
+   « rouge -> vert » de la journée. Les bandeaux figés se posent dessous
+   (--bnd-top3, mesuré par syncStickTop). */
+.onb-dots{position:sticky;top:var(--bnd-top2);z-index:13;
+  margin:0 0 12px;padding:8px 10px;border-top:none;
+  background:#eef4fb;border:1.5px solid #cfe0f2;border-radius:12px;
+  justify-content:center}
+.onb-card{margin:14px 0 8px}
+
+/* Titre de section + « i » à droite ; ouvert, le panneau passe à la ligne. */
+.sec-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.sec-head>.sec-title{margin:0;flex:1 1 auto}
+.sec-head>.base-hint.sec-i{flex:0 0 auto}
+.sec-head>.base-hint.sec-i[open]{flex:1 1 100%}
+
+/* Ligne « Repas » : libellé, total du jour, et le détail protéines réduit
+   à son emoji + chevron. Aucune ligne supplémentaire. */
+.meal-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.meal-head>label{margin:0;flex:0 0 auto}
+.meal-head .meal-total{margin:0 0 0 auto;flex:0 1 auto;text-align:right}
+.meal-head .meal-total.on{padding:5px 10px}
+.meal-head .bnd-mini{flex:0 0 auto;width:auto;padding:4px 6px;gap:2px}
+.meal-head .bnd-mini .bnd-ttl{font-size:15px}
+
+/* Hydratation : les trois pastilles ne coûtent plus de ligne au repos. */
+.wadd-d{margin:0}
+.wadd-d>summary::before{content:none}
+.wadd-d>summary{font-size:14px;line-height:1;padding:3px 7px;border:1.5px solid var(--line);border-radius:999px;background:#fff}
+.wadd-d[open]>div{flex-basis:100%}
+.wadd-d>div{background:none;border:none;padding:0}
+.wadd-d .wadd{margin-top:8px}
+.hy-top{flex-wrap:wrap}
+
+/* Calendrier : la légende passe derrière le « i », en haut à droite. */
+.calhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cal-i{margin:0 0 0 auto}
+.cal-i[open]{flex:1 1 100%;margin-left:0}
+.cal-i>div{background:none;border:none;padding:0}
+.cal-i .cal-leg{margin:6px 0 0}
+
+/* Emojis de Régularité qui mènent à la saisie. */
+.reg-grid .act-label.go{cursor:pointer}
+.reg-grid .act-label.go:active{opacity:.55}
+
+
+/* ---------- v=136 : ce qui manque se voit ---------- */
+.tag-warn{margin-left:5px;font-size:11px;line-height:1;cursor:help}
+.tag.fl-todo{border-color:#e0a03a;background:#fdf6e9}
+.tag.fl-big{border-color:#d95c4a;background:#fdeeeb}
+.tag-q.def{opacity:.5;font-style:italic;font-weight:600}
+.meal-head{flex-wrap:wrap}
+.meal-todo{flex:0 0 auto;font-size:11px;font-weight:800;color:#8a5a12;
+  background:#fdf6e9;border:1px solid #e0a03a;border-radius:999px;padding:3px 8px;cursor:help}
