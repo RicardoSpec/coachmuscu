@@ -422,9 +422,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
      bndBody  : génère le corps repliable (data-bndb, .collapsed).
      wireBnd  : UN seul écouteur de clic, délégué sur document, posé une fois au démarrage.
      Ajouter un bandeau = 1 clé dans bndOpen + 1 appel à bndHead/bndBody. Rien d'autre. */
-  var bndOpen={homecal:false,hero:false,radar:true,
-              eg:true,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,
-              axhelp:false,tenut:false,rgS:true,rgR:true,rgP:false};
+  /* Tous repliés au chargement : l'état n'est pas persisté, donc ces valeurs
+     sont ce que l'app montre à chaque ouverture. Aucun bandeau ne s'ouvre seul. */
+  var bndOpen={homecal:false,hero:false,radar:false,
+              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,
+              axhelp:false,tenut:false,rgS:false,rgR:false,rgP:false};
   var BND_RENDER={};
   function bndHead(key,skin,o){
     o=o||{};
