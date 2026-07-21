@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=136">
+  <link rel="stylesheet" href="style.css?v=138">
 </head>
 <body>
 
@@ -51,8 +51,8 @@
         <div class="dlabel" id="dayLabel"></div>
         <button class="navbtn" id="dayNext" aria-label="Jour suivant">›</button>
       </div>
-      <div id="onbNudge"></div>
       <div id="dayHead">
+        <div id="onbNudge"></div>
         <div id="homeCalBlock">
         <button class="bnd bnd-card bnd-stick" id="homeCalToggle" data-bnd="homecal" data-bndr="homecal"><span class="bnd-ic">📅</span><span class="bnd-txt"><span class="bnd-k">Calendrier</span><span class="bnd-v" id="homeCalSummary"></span></span><span class="bnd-chev">▾</span></button>
         <div id="homeCal" class="calwrap collapsed"></div>
@@ -97,6 +97,8 @@
     <!-- ====================== PROGRÈS ====================== -->
     <section class="view" id="v-prog2">
       <h2 class="page">Progrès</h2>
+
+      <div id="setupList"></div>
 
       <div id="progRadar"></div>
 
@@ -183,7 +185,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=136"></script>
-  <script src="app.js?v=136"></script>
+  <script src="data.js?v=138"></script>
+  <script src="app.js?v=138"></script>
 </body>
 </html>
