@@ -1564,9 +1564,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     wrap.innerHTML=
       '<div class="eyebrow">Séance ouverte</div>'+
       '<div class="card pad">'+
-        '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.nat.taper?' · affûtage':'')+'</div><h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+
-        '<p class="muted" style="margin-top:10px">'+info.d+'</p>'+
-        (currentTri.w===10?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — 11-13 septembre. Affûtage, sommeil, et on profite !</p></div>':'')+
+      '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.phase?' · '+wk.phase:(wk.nat.taper?' · affûtage':''))+'</div><h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+        '<p class="muted" style="margin-top:10px">'+info.d+'</p>'+
+        (currentTri.w===TRI.length?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — dimanche 13 septembre, départ 9h (Grande Plage, Saint-Lunaire). Affûtage, sommeil, et on profite !</p></div>':'')+
         '<div class="field" style="margin-top:12px"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'Annuler':'Marquer comme faite')+'</button></div>'+
         (rec.done?'<div class="donedate"><label>Faite le <input type="date" id="triDoneDate" value="'+esc(rec.date||todayStr())+'"></label></div>':'')+
         '<div class="field"><label>Réalisé</label><div class="tri-io"><input type="number" inputmode="decimal" step="0.1" min="0" class="t-dist" placeholder="'+(dz==="nat"?"ex : 1300":"ex : "+(dz==="velo"?"32":"7,5"))+'"><span class="tri-u">'+TRI_TARGETS[dz].u+'</span><input type="number" inputmode="decimal" step="1" min="0" class="t-dur" placeholder="min"><span class="tri-u">min</span></div><div class="tri-pace" hidden></div>'+(rec.val?'<div class="tri-legacy">Ancien réalisé : '+esc(rec.val)+'</div>':'')+'</div>'+
@@ -2064,7 +2063,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     L.push("BILAN SEMAINE — "+ddmm(new Date(wk[0]+"T00:00:00"))+" au "+ddmm(new Date(wk[6]+"T00:00:00")));
     L.push("");
     L.push("Muscu : "+sportCount["Muscu"]+" séance(s) cette semaine · "+doneCount()+"/"+totalSessions()+" au total");
-    L.push("Triathlon : nat "+sportCount["Natation"]+" · vélo "+sportCount["Vélo"]+" · course "+sportCount["Course"]+" · "+triDoneCount()+"/30 au total");
+    L.push("Triathlon : nat "+sportCount["Natation"]+" · vélo "+sportCount["Vélo"]+" · course "+sportCount["Course"]+" · "+triDoneCount()+"/"+(TRI.length*TRI_DISC.length)+" au total");
     if(sportCount["Escalade"])L.push("Escalade : "+sportCount["Escalade"]+" séance(s)");
     L.push(wFirst!==null?("Poids : "+fr1(wLast)+" kg ("+((wLast-wFirst)>=0?"+":"")+fr1(wLast-wFirst)+" kg sur la semaine)"):"Poids : non renseigné");
     L.push("Sommeil moyen : "+(asl?fr1(asl)+" h":"—"));
@@ -3049,6 +3048,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsQualSel=null;settingsQualOpen=false;settingsQualQuery="";settingsSecOpen={};settingsGrpOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
   function openSettingsAt(grp,sec){openSettings();if(grp)settingsGrpOpen[grp]=true;if(sec)settingsSecOpen[sec]=true;renderSettings();var el=document.querySelector('#settingsBody .set-sectog[data-sec="'+sec+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});}  function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
+/* Migration ponctuelle : le plan tri est renuméroté en 4 semaines (départ 2026-08-17).
+     Si l'ancien départ par défaut (2026-07-06) est encore stocké, on l'aligne — état LOCAL (suiviMuscu_v1), pas le store partagé. */
+  function triStartMigrateOnce(){
+    if(state.config&&state.config.activities&&state.config.activities.tri&&state.config.activities.tri.start==="2026-07-06"){
+      state.config.activities.tri.start=TRI_START;save();
+    }
+  }
+   
   /* ---------------- Initialisation ---------------- */
   function init(){
     if(!STORAGE_OK){var wb=document.getElementById("warnbar");if(wb)wb.hidden=false;}
@@ -3078,7 +3085,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();loadFoodDB();wireFqTaps();
+    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-day");
   }
