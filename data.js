@@ -143,7 +143,7 @@ var CODES = ["A","B","C","D"];
 
 /* ---------- Dates d'ancrage ---------- */
 var MUSCU_START = "2026-06-27";  /* Bloc 1, semaine 1 */
-var TRI_START   = "2026-07-06";  /* Triathlon, semaine 1 (semaine 10 = course 11-13 sept) */
+var TRI_START   = "2026-08-17";  /* Triathlon — REPRISE : semaine 1 (semaine 4 = course dim. 13 sept) */
 
 /* ---------- Agenda : modèle de semaine ----------
    Pour chaque jour : {type:"muscu", code:"A"} (A/B/C/D) ou {type:"tri", disc:"nat"} (nat/velo/course),
@@ -192,19 +192,15 @@ var DEADLINES = [
   {date:"2026-09-11", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
 ];
 
-/* ---------- Plan Triathlon Dinard — Distance Olympique, 10 semaines, 3 séances/sem.
-   Résumé des volumes/séances (détails complets dans le Drive). ---------- */
+/* ---------- Plan Triathlon Dinard — Distance Olympique. RECONFIGURÉ le 16/08 :
+   plan de REPRISE sur 4 semaines (Reprise · Charge · Affinage · Affûtage), 3 séances/sem.
+   Calibré après un relâchement : on ne repart PAS sur le pic, on reconstruit puis on affûte.
+   Course = dimanche 13 septembre (semaine 4). ---------- */
 var TRI = [
- {w:1, nat:{t:"1200 m", d:"8×50 m (alterné amplitude/vélocité) · 4×100 m pull buoy (resp. 3 temps) · 200 m au choix."}, velo:{t:"1h15", d:"Petit plateau, travail de vélocité (~90 tr/min)."}, course:{t:"40′", d:"20′ footing · 10′ éducatifs (montées de genoux, talons-fesses) · 10′ footing."}},
- {w:2, nat:{t:"1400 m", d:"300 m (crawl/dos/brasse) · 6×100 m technique · 300 m pull buoy · 200 m (50 crawl/50 dos)."}, velo:{t:"1h30", d:"Petit plateau, vélocité ; danseuse/debout dans les bosses."}, course:{t:"45′", d:"25′ footing · éducatifs · footing."}},
- {w:3, nat:{t:"1600 m", d:"6×100 m (crawl/pull buoy) · 8×50 m (15 m sprint/35 m lent) · 2×200 m resp. frontale · 200 m."}, velo:{t:"1h45", d:"2 blocs de 10′ en force (grand plateau/petit pignon), r 5′ en vélocité."}, course:{t:"50′", d:"20′ footing · 20′ avec sprint 15 s toutes les 2′ · 10′ footing."}},
- {w:4, nat:{t:"1800 m", d:"400 m pull buoy · 8×50 m (battements/amplitude) · 6×100 m (25 vite/75 lent) · 300 m resp. frontale · 100 m."}, velo:{t:"2h00", d:"Grand plateau : bloc 12′ force + 6 sprints 15 s toutes les 4′, fin en endurance."}, course:{t:"50′", d:"20′ footing · 8 accélérations en côte (~100 m), récup en descente · footing."}},
- {w:5, nat:{t:"2000 m", d:"4×150 m · 8×50 m vite · 400 m pull buoy (resp. 3/5 temps) · 200 m resp. frontale · 200 m."}, velo:{t:"2h00 +15′", d:"6 bosses de 500-800 m (petit plateau), récup en descente. Puis enchaîne 15′ de course."}, course:{t:"50′", d:"20′ footing · 2×8′ (30 s vite/30 s lentes) · footings entre les blocs."}},
- {w:6, nat:{t:"2000 m", d:"400 m alterné · 6×50 m amplitude · 800 m en pyramide (25→100→25, vite/lent) · 300 m pull buoy · 200 m."}, velo:{t:"2h00 +20′", d:"Parcours vallonné, braquet selon le relief. Puis enchaîne 20′ de footing."}, course:{t:"50′", d:"2×10′ (1 min vite/1 min lente) · footings entre."}},
- {w:7, nat:{t:"2000 m", d:"12×50 m variés · 300 m pull buoy resp. frontale · 5×200 m allure course (r 30″) · 100 m."}, velo:{t:"2h00 +20′", d:"Parcours vallonné. Puis enchaîne 20′ de footing."}, course:{t:"50′", d:"3×10′ allure course (r 10′) · 3×5′ allure 10 km (r 2′) · footing."}},
- {w:8, nat:{t:"2000 m", d:"500 m enchaîné (crawl/dos/brasse) · 500 m pull buoy · 500 m allure course · 500 m enchaîné."}, velo:{t:"2h00 +30′", d:"Parcours vallonné souple. Puis enchaîne 30′ (15′ allure course/15′ footing)."}, course:{t:"50′", d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
- {w:9, nat:{t:"1500 m", d:"300 m au choix · 1000 m pull buoy · 200 m au choix.", taper:true}, velo:{t:"1h30 +20′", d:"Vallonné souple, accélérations dans les bosses. Puis 20′ (10′ allure/10′ footing)."}, course:{t:"50′", d:"20′ footing · 5×(2′ vite/2′ lentes) · 10′ footing."}},
- {w:10, nat:{t:"1000 m", d:"400 m (crawl/dos/crawl/brasse) · 4×100 m allure course (r 30″) · 200 m au choix.", taper:true}, velo:{t:"1h00 +20′", d:"Parcours vallonné léger. Puis enchaîne 20′ de footing."}, course:{t:"30′", d:"15′ footing · 5′ allure course · 10′ footing. Dernière semaine !"}}
+ {w:1, phase:"Reprise", nat:{t:"1200 m", d:"Reprise en douceur. 300 m souple (crawl/dos) · 6×50 m technique (r 20″) · 4×100 m allure facile (r 20″) · 200 m au choix. Objectif : retrouver l'aisance et la respiration, pas la performance."}, velo:{t:"1h15", d:"Endurance fondamentale, cadence souple (~90 tr/min), rien de dur. Reprendre le contact avec le vélo et la position."}, course:{t:"40′", d:"Footing très facile (tu papotes sans t'essouffler) · 4-5 lignes droites de 20″ en fin de séance. On réhabitue les jambes, on ne force pas."}},
+ {w:2, phase:"Charge", nat:{t:"1500 m continu", d:"LA séance-test : 1500 m nagés EN CONTINU, allure régulière, sans t'arrêter. Nage au moins une fois EN MER et EN COMBI avant le jour J (flottaison + respiration différentes) ; travaille le repérage (sighting) si eau libre."}, velo:{t:"1h45 + 15′ brick", d:"1h30 d'endurance avec 2×8′ un peu plus soutenus (allure course, r 5′), puis enchaîne DIRECT 15′ de course à pied. Ce brick t'apprend la transition jambes-en-coton — le plus rentable de toute la prépa."}, course:{t:"50′", d:"20′ footing · 5×2′ à allure course (r 1′30 footing) · 10′ footing. On touche l'allure de course sans s'épuiser."}},
+ {w:3, phase:"Affinage", nat:{t:"1200 m", d:"300 m souple · 8×100 m à allure course (r 20″) · 200 m au choix. On aiguise l'allure, volume réduit. À placer plutôt en début de semaine."}, velo:{t:"1h15 + 10′ brick", d:"1h d'endurance avec 3×5′ à allure course (r 4′), puis enchaîne 10′ de course à allure course. Dernier brick, plus court — à placer lundi/mardi."}, course:{t:"40′", d:"15′ footing · 4×3′ à allure course (r 2′) · 10′ footing. Plus rien de long après le milieu de semaine."}},
+ {w:4, phase:"Affûtage", nat:{t:"800 m", d:"300 m souple · 4×100 m à allure course (r 30″) · 100 m facile. Court : on garde le feeling de l'eau, on arrive frais.", taper:true}, velo:{t:"45′ souple", d:"Endurance très facile avec 3×2′ à allure course en début de sortie (réveil musculaire). Le reste : jambes légères. Le repos est LA priorité cette semaine."}, course:{t:"25′", d:"20′ footing facile · 3-4 lignes droites de 20″. La veille (sam. 12) : 15-20′ très souple + reconnaissance du parc à vélo. Dimanche 13 : COURSE 🏁", taper:true}}
 ];
 var TRI_DISC = [["nat","Natation"],["velo","Vélo"],["course","Course"]];
 /* Cibles distance olympique (Dinard) — pour la barre de progression du suivi */
