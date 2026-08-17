@@ -3062,6 +3062,26 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       state.config.activities.tri.start=TRI_START;save();
     }
   }
+  /* Reslot des validations tri par DATE (idempotent). Le plan a été renuméroté le 16/08 : les
+     validations de l'ancien plan (clé = n° de semaine) se sont reportées sur les nouvelles semaines
+     (ex. natation « faite » sur des semaines encore à venir). On replace chaque validation dans la
+     semaine correspondant à SA date et on écarte celles hors fenêtre (avant TRI_START, après la
+     course, ou sans date). État LOCAL (suiviMuscu_v1), pas le store partagé. */
+  function triReslotByDate(){
+    if(!state.tri)return;
+    var next={},changed=false;
+    Object.keys(state.tri).forEach(function(k){
+      var rec=state.tri[k],disc=k.split("_")[1];
+      if(!rec||!rec.done){if(rec&&!(next[k]&&next[k].done))next[k]=rec;return;}
+      var ti=rec.date?triInfoForDate(rec.date):null;
+      if(!ti){changed=true;return;}
+      var nk=ti.w+"_"+disc;
+      if(nk!==k)changed=true;
+      if(next[nk]&&next[nk].done){if((rec.date||"")>(next[nk].date||""))next[nk]=rec;}
+      else next[nk]=rec;
+    });
+    if(changed){state.tri=next;save();}
+  }
    
   /* ---------------- Initialisation ---------------- */
   function init(){
@@ -3092,7 +3112,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();
+    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-day");
   }
