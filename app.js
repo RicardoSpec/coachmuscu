@@ -238,7 +238,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Objectifs ---------------- */
   var MUSCU_DEADLINE="2026-07-27";
-  var RACE_DATE="2026-09-11";
+  var RACE_DATE="2026-09-13";
   function blockDone(b){var n=0,wk=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wk;w++)for(var i=0;i<CODES.length;i++)if(sess(b,w,CODES[i]).done)n++;return n;}
   function daysUntil(iso){return Math.round((new Date(iso+"T00:00:00")-new Date(todayStr()+"T00:00:00"))/86400000);}
 
@@ -398,9 +398,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function phaseTip(iso){
     if(iso<"2026-06-22")return {t:"Avant le Vercors 🧗",p:"Priorité escalade : monte le volume de grimpe pour arriver prêt. Garde 2 séances muscu max par semaine d'ici là."};
     if(iso<="2026-06-28")return {t:"Semaine Vercors 🧗",p:"Profite de la grimpe ! La muscu démarre à 4 séances au retour, le 27/06."};
-    if(iso<="2026-07-31")return {t:"Bloc 1 — Construction",p:"Surcharge progressive : dès que tu boucles le haut de la fourchette de reps sur toutes les séries, ajoute du poids. Objectif 27 juillet. Le triathlon démarre le 6/7 en parallèle."};
-    if(iso<="2026-08-28")return {t:"Bloc 2 — Plage ☀️",p:"Focus épaules / dos / bras : c'est ce qui ressort le plus. En parallèle le triathlon monte en charge — surveille la fatigue."};
-    if(iso<="2026-09-13")return {t:"Affûtage triathlon 🏁",p:"On réduit le volume, on garde un peu d'intensité. Sommeil et récup prioritaires. Course les 11-13 septembre à Dinard !"};
+    if(iso<="2026-07-31")return {t:"Bloc 1 — Construction",p:"Surcharge progressive : dès que tu boucles le haut de la fourchette de reps sur toutes les séries, ajoute du poids. Objectif 27 juillet. Le triathlon prendra le relais à la mi-août."};
+    if(iso<="2026-08-28")return {t:"Bloc 2 — Plage ☀️",p:"Focus épaules / dos / bras : c'est ce qui ressort le plus. En parallèle le triathlon reprend (17/08 → Dinard) : surveille la fatigue en cumulant les deux."};
+    if(iso<="2026-09-13")return {t:"Affûtage triathlon 🏁",p:"On réduit le volume, on garde un peu d'intensité. Sommeil et récup prioritaires. Course le dimanche 13 septembre à Dinard !"};
     return {t:"Bravo 👏",p:"Gros été bouclé. Note tes ressentis et planifie la suite."};
   }
   /* Bandeau phase sur Aujourd'hui : phase courante + prochain objectif lu depuis le calendrier (éditable). */
@@ -478,8 +478,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     window.scrollTo(0,0);
   }
   /* Sous-onglets de l'onglet Sport : construits à partir des activités actives (Réglages). */
-  var sportSel="muscu";
-  function sportActs(){var a=[];if(actEnabled("muscu"))a.push("muscu");if(actEnabled("tri"))a.push("tri");return a;}
+  var sportSel=null;  /* défaut = sport principal, résolu au 1er rendu */
+  function sportActs(){var a=[];if(actEnabled("muscu"))a.push("muscu");if(actEnabled("tri"))a.push("tri");var f=sportFocus(),i=a.indexOf(f);if(i>0){a.splice(i,1);a.unshift(f);}return a;}
   function renderSportTabs(){
     var host=document.getElementById("sportSub");if(!host)return;
     var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
@@ -1565,6 +1565,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="eyebrow">Séance ouverte</div>'+
       '<div class="card pad">'+
       '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.phase?' · '+wk.phase:(wk.nat.taper?' · affûtage':''))+'</div><h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+        '<p class="muted" style="margin-top:10px">'+info.d+'</p>'+
+        (dz==="nat"&&info.drills?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🥽 Drills technique — tuba + palmes</div><p style="color:var(--muted)">'+info.drills+'</p></div>':'')+
+        (dz==="nat"&&info.sec?'<div class="tip" style="margin-top:10px;background:#f3f0ff;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏠 À sec — hors piscine</div><p style="color:var(--muted)">'+info.sec+'</p></div>':'')+
         (currentTri.w===TRI.length?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — dimanche 13 septembre, départ 9h (Grande Plage, Saint-Lunaire). Affûtage, sommeil, et on profite !</p></div>':'')+
         '<div class="field" style="margin-top:12px"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'Annuler':'Marquer comme faite')+'</button></div>'+
         (rec.done?'<div class="donedate"><label>Faite le <input type="date" id="triDoneDate" value="'+esc(rec.date||todayStr())+'"></label></div>':'')+
@@ -2095,7 +2097,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     host.innerHTML='<div class="card pad"><div class="sec-title">Objectifs</div>'+
       goal("💪 Muscu","Bloc 1 · obj. 27 juil.",blockDone("b1"),PROGRAM_BLOCKS.b1.weeks*CODES.length,daysUntil(MUSCU_DEADLINE),"muscu")+
-      goal("🏊 Triathlon","Dinard · 11-13 sept.",triDoneCount(),30,daysUntil(RACE_DATE),"tri")+
+      goal("🏊 Triathlon","Dinard · 13 sept.",triDoneCount(),30,daysUntil(RACE_DATE),"tri")+
     '</div>';
     host.querySelectorAll("[data-goto]").forEach(function(el){el.onclick=function(){var g=el.getAttribute("data-goto");if(g)goSport(g);};});
   }
@@ -2360,6 +2362,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function actStart(k){return cfgActs()[k].start||(k==="muscu"?MUSCU_START:TRI_START);}
   function actName(k){return cfgActs()[k].name||(k==="muscu"?"Musculation":"Triathlon");}
   function setAct(k,patch){var a=cfgActs()[k];for(var p in patch)if(patch.hasOwnProperty(p))a[p]=patch[p];save();}
+  function sportFocus(){var f=state.config&&state.config.sportFocus;return (f&&cfgActs()[f])?f:"muscu";}
+  function setFocus(k){if(!state.config)state.config={};state.config.sportFocus=k;save();}
 
   function muscuSeqAll(){if(!actEnabled("muscu"))return [];var s=[];BLOCK_ORDER.forEach(function(b){var wks=PROGRAM_BLOCKS[b].weeks;for(var w=1;w<=wks;w++){CODES.forEach(function(c){s.push({kind:"muscu",block:b,w:w,code:c});});}});return s;}
   function triSeqAll(){if(!actEnabled("tri"))return [];var s=[];for(var i=0;i<TRI.length;i++){var ww=TRI[i].w;TRI_DISC.forEach(function(p){s.push({kind:"tri",w:ww,disc:p[0]});});}return s;}
@@ -2807,6 +2811,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       (_lf.length?'<input type="text" class="fqe-search" placeholder="Rechercher un aliment…" value="'+esc(settingsQualQuery||"")+'"><div class="fqe-scroll">'+qualRows.join("")+'</div>':'<p class="muted" style="font-size:13px">Aucun aliment loggé — ajoute des repas, ils apparaîtront ici.</p>');
 
     var actsInner='<p class="set-note">Active les sports que tu prépares. Désactivé, le sport disparaît du calendrier (rien n\'est supprimé). Tu peux ajuster le nom, la date de début et la description.</p>'+
+      '<div class="set-note" style="margin-top:2px"><b>Sport principal</b> — ce que l\'app met en avant en premier (onglet Sport). <span class="low">Extensible à d\'autres sports plus tard.</span></div>'+
+      '<div class="chips" style="margin:2px 0 12px">'+sportActs().map(function(k){return '<button type="button" class="chip'+(sportFocus()===k?" on":"")+'" data-focus="'+k+'">'+esc((k==="muscu"?"💪 ":"🏊 ")+actName(k))+'</button>';}).join("")+'</div>'+
       actCard("muscu")+actCard("tri");
     var rows=pDeadlines().map(function(d){
       if(settingsEdit===d.id)return deadlineForm(d);
@@ -2970,6 +2976,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       b.onclick=addCR;var li=host.querySelector(".cr-new-label");if(li)li.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addCR();}});
     })();
     host.querySelectorAll("[data-tgl]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-tgl");setAct(k,{enabled:!actEnabled(k)});settingsActEdit=null;renderSettings();renderCalendars();};});
+    host.querySelectorAll("[data-focus]").forEach(function(b){b.onclick=function(){setFocus(b.getAttribute("data-focus"));sportSel=null;renderSettings();};});
     host.querySelectorAll("[data-actedit]").forEach(function(b){b.onclick=function(){settingsActEdit=b.getAttribute("data-actedit");renderSettings();};});
     host.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){settingsEdit=b.getAttribute("data-edit");renderSettings();};});
     host.querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-del");if(confirm("Supprimer cette échéance ?")){pRemoveDeadline(id);settingsEdit=null;renderSettings();renderCalendars();}};});
