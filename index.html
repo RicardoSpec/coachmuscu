@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=141">
+  <link rel="stylesheet" href="style.css?v=142">
 </head>
 <body>
 
@@ -79,9 +79,9 @@
       <div class="sport-pane" id="sportTri" hidden>
         <p class="hint">Plan de reprise — 4 semaines (Reprise · Charge · Affinage · Affûtage), 3 séances/sem. 🏁 Course dimanche 13 septembre (semaine 4). Touche une case pour voir la séance et la cocher. (* = affûtage)</p>
         <div id="triProgress"></div>
-        <div class="card pad blockcard open" id="triPlanCard">
+        <div class="card pad blockcard" id="triPlanCard">
           <button type="button" class="bnd blk-toggle" id="triPlanToggle"><span class="blk-ttl">Plan 4 semaines</span><span class="blk-meta" id="triPlanMeta">0/12</span><span class="bnd-chev">▾</span></button>
-          <div class="blk-body" id="triPlanBody">
+          <div class="blk-body collapsed" id="triPlanBody">
             <div class="legend"><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>
             <table class="grid" id="triTable"></table>
           </div>
@@ -185,7 +185,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=141"></script>
-  <script src="app.js?v=141"></script>
+  <script src="data.js?v=142"></script>
+  <script src="app.js?v=142"></script>
 </body>
 </html>
