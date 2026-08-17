@@ -1,35 +1,191 @@
-/* Coach Muscu — service worker.
-   Stratégie RÉSEAU D'ABORD : en ligne, on sert toujours la version fraîche (et on met le cache à jour) ;
-   hors-ligne, on sert la dernière version vue. ignoreSearch permet au cache de matcher malgré les ?v=N. */
-var CACHE = "coachmuscu-runtime-v74";
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12466B">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Coach Muscu">
+  <title>Coach Muscu</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- Styles externes -->
+  <link rel="stylesheet" href="style.css?v=142">
+</head>
+<body>
 
-self.addEventListener("install", function () { self.skipWaiting(); });
+  <!-- Avertissement stockage (affiché par app.js si localStorage indisponible) -->
+  <div class="warn" id="warnbar" hidden>Le stockage local n'est pas disponible sur ce navigateur : tes saisies ne seront pas conservées après fermeture. Pense à exporter tes données.</div>
 
-self.addEventListener("activate", function (e) {
-  e.waitUntil(
-    caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
-    }).then(function () { return self.clients.claim(); })
-  );
-});
+  <header class="top">
+    <div class="top-left">
+      <button class="menu-btn" id="menuBtn" aria-label="Ouvrir le menu des apps" aria-expanded="false"><span></span><span></span><span></span></button>
+      <h1>Suivi muscu</h1>
+    </div>
+    <span class="chip" id="wkChip"></span>
+  </header>
 
-self.addEventListener("fetch", function (e) {
-  var req = e.request;
-  if (req.method !== "GET") return;
-  var url = new URL(req.url);
-  if (url.origin !== location.origin) return; /* on ne gère que nos propres fichiers */
-  e.respondWith(
-    fetch(req).then(function (res) {
-      if (res && res.ok) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(req, copy); });
-      }
-      return res;
-    }).catch(function () {
-      return caches.match(req, { ignoreSearch: true }).then(function (m) {
-        if (m) return m;
-        if (req.mode === "navigate") return caches.match("index.html", { ignoreSearch: true });
-      });
-    })
-  );
-});
+  <!-- Panneau lanceur d'apps (ouvert par le bouton ☰) -->
+  <div class="drawer-bg" id="drawerBg" hidden></div>
+  <aside class="drawer" id="drawer" hidden aria-label="Mes applications">
+    <div class="drawer-head">
+      <span class="drawer-title">Mes apps</span>
+      <button class="drawer-close" id="drawerClose" aria-label="Fermer le menu">&times;</button>
+    </div>
+    <nav class="app-list" id="appList"></nav>
+    <div class="drawer-foot">
+      <button class="drawer-gear" id="settingsBtn"><span class="gear-ic">⚙️</span><span>Réglages</span></button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ====================== LE JOUR (aujourd'hui ou un jour passé) ======================
+         Un seul écran : la barre de dates choisit le jour, les blocs d'entête
+         (#dayHead) ne s'affichent que si ce jour est aujourd'hui. -->
+    <section class="view active" id="v-day">
+      <div class="datenav">
+        <button class="navbtn" id="dayPrev" aria-label="Jour précédent">‹</button>
+        <div class="dlabel" id="dayLabel"></div>
+        <button class="navbtn" id="dayNext" aria-label="Jour suivant">›</button>
+      </div>
+      <div id="dayHead">
+        <div id="onbNudge"></div>
+        <div id="homeCalBlock">
+        <button class="bnd bnd-card bnd-stick" id="homeCalToggle" data-bnd="homecal" data-bndr="homecal"><span class="bnd-ic">📅</span><span class="bnd-txt"><span class="bnd-k">Calendrier</span><span class="bnd-v" id="homeCalSummary"></span></span><span class="bnd-chev">▾</span></button>
+        <div id="homeCal" class="calwrap collapsed"></div>
+        </div>
+        <div class="hero" id="heroCard"></div>
+      </div>
+      <div id="dayRadar"></div>
+      <div id="dayLog"></div>
+      <div id="backupNudge"></div>
+    </section>
+
+    <!-- ====================== SPORT (muscu + triathlon) ====================== -->
+    <section class="view" id="v-sport">
+      <h2 class="page">Sport</h2>
+      <div class="subtabs" id="sportSub"></div>
+
+      <div class="sport-pane" id="sportMuscu">
+        <p class="hint">Enchaîne A → B → C → D, semaine après semaine : deux blocs (Construction puis Plage). Touche une case pour ouvrir la séance — charges de la dernière fois pré-affichées, minuteur de repos intégré.</p>
+        <div id="progBlocks"></div>
+        <div class="spacer"></div>
+        <div id="sessionDetail"></div>
+      </div>
+
+      <div class="sport-pane" id="sportTri" hidden>
+        <p class="hint">Plan de reprise — 4 semaines (Reprise · Charge · Affinage · Affûtage), 3 séances/sem. 🏁 Course dimanche 13 septembre (semaine 4). Touche une case pour voir la séance et la cocher. (* = affûtage)</p>
+        <div id="triProgress"></div>
+        <div class="card pad blockcard" id="triPlanCard">
+          <button type="button" class="bnd blk-toggle" id="triPlanToggle"><span class="blk-ttl">Plan 4 semaines</span><span class="blk-meta" id="triPlanMeta">0/12</span><span class="bnd-chev">▾</span></button>
+          <div class="blk-body collapsed" id="triPlanBody">
+            <div class="legend"><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>
+            <table class="grid" id="triTable"></table>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div id="triDetail"></div>
+      </div>
+
+      <h2 class="page learn-h">Apprentissage</h2>
+      <div id="learnPane"></div>
+    </section>
+
+    <!-- ====================== PROGRÈS ====================== -->
+    <section class="view" id="v-prog2">
+      <h2 class="page">Progrès</h2>
+
+      <div id="setupList"></div>
+
+      <div id="progRadar"></div>
+
+      <div class="card pad">
+        <div class="stat-grid" id="statGrid"></div>
+      </div>
+
+      <div id="weekViz"></div>
+
+      <div id="regularity"></div>
+
+      <div class="card pad">
+        <div class="sec-title">Poids</div>
+        <div id="weightChart"></div>
+      </div>
+
+      <div class="card pad">
+        <div class="sec-title">Protéines</div>
+        <div id="proteinChart"></div>
+      </div>
+
+      <!-- Bilan hebdo à copier-coller dans le chat -->
+      <div class="card pad">
+        <div class="sec-title">Bilan de la semaine</div>
+        <p class="muted" style="margin:0 0 8px">Copie ce texte et colle-le ici dans le chat (avec une photo si tu veux une analyse de progression).</p>
+        <textarea id="bilanText" class="bilan" readonly rows="11"></textarea>
+        <button class="btn ghost" id="bilanCopy" style="margin-top:8px">Copier le bilan</button>
+      </div>
+
+      <!-- Données / sauvegarde : un seul point d'entrée, dans les Réglages -->
+      <div class="card pad">
+        <div class="sec-title">Tes données</div>
+        <p class="muted" style="margin:0 0 10px">Sauvegarde locale (sur cet appareil uniquement). Export, import et remise à zéro sont regroupés au même endroit.</p>
+        <button class="btn ghost" id="dataGo">Réglages ▸ Données →</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Feuille d'action : état d'un jour (ouverte en touchant une case du calendrier) -->
+  <div class="sheet-bg" id="calSheetBg" hidden></div>
+  <div class="sheet" id="calSheet" hidden role="dialog" aria-label="Modifier le jour"></div>
+
+  <!-- Panneau Réglages (plein écran, ouvert par l'engrenage du menu) -->
+  <section class="axis" id="axisView" hidden aria-label="Détail d'une dimension">
+    <header class="axis-head">
+      <button class="axis-back" id="axisBack" aria-label="Retour">‹</button>
+      <button class="axis-title" id="axisTitle"></button>
+    </header>
+    <div class="axis-body" id="axisBody"></div>
+  </section>
+
+  <section class="settings" id="settings" hidden aria-label="Réglages">
+    <header class="settings-head">
+      <button class="settings-close" id="settingsClose" aria-label="Fermer les réglages">‹</button>
+      <span class="settings-title">Réglages</span>
+    </header>
+    <div class="settings-body" id="settingsBody"></div>
+  </section>
+
+  <!-- ====================== NAVIGATION ====================== -->
+  <nav class="tabs">
+    <button class="tab on" data-view="v-day">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
+    <button class="tab" data-view="v-sport">
+      <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Objectif</button>
+    <button class="tab" data-view="v-prog2">
+      <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>Progrès</button>
+  </nav>
+
+  <!-- Scanner code-barres (caméra), affiché à la demande -->
+  <div id="crsScanModal" class="scan-modal" hidden>
+    <div class="scan-title">📷 Scanner un produit</div>
+    <div id="crsCam" class="scan-cam"></div>
+    <div class="scan-msg" id="crsScanStatus"></div>
+    <div id="crsZoomWrap" class="scan-zoom" hidden><span>Zoom</span><input type="range" id="crsZoom" class="scan-range" min="1" max="4" step="0.1" value="2"></div>
+    <div class="scan-manual">
+      <div class="scan-manual-l">Pas de lecture ? Saisis le numéro sous le code‑barres :</div>
+      <div class="scan-manual-row"><input type="text" inputmode="numeric" id="crsManualCode" class="scan-manual-in" placeholder="ex. 3017620422003"><button type="button" class="btn accent" id="crsManualGo">Rechercher</button></div>
+    </div>
+    <div class="scan-btns"><button type="button" class="scan-tbtn" id="crsTorch" hidden>🔦 Torche</button><button type="button" class="btn" id="crsScanClose">Fermer</button></div>
+  </div>
+
+  <!-- ====================== SCRIPTS ======================
+       Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
+       doit être chargé AVANT app.js (logique, rendu, stockage). -->
+  <script src="data.js?v=142"></script>
+  <script src="app.js?v=142"></script>
+</body>
+</html>
