@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=145">
+  <link rel="stylesheet" href="style.css?v=146">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
       <button class="menu-btn" id="menuBtn" aria-label="Ouvrir le menu des apps" aria-expanded="false"><span></span><span></span><span></span></button>
       <h1>Suivi muscu</h1>
     </div>
-    <span class="chip" id="wkChip"></span>
+    <button class="chip calchip" id="calChip" aria-label="Ouvrir le calendrier" aria-expanded="false">📅</button>
   </header>
 
   <!-- Panneau lanceur d'apps (ouvert par le bouton ☰) -->
@@ -52,13 +52,9 @@
         <button class="navbtn" id="dayNext" aria-label="Jour suivant">›</button>
       </div>
       <div id="dayHead">
-        <div id="onbNudge"></div>
-        <div id="homeCalBlock">
-        <button class="bnd bnd-card bnd-stick" id="homeCalToggle" data-bnd="homecal" data-bndr="homecal"><span class="bnd-ic">📅</span><span class="bnd-txt"><span class="bnd-k">Calendrier</span><span class="bnd-v" id="homeCalSummary"></span></span><span class="bnd-chev">▾</span></button>
-        <div id="homeCal" class="calwrap collapsed"></div>
-        </div>
         <div class="hero" id="heroCard"></div>
       </div>
+      <div id="homeCal" class="calwrap collapsed"></div>
       <div id="dayRadar"></div>
       <div id="dayLog"></div>
       <div id="backupNudge"></div>
@@ -185,7 +181,7 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=145"></script>
-  <script src="app.js?v=145"></script>
+  <script src="data.js?v=146"></script>
+  <script src="app.js?v=146"></script>
 </body>
 </html>
