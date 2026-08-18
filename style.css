@@ -322,10 +322,21 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,2
 nav.tabs .tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;border:none;background:transparent;color:var(--muted);font-size:9.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;letter-spacing:-.01em}
 nav.tabs .tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs .tab.on{color:var(--primary)}
+/* Bulle « Ajouter à l'écran d'accueil » (iOS) : bandeau bas, glissé, non bloquant. */
+.a2hs{position:fixed;left:8px;right:8px;z-index:39;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;background:var(--primary);color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.28);transform:translateY(160%);transition:transform .34s cubic-bezier(.22,.61,.36,1)}
+.a2hs.show{transform:translateY(0)}
+.a2hs-ic{flex:none;font-size:20px;line-height:1}
+.a2hs-txt{flex:1;font-size:12.5px;line-height:1.4}
+.a2hs-txt b{font-weight:800}
+.a2hs-x{flex:none;width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:14px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.a2hs-x:active{background:rgba(255,255,255,.32)}
 
 /* ====================== AGENDA / CALENDRIER ====================== */
-.calbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px}
-.calmonth{font-size:18px;font-weight:800;color:var(--ink);text-transform:capitalize}
+.calbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin:0 4px 10px}
+.calmonth{font-size:18px;font-weight:800;color:var(--ink);text-transform:capitalize;display:inline-flex;align-items:center;gap:6px;background:none;border:none;font-family:inherit;cursor:default;padding:2px 6px;border-radius:9px;-webkit-tap-highlight-color:transparent}
+.calmonth.off{cursor:pointer;color:var(--primary)}
+.calmonth.off:active{background:#f3f6f9}
+.calmonth-back{font-size:14px;font-weight:800;color:var(--primary);line-height:1}
 .calhead{text-align:center;margin:0 4px 12px}
 .calhead .btn{display:inline-block;width:auto;padding:9px 16px}
 .cr-add .btn{width:auto;flex:0 0 auto}
@@ -509,8 +520,12 @@ nav.tabs .tab.on{color:var(--primary)}
 .bnd-v{font-size:14px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* peaux */
 .bnd-card{gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:14px}
-.bnd-group{gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px}
+.bnd-group{gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;background:#eef2f6}
 .bnd-group.open{border-color:var(--primary)}
+/* Fond conservé même une fois figé en haut (sinon .bnd-stick.open repasse en blanc). */
+.bnd-group.bnd-stick.open{background:#eef2f6}
+/* Titres de rubrique plus francs (sombre + gras) pour bien les repérer comme gros titres. */
+.bnd-group .bnd-ttl{color:var(--ink);font-weight:800}
 .bnd-sec{gap:10px;border-bottom:1px solid var(--line);padding:2px 0 12px}
 .bnd-sec .bnd-ttl{color:var(--ink);font-weight:800;font-size:12px;text-transform:none;letter-spacing:0}
 .bnd-sub{gap:10px;padding:2px 0}
@@ -1182,7 +1197,7 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Calendrier : la légende passe derrière le « i », en haut à droite. */
 .calhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.cal-i{margin:0 0 0 auto}
+.cal-i{margin:0}
 .cal-i[open]{flex:1 1 100%;margin-left:0}
 .cal-i>div{background:none;border:none;padding:0}
 .cal-i .cal-leg{margin:6px 0 0}
