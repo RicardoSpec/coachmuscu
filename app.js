@@ -425,7 +425,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Tous repliés au chargement : l'état n'est pas persisté, donc ces valeurs
      sont ce que l'app montre à chaque ouverture. Aucun bandeau ne s'ouvre seul. */
   var bndOpen={homecal:false,hero:false,radar:false,
-              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,
+              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,ebal:false,spday:false,
               axhelp:false,tenut:false,rgS:false,rgR:false,rgP:false};
   var BND_RENDER={};
   function bndHead(key,skin,o){
@@ -1267,8 +1267,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     rx:{o:["wb","rx"],s:'[data-bnd="rx"]'},
     cr:{o:["wb","cr"],s:'[data-bnd="cr"]'},
     px:{o:["wb","px"],s:'[data-bnd="px"]'},
-    sport:{o:["eg"],s:".chips"},
-    bal:{o:["eg"],s:".jbal"},
+    sport:{o:["spday"],s:".chips"},
+    bal:{o:["ebal"],s:".jbal"},
     sleep:{o:["cm"],s:".f-sleep"},
     water:{o:[],s:".hydra"},
     prot:{o:[],s:".meal-head"}
@@ -1671,21 +1671,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="hy-glasses">'+g+'<button type="button" class="hy-g hy-plus" data-w="+" aria-label="Un verre de plus">+</button></div>'+
       '</div>';
   }
-  function dfEnergie(x,d,chips){
-    return '<div class="field dg-field">'+
-          bndHead("eg","group",{stick:true,ttl:"\u26a1 \u00c9nergie &amp; sport",sum:"",cls:"eg-meta"})+
-          '<div class="bnd-body eg-body'+(bndOpen.eg?'':' collapsed')+'" data-bndb="eg">'+
-        jBalHTML(x,d)+
-        /* Les détails Protéines et Bilan kcal vivent désormais dans l'écran d'axe
-           du radar (tape le logo correspondant) : l'accueil reste lisible. */
-        '<div class="field"><label>Sports du jour</label>'+chips+'</div>'+
-        '</div>'+
-        '</div>';
+  function dfSport(chips){
+    return '<div class="field">'+bndHead("spday","sub",{ttl:"\ud83c\udfc3 Sports du jour"})+bndBody("spday","spday-body",chips)+'</div>';
   }
 
   function dfCorps(x){
     return '<div class="field dg-field">'+
-          bndHead("cm","group",{stick:true,ttl:"\ud83d\udcca Corps &amp; mesures",sum:"",cls:"cm-meta"})+
+          bndHead("cm","group",{stick:true,ttl:"\ud83d\udcca Corps",sum:"",cls:"cm-meta"})+
           '<div class="bnd-body cm-body'+(bndOpen.cm?'':' collapsed')+'" data-bndb="cm">'+
 
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
@@ -1695,10 +1687,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '</div>';
   }
 
-  function dfRepas(){
+  function dfRepas(x,d){
     return '<div class="field"><div class="meal-head"><label>Repas</label><span class="meal-todo" hidden></span><span class="meal-total"></span>'+
-          bndHead("jprot","mini",{ttl:"\ud83e\udd69",attrs:' hidden aria-label="D\u00e9tail prot\u00e9ines"'})+'</div>'+
+          bndHead("jprot","mini",{ttl:"\ud83e\udd69",attrs:' hidden aria-label="D\u00e9tail prot\u00e9ines"'})+
+          bndHead("ebal","mini",{ttl:"\u26a1",attrs:' aria-label="Bilan \u00e9nergie du jour"'})+'</div>'+
           bndBody("jprot","jprot-body")+
+          bndBody("ebal","ebal-body",jBalHTML(x,d))+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
 
         '</div>';
@@ -1706,7 +1700,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   function dfBienEtre(x,d){
     return '<div class="field supps-field wb-group">'+
-          bndHead("wb","sec",{stick:true,ttl:"Bien-être &amp; suivi"})+
+          bndHead("wb","group",{stick:true,ttl:"🌿 Bien-être"})+
           '<div class="bnd-body wb-body'+(bndOpen.wb?'':' collapsed')+'" data-bndb="wb">'+
         '<div class="field supps-field">'+
           bndHead("sp","sub",{ttl:"Compléments alimentaires",cls:"sp-meta",meta:+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)})+
@@ -1761,12 +1755,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '</div>'+
         '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
           '</div>'+
-        '</div>'+
-        /* Raccourci vers l'app de révisions : hors du repli, sinon il faudrait
-           déplier Bien-être pour l'atteindre — un raccourci qu'on ne voit pas
-           n'en est pas un. URL et heures viennent de dscgBlockHTML (APPS +
-           memoDSCG_v1 en LECTURE SEULE). */
-        dscgBlockHTML(d);
+        '</div>';
   }
   function buildDayForm(container,d){
     var x=day(d);
@@ -1774,9 +1763,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var chips='<div class="chips">'+SPORTS.map(function(sp){return '<button type="button" class="chip'+(x.sports.indexOf(sp)>-1?' on':'')+'" data-sport="'+sp+'">'+sp+'</button>';}).join("")+'</div>';
     container.innerHTML='<div class="card pad">'
       +dfWater(x,d)
-      +dfRepas()
+      +dfRepas(x,d)
+      +dfSport(chips)
       +dfBienEtre(x,d)
-      +dfEnergie(x,d,chips)
       +dfCorps(x)
       +'</div>';
 
@@ -2438,14 +2427,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function renderCalendarInto(host){
     if(!host)return;
+    var _n=new Date(),_cur=(calRef.y===_n.getFullYear()&&calRef.m===_n.getMonth());
     host.innerHTML='<div class="calwrap-inner">'+
-      '<div class="calbar"><button class="navbtn calPrev" aria-label="Mois précédent">‹</button><div class="calmonth">'+MOIS_LONG[calRef.m]+' '+calRef.y+'</div><button class="navbtn calNext" aria-label="Mois suivant">›</button></div>'+
-      '<div class="calhead"><button class="btn ghost calToday">Aujourd\'hui</button>'+legendHTML()+'</div>'+
+      '<div class="calbar"><button class="navbtn calPrev" aria-label="Mois précédent">‹</button>'+
+        '<button type="button" class="calmonth'+(_cur?'':' off')+'"'+(_cur?' aria-disabled="true"':' aria-label="Revenir au mois courant"')+'><span class="calmonth-lbl">'+MOIS_LONG[calRef.m]+' '+calRef.y+'</span>'+(_cur?'':'<span class="calmonth-back" aria-hidden="true">↺</span>')+'</button>'+
+        legendHTML()+
+        '<button class="navbtn calNext" aria-label="Mois suivant">›</button></div>'+
       monthGridHTML(calRef.y,calRef.m)+monthEventsHTML(calRef.y,calRef.m)+'</div>';
     host.querySelectorAll(".cal-day").forEach(function(b){b.onclick=function(){openDaySheet(b.getAttribute("data-iso"));};});
     var pv=host.querySelector(".calPrev");if(pv)pv.onclick=function(){calGoMonth(-1);};
     var nx=host.querySelector(".calNext");if(nx)nx.onclick=function(){calGoMonth(1);};
-    var td=host.querySelector(".calToday");if(td)td.onclick=calGoToday;
+    var cm=host.querySelector(".calmonth");if(cm&&!_cur)cm.onclick=calGoToday;
     bindSwipe(host);
   }
   /* Glissement au doigt : vers la droite = mois suivant, vers la gauche = mois précédent.
@@ -3083,6 +3075,41 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(changed){state.tri=next;save();}
   }
    
+  /* ---------------- Bulle « Ajouter à l'écran d'accueil » (iOS Safari) ----------------
+     Rejet mémorisé dans state.config (suiviMuscu_v1) — pas de nouvelle clé top-level.
+     N'apparaît que : iPhone/iPad + Safari (pas Chrome/Firefox/Edge iOS) + pas déjà installée + pas déjà rejetée. */
+  function a2hsEligible(){
+    if(!STORAGE_OK)return false;                          /* sans persistance, elle reviendrait à chaque ouverture */
+    if(state.config&&state.config.a2hsDismissed)return false;
+    var ua=navigator.userAgent||"";
+    var isIOS=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1); /* iPad récent = UA « Macintosh » */
+    if(!isIOS)return false;
+    if(/CriOS|FxiOS|EdgiOS|OPiOS|mercury/i.test(ua))return false; /* navigateurs tiers iOS : pas de « Sur l'écran d'accueil » */
+    if(!/Safari/.test(ua))return false;
+    var standalone=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
+    return !standalone;
+  }
+  function maybeShowA2HS(){
+    if(!a2hsEligible())return;
+    setTimeout(function(){
+      if(!a2hsEligible()||document.getElementById("a2hsBar"))return;
+      var bar=document.createElement("div");
+      bar.className="a2hs";bar.id="a2hsBar";
+      bar.setAttribute("role","dialog");bar.setAttribute("aria-label","Ajouter à l'écran d'accueil");
+      bar.innerHTML='<span class="a2hs-ic">📲</span><span class="a2hs-txt">Ajoute Coach Muscu à ton écran d\'accueil : appuie sur <b>Partager</b>, puis <b>« Sur l\'écran d\'accueil »</b>.</span><button type="button" class="a2hs-x" aria-label="Fermer">✕</button>';
+      document.body.appendChild(bar);
+      var nav=document.querySelector("nav.tabs");
+      bar.style.bottom=((nav?nav.getBoundingClientRect().height:56)+8)+"px";
+      bar.querySelector(".a2hs-x").onclick=function(){
+        bar.classList.remove("show");
+        if(!state.config)state.config={};
+        state.config.a2hsDismissed=true;save();
+        setTimeout(function(){if(bar.parentNode)bar.parentNode.removeChild(bar);},360);
+      };
+      requestAnimationFrame(function(){requestAnimationFrame(function(){bar.classList.add("show");});});
+    },600);
+  }
+
   /* ---------------- Initialisation ---------------- */
   function init(){
     if(!STORAGE_OK){var wb=document.getElementById("warnbar");if(wb)wb.hidden=false;}
@@ -3115,6 +3142,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-day");
+    maybeShowA2HS();
   }
   init();
 
