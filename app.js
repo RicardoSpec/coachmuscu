@@ -425,7 +425,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Tous repliés au chargement : l'état n'est pas persisté, donc ces valeurs
      sont ce que l'app montre à chaque ouverture. Aucun bandeau ne s'ouvre seul. */
   var bndOpen={homecal:false,hero:false,radar:false,
-              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,ebal:false,spday:false,
+              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,ebal:false,spday:false,water:false,chiffr:false,note:false,
               axhelp:false,tenut:false,rgS:false,rgR:false,rgP:false};
   var BND_RENDER={};
   function bndHead(key,skin,o){
@@ -446,6 +446,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function bndBody(key,cls,inner){
     return '<div class="bnd-body'+(cls?" "+cls:"")+(bndOpen[key]?"":" collapsed")+'" data-bndb="'+key+'">'+(inner||"")+'</div>';
   }
+  /* Accordéon : dans un même groupe, ouvrir un émoji referme les autres (comme le détail du radar). */
+  var BND_GROUP={jprot:"meal",ebal:"meal",spday:"meal",chiffr:"meal",water:"meal"};
   function wireBnd(){
     BND_RENDER={homecal:renderCalendars,hero:renderHero,dayRadar:renderDayRadar};
     document.addEventListener("click",function(e){
@@ -455,6 +457,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       bndOpen[k]=!bndOpen[k];
       var r=b.getAttribute("data-bndr");
       if(r){var fn=BND_RENDER[r];if(fn)fn();return;}
+      var grp=BND_GROUP[k];
+      if(grp&&bndOpen[k]){Object.keys(BND_GROUP).forEach(function(k2){
+        if(k2!==k&&BND_GROUP[k2]===grp&&bndOpen[k2]){bndOpen[k2]=false;
+          var h2=document.querySelector('[data-bnd="'+k2+'"]');if(h2)h2.classList.remove("open");
+          var b2=document.querySelector('[data-bndb="'+k2+'"]');if(b2)b2.classList.add("collapsed");}
+      });}
       b.classList.toggle("open",bndOpen[k]);
       var body=document.querySelector('[data-bndb="'+k+'"]');
       if(body)body.classList.toggle("collapsed",!bndOpen[k]);
@@ -466,7 +474,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
-  var onbSel=null;  /* pastille ouverte dans le bandeau du jour ; null = rangée seule */ 
   function activateTab(id){
     var t;
     document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-view")===id);});
@@ -525,7 +532,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   /* ---------------- En-tête ---------------- */
-  function renderChip(){var n=nextSession();document.getElementById("wkChip").textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+doneCount()+"/"+totalSessions();}
+  function renderChip(){var el=document.getElementById("wkChip");if(!el)return;var n=nextSession();el.textContent=(n?(PROGRAM_BLOCKS[n.block].short+" · S"+n.w):"Fini")+" · "+doneCount()+"/"+totalSessions();}
 
   /* ---------------- Aujourd'hui ---------------- */
   /* Prochaine séance planifiée, TOUS sports actifs confondus (lue depuis le calendrier). */
@@ -563,6 +570,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function whenLabel(iso){var d=diffDays(iso,todayStr());if(d<=0)return "aujourd'hui";if(d===1)return "demain";return frDateShort(iso)+" · J-"+d;}
 
+  /* Chips « sports du jour » : rendu dans le meal-head (tous les jours). */
+  function sportChipsHTML(x){return '<div class="chips">'+SPORTS.map(function(sp){return '<button type="button" class="chip'+(x.sports.indexOf(sp)>-1?' on':'')+'" data-sport="'+sp+'">'+sp+'</button>';}).join("")+'</div>';}
+  var SPORT_OF_DISC={nat:"Natation",velo:"Vélo",course:"Course"};
+  /* Lien programme → tâche effectuée : valider une séance ajoute le sport correspondant au
+     « sport du jour » de SA date. Ajout seul — jamais de retrait auto (saisie manuelle préservée).
+     Le sens inverse n'est pas fait : une pastille est grossière, une séance a une cible précise. */
+  function linkSessionSport(sport,iso){if(!sport||!iso)return;var xx=day(iso);if(xx.sports.indexOf(sport)<0)xx.sports.push(sport);}
+
   function renderHero(){
     var hero=document.getElementById("heroCard");if(!hero)return;
     var next=nextScheduled();
@@ -597,10 +612,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(bndOpen.hero){
       if(muscu){
         var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
-        var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
+        var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();linkSessionSport("Muscu",r.date);save();renderChip();renderHero();renderCalendars();};
       }else{
         var gt=hero.querySelector("#goSessionTri");if(gt)gt.onclick=function(){currentTri={w:s.w,dz:s.disc};goSport("tri");var td=document.getElementById("triDetail");if(td&&td.scrollIntoView)td.scrollIntoView({behavior:"smooth",block:"start"});};
-        var qt=hero.querySelector("#quickDoneTri");if(qt)qt.onclick=function(){var k=s.w+"_"+s.disc;var r=state.tri[k]||(state.tri[k]={});r.done=true;if(!r.date)r.date=todayStr();save();renderChip();renderHero();renderCalendars();};
+        var qt=hero.querySelector("#quickDoneTri");if(qt)qt.onclick=function(){var k=s.w+"_"+s.disc;var r=state.tri[k]||(state.tri[k]={});r.done=true;if(!r.date)r.date=todayStr();linkSessionSport(SPORT_OF_DISC[s.disc],r.date);save();renderChip();renderHero();renderCalendars();};
       }
     }
   }
@@ -1220,7 +1235,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var hd=document.getElementById("dayHead");if(hd)hd.hidden=!isTd;
     renderChip();
     renderHero();
-    renderOnboard();
     renderDayRadar();
     buildDayForm(document.getElementById("dayLog"),d);
     var bn=document.getElementById("backupNudge");
@@ -1241,24 +1255,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Pesée : la cible est 2 fois par semaine (7 jours glissants), pas tous les
      jours — une pesée quotidienne mesure surtout le contenu de l'intestin. */
   function weightLogs7(){var n=0;for(var i=0;i<7;i++){var y=state.days[isoOf(addDays(todayStr(),-i))];if(y&&(""+(y.weight||"")).trim()!=="")n++;}return n;}
-  /* Le bandeau du jour ne porte QUE les 6 axes du radar : ils rebasculent au
-     rouge chaque matin. Les reglages a saisir une fois vivent dans Progres
-     (renderSetupList) — deux objets differents, deux endroits differents. */
-  function onbChecks(){
-    var d=todayStr(),arr=[];
-    var AXJ=["sport","prot","sleep","water","cr","bal"];
-    var AXW=["bouger un peu chaque jour entretient la r\u00e9cup\u00e9ration autant que la forme.",
-             "c'est la brique de la construction musculaire \u2014 mieux vaut l'\u00e9taler sur la journ\u00e9e.",
-             "c'est la nuit que le muscle se r\u00e9pare, pas \u00e0 la salle.",
-             "quelques pour cent de d\u00e9shydratation suffisent \u00e0 faire chuter la performance.",
-             "une seule habitude tenue suffit \u00e0 prolonger la s\u00e9rie \ud83d\udd25.",
-             "pour la pr\u00e9pa triathlon, l'enjeu est d'alimenter l'effort, pas de creuser un d\u00e9ficit."];
-    radarDay(d).forEach(function(a,i){
-      arr.push({ic:a.ic,ok:a.met,lbl:a.lab,jump:AXJ[i],
-        txt:"<b>"+esc(a.lab)+"</b> \u00b7 "+esc(a.valTxt)+" \u2014 "+AXW[i]});
-    });
-    return arr;
-  }
   /* Tous les raccourcis « m'emmener là où ça se saisit » passent par ici :
      bandeaux à ouvrir + sélecteur du champ visé. Utilisé par les alertes ET
      par les emojis de Régularité (Progrès). */
@@ -1270,7 +1266,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     sport:{o:["spday"],s:".chips"},
     bal:{o:["ebal"],s:".jbal"},
     sleep:{o:["cm"],s:".f-sleep"},
-    water:{o:[],s:".hydra"},
+    water:{o:["water"],s:".hydra"},
     prot:{o:[],s:".meal-head"}
   };
   function jumpDay(kind){
@@ -1280,41 +1276,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var h=document.getElementById("dayLog");if(!h)return;
     buildDayForm(h,dayDate); /* l'\u00e9tat vient d'\u00eatre chang\u00e9 : il faut reg\u00e9n\u00e9rer, sinon rien ne s'ouvre */
     var el=h.querySelector(j.s);if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});
-  }
-  function renderOnboard(){
-    var host=document.getElementById("onbNudge");if(!host)return;
-    /* Muet sur un jour passe : ces pastilles ne parlent que d'aujourd'hui. */
-    if(dayDate!==todayStr()){host.innerHTML="";onbSel=null;return;}
-    var all=onbChecks();
-    if(!all.length){host.innerHTML="";return;}
-    if(onbSel!=null&&onbSel>=all.length)onbSel=null;
-    function dotsHTML(){
-      return all.map(function(o,i){
-        return '<button type="button" class="onb-dot'+(o.ok?" ok":" ko")+((i===onbSel)?" cur":"")+
-          '" data-i="'+i+'" aria-expanded="'+((i===onbSel)?"true":"false")+'" aria-label="'+esc(o.lbl)+'">'+o.ic+'</button>';
-      }).join("");
-    }
-    /* Le message didactique n'existe qu'au toucher : au repos, une seule ligne. */
-    function panelHTML(){
-      if(onbSel==null)return "";
-      var m=all[onbSel];
-      return '<div class="onb-panel"><div class="onb-msg">'+
-        (m.ok?("<b>"+esc(m.lbl)+"</b> \u2713 c\u2019est bon pour aujourd\u2019hui."):m.txt)+'</div>'+
-        (m.ok?"":'<button type="button" class="onb-go">Y aller</button>')+'</div>';
-    }
-    function paint(){
-      host.innerHTML='<div class="onb-row">'+dotsHTML()+'</div>'+panelHTML();
-      host.querySelectorAll(".onb-dot").forEach(function(b){
-        b.onclick=function(){
-          var i=parseInt(b.getAttribute("data-i"),10);
-          onbSel=(onbSel===i)?null:i;   /* re-tap sur la meme pastille = referme */
-          paint();
-        };
-      });
-      var go=host.querySelector(".onb-go");
-      if(go)go.onclick=function(){var m=all[onbSel];if(m&&m.jump)jumpDay(m.jump);};
-    }
-    paint();
   }
 
   /* ---------------- Muscu (grilles) ---------------- */
@@ -1499,7 +1460,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     wrap.querySelectorAll(".rest-chip").forEach(function(ch){ch.addEventListener("click",function(){startRest(parseInt(ch.getAttribute("data-sec"),10));});});
     wrap.querySelectorAll(".rest-btns button[data-sec]").forEach(function(bt){bt.addEventListener("click",function(){startRest(parseInt(bt.getAttribute("data-sec"),10));});});
     var rs=wrap.querySelector("#restStop");if(rs)rs.addEventListener("click",stopRest);
-    wrap.querySelector("#toggleDone").addEventListener("click",function(){s.done=!s.done;if(s.done&&!s.date)s.date=todayStr();save();renderProgram();renderSessionDetail();});
+    wrap.querySelector("#toggleDone").addEventListener("click",function(){s.done=!s.done;if(s.done&&!s.date)s.date=todayStr();if(s.done)linkSessionSport("Muscu",s.date);save();renderProgram();renderSessionDetail();});
     var mdd=wrap.querySelector("#doneDate");if(mdd)mdd.addEventListener("change",function(){if(this.value){s.date=this.value;save();renderProgram();}});
     var aeb=wrap.querySelector("#addExtraBtn");if(aeb)aeb.addEventListener("click",function(){s.extra.push({id:"x"+Date.now().toString(36),name:"",sets:3});save();renderSessionDetail();var ni=document.querySelector("#sessionDetail .exo-extra:last-of-type .exo-name-in");if(ni)ni.focus();});
     wrap.querySelectorAll(".exo-name-in").forEach(function(inp){inp.addEventListener("input",function(){var id=inp.getAttribute("data-xid");for(var j=0;j<s.extra.length;j++)if(s.extra[j].id===id){s.extra[j].name=inp.value;break;}save();});});
@@ -1581,8 +1542,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     du.addEventListener("input",function(){rec.dur=this.value;save();showPace();renderTriProgress();});
     wrap.querySelector(".t-note").value=rec.note||"";
     wrap.querySelector(".t-note").addEventListener("input",function(){rec.note=this.value;save();});
-    wrap.querySelector("#triDone").addEventListener("click",function(){rec.done=!rec.done;if(rec.done&&!rec.date)rec.date=todayStr();save();renderTri();renderTriDetail();});
-    var tdd=wrap.querySelector("#triDoneDate");if(tdd)tdd.addEventListener("change",function(){if(this.value){rec.date=this.value;save();renderTri();}});
+    wrap.querySelector("#triDone").addEventListener("click",function(){rec.done=!rec.done;if(rec.done&&!rec.date)rec.date=todayStr();if(rec.done)linkSessionSport(SPORT_OF_DISC[dz],rec.date);save();renderTri();renderTriDetail();});
+    var tdd=wrap.querySelector("#triDoneDate");if(tdd)tdd.addEventListener("change",function(){if(this.value){rec.date=this.value;if(rec.done)linkSessionSport(SPORT_OF_DISC[dz],rec.date);save();renderTri();}});
   }
 
   /* ---------------- Transit (Bristol) ---------------- */
@@ -1671,9 +1632,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="hy-glasses">'+g+'<button type="button" class="hy-g hy-plus" data-w="+" aria-label="Un verre de plus">+</button></div>'+
       '</div>';
   }
-  function dfSport(chips){
-    return '<div class="field">'+bndHead("spday","sub",{ttl:"\ud83c\udfc3 Sports du jour"})+bndBody("spday","spday-body",chips)+'</div>';
-  }
 
   function dfCorps(x){
     return '<div class="field dg-field">'+
@@ -1688,11 +1646,20 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
 
   function dfRepas(x,d){
-    return '<div class="field"><div class="meal-head"><label>Repas</label><span class="meal-todo" hidden></span><span class="meal-total"></span>'+
+    /* En-tête : une rangée d'émojis-dépliants en accordéon (un seul ouvert à la fois).
+       🥩 protéines · ⚡ bilan énergie · 💧 eau · 🏃 sports du jour · ⚠️ aliments à chiffrer.
+       Les totaux chiffrés d'antan (« x kcal · y g prot ») ont disparu : les émojis les portent. */
+    return '<div class="field"><div class="meal-head"><label>Repas</label>'+
           bndHead("jprot","mini",{ttl:"\ud83e\udd69",attrs:' hidden aria-label="D\u00e9tail prot\u00e9ines"'})+
-          bndHead("ebal","mini",{ttl:"\u26a1",attrs:' aria-label="Bilan \u00e9nergie du jour"'})+'</div>'+
+          bndHead("ebal","mini",{ttl:"\u26a1",attrs:' aria-label="Bilan \u00e9nergie du jour"'})+
+          bndHead("water","mini",{ttl:"\ud83d\udca7",attrs:' aria-label="Hydratation"'})+
+          bndHead("spday","mini",{ttl:"\ud83c\udfc3",attrs:' aria-label="Sports du jour"'})+
+          bndHead("chiffr","mini",{ttl:"\u26a0\ufe0f",attrs:' hidden aria-label="Aliments \u00e0 chiffrer"'})+'</div>'+
           bndBody("jprot","jprot-body")+
           bndBody("ebal","ebal-body",jBalHTML(x,d))+
+          bndBody("water","water-body",dfWater(x,d))+
+          bndBody("spday","spday-body",sportChipsHTML(x))+
+          bndBody("chiffr","chiffr-body")+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
 
         '</div>';
@@ -1703,7 +1670,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           bndHead("wb","group",{stick:true,ttl:"🌿 Bien-être"})+
           '<div class="bnd-body wb-body'+(bndOpen.wb?'':' collapsed')+'" data-bndb="wb">'+
         '<div class="field supps-field">'+
-          bndHead("sp","sub",{ttl:"Compléments alimentaires",cls:"sp-meta",meta:+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)})+
+          bndHead("sp","sub",{ttl:"💊 Compléments alimentaires",cls:"sp-meta",meta:+((typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return x.supps&&x.supps[sp.id];}).length)+'/'+(typeof SUPPS!=="undefined"?SUPPS.length:0)})+
           '<div class="bnd-body'+(bndOpen.sp?'':' collapsed')+'" data-bndb="sp">'+
             (typeof SUPP_SLOTS!=="undefined"?SUPP_SLOTS:[]).map(function(slot){
               var items=(typeof SUPPS!=="undefined"?SUPPS:[]).filter(function(sp){return sp.when===slot.id;});
@@ -1716,7 +1683,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          bndHead("rx","sub",{ttl:"Ce qui te fait du bien",cls:"rx-meta",meta:""})+
+          bndHead("rx","sub",{ttl:"☀️ Ce qui te fait du bien",cls:"rx-meta",meta:""})+
           '<div class="bnd-body rx-body'+(bndOpen.rx?'':' collapsed')+'" data-bndb="rx">'+
             (typeof ROUTINES!=="undefined"?ROUTINES:[]).map(function(r){var info=r.link?'<button type="button" class="rx-info" data-rx="'+r.id+'" aria-label="Infos">i</button>':'';var help=r.link?'<div class="rx-help" id="rxhelp-'+r.id+'"><a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.linkLabel||"Ouvrir")+' ↗</a></div>':'';return '<div class="rx-item"><label class="supp"><input type="checkbox" class="f-rx" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span>'+info+'</label>'+help+'</div>';}).join("")+
             '<div class="xtras rx-x">'+((x.routinesX||[]).map(function(n,i){return '<span class="xchip">'+esc(n)+'<button type="button" class="xdel" data-k="rx" data-i="'+i+'">×</button></span>';}).join(""))+'</div>'+
@@ -1725,7 +1692,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          bndHead("px","sub",{ttl:"Petits exercices",cls:"px-meta",meta:""})+
+          bndHead("px","sub",{ttl:"🤸 Petits exercices",cls:"px-meta",meta:""})+
           '<div class="bnd-body px-body'+(bndOpen.px?'':' collapsed')+'" data-bndb="px">'+
             pxOrder(d).map(function(r){var info=r.link?'<button type="button" class="rx-info" data-rx="px-'+r.id+'" aria-label="Infos">i</button>':'';var help=r.link?'<div class="rx-help" id="rxhelp-px-'+r.id+'"><a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.linkLabel||"Ouvrir")+' ↗</a></div>':'';return '<div class="rx-item'+(r._px?'':' px-hid')+'"><label class="supp"><input type="checkbox" class="f-px" data-id="'+r.id+'"><span class="supp-txt"><span class="supp-name">'+(r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span></span>'+info+'</label>'+help+'</div>';}).join("")+
             '<button type="button" class="px-more'+(pxAllOpen?' open':'')+'">'+(pxAllOpen?'Masquer les autres':'Voir les autres exercices')+'</button>'+
@@ -1735,7 +1702,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          bndHead("cr","sub",{ttl:"Ancrages",cls:"cr-meta",meta:""})+
+          bndHead("cr","sub",{ttl:"⏰ Ancrages",cls:"cr-meta",meta:""})+
           '<div class="bnd-body cr-body'+(bndOpen.cr?'':' collapsed')+'" data-bndb="cr">'+
             (customRoutines().length?customRoutines().map(function(a){
               /* M\u00eame patron que les petits exercices : un \u00ab i \u00bb qui d\u00e9plie un lien.
@@ -1750,21 +1717,20 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
         '</div>'+
         '<div class="field supps-field">'+
-          bndHead("tr","sub",{ttl:"Transit",cls:"tr-meta",meta:""})+
+          bndHead("tr","sub",{ttl:"💩 Transit",cls:"tr-meta",meta:""})+
           '<div class="bnd-body tr-body'+(bndOpen.tr?'':' collapsed')+'" data-bndb="tr"><div class="stools f-stools"></div></div>'+
         '</div>'+
-        '<div class="field"><label>Note du jour</label><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
+        '<div class="field supps-field">'+bndHead("note","sub",{ttl:"📝 Note du jour"})+
+          '<div class="bnd-body note-body'+(bndOpen.note?'':' collapsed')+'" data-bndb="note"><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
+        '</div>'+
           '</div>'+
         '</div>';
   }
   function buildDayForm(container,d){
     var x=day(d);
     var dlId="foodlist-"+(container.id||"x");
-    var chips='<div class="chips">'+SPORTS.map(function(sp){return '<button type="button" class="chip'+(x.sports.indexOf(sp)>-1?' on':'')+'" data-sport="'+sp+'">'+sp+'</button>';}).join("")+'</div>';
     container.innerHTML='<div class="card pad">'
-      +dfWater(x,d)
       +dfRepas(x,d)
-      +dfSport(chips)
       +dfBienEtre(x,d)
       +dfCorps(x)
       +'</div>';
@@ -1782,15 +1748,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     (function(){
       /* Résumé d'en-tête tenu à jour sans toucher aux handlers existants — et,
-         dans la foulée, le radar et la bande de pastilles. Sans ce pouls, une
-         pastille ne passe au vert qu'au prochain rendu complet : la récompense
-         arrive trop tard pour être une récompense. Débounce : on ne re-rend pas
-         le radar à chaque frappe dans le champ Poids. */
+         dans la foulée, le radar (le graphe araignée reflète la saisie en direct).
+         Débounce : on ne re-rend pas le radar à chaque frappe dans le champ Poids. */
       var pt=null;
       function pulse(){
         dgMeta();
         if(pt)clearTimeout(pt);
-        pt=setTimeout(function(){pt=null;renderDayRadar();renderOnboard();},220);
+        pt=setTimeout(function(){pt=null;renderDayRadar();},220);
       }
       container.addEventListener("input",pulse);
       container.addEventListener("change",pulse);
@@ -1839,7 +1803,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     container.querySelectorAll(".supp-x2").forEach(function(bt){
       bt.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();var id=bt.getAttribute("data-x2");if(!x.supps2)x.supps2={};x.supps2[id]=!x.supps2[id];bt.classList.toggle("on",x.supps2[id]);save();if(x.supps&&x.supps[id])recalcTotals();});
     });
-    container.querySelectorAll(".chip").forEach(function(ch){ch.addEventListener("click",function(){var sp=ch.getAttribute("data-sport");var arr=x.sports;var i=arr.indexOf(sp);if(i>-1){arr.splice(i,1);ch.classList.remove("on");}else{arr.push(sp);ch.classList.add("on");}save();});});
+    container.querySelectorAll(".chip").forEach(function(ch){ch.addEventListener("click",function(){var sp=ch.getAttribute("data-sport");var arr=x.sports;var i=arr.indexOf(sp);if(i>-1){arr.splice(i,1);ch.classList.remove("on");}else{arr.push(sp);ch.classList.add("on");}save();renderDayRadar();});});
 
     (function(){
       var sum=container.querySelector(".hy-sum");
@@ -1870,10 +1834,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     function nutFilled(it){var n=it&&it.nut;return !!(n&&num(n.base)>0&&n.kcal!==""&&n.kcal!=null&&!isNaN(num(n.kcal))&&n.prot!==""&&n.prot!=null&&!isNaN(num(n.prot)));}
     function sumText(it){var s=scaleNut(it);if(!s)return "";return "≈ "+(s.kcal!==undefined?Math.round(s.kcal)+" kcal":"")+((s.kcal!==undefined&&s.prot!==undefined)?" · ":"")+(s.prot!==undefined?fr1(s.prot)+" g prot.":"");}
     function recalcTotals(){var t=dayTotals(d);
-      var _td=todoCount(),_tdEl=container.querySelector(".meal-todo");
-      if(_tdEl){_tdEl.hidden=!_td;_tdEl.textContent=_td?("\u26a0\ufe0f "+_td+" \u00e0 chiffrer"):"";
-        _tdEl.title=_td?("Ces aliments n'ont pas de valeurs nutritionnelles : ils comptent pour 0, ton total est donc sous-estim\u00e9."):"";}
-      var el=container.querySelector(".meal-total");if(el){if(t){el.textContent=Math.round(t.kcal)+" kcal · "+fr1(pEff(t))+" g prot.";el.className="meal-total on";}else{el.textContent="";el.className="meal-total";}}var jt=container.querySelector('[data-bnd="jprot"]'),jb=container.querySelector(".jprot-body");if(jt&&jb){if(t){jt.hidden=false;jb.innerHTML=protBreakHTML(t)+dayMealDistHTML(d);jb.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");recalcTotals();};});}else{jt.hidden=true;jb.innerHTML="";}}}
+      /* ⚠️ Aliments à chiffrer : le toggle n'apparaît que s'il y en a ; son dépliant les liste,
+         un tap ouvre l'éditeur de l'aliment (rubrique « Composition » dépliée). */
+      var _list=[];MEALS.forEach(function(m){((day(d).mealItems||{})[m.k]||[]).forEach(function(it,i){if(itemTodo(it))_list.push({mk:m.k,i:i,name:it.name||"\u2014"});});});
+      var _ct=container.querySelector('[data-bnd="chiffr"]'),_cb=container.querySelector(".chiffr-body");
+      if(_ct){_ct.hidden=!_list.length;
+        if(!_list.length){bndOpen.chiffr=false;_ct.classList.remove("open");if(_cb)_cb.classList.add("collapsed");}
+        if(_cb){_cb.innerHTML='<div class="chiffr-hint">Ces aliments comptent pour 0 tant qu\'ils n\'ont pas de valeurs. Touche-en un pour les renseigner.</div>'+_list.map(function(o){return '<button type="button" class="chiffr-it" data-mk="'+o.mk+'" data-i="'+o.i+'">\u26a0\ufe0f '+esc(o.name)+'</button>';}).join("");
+          _cb.querySelectorAll(".chiffr-it").forEach(function(b){b.onclick=function(){gotoTodo(b.getAttribute("data-mk"),parseInt(b.getAttribute("data-i"),10));};});}}
+      var jt=container.querySelector('[data-bnd="jprot"]'),jb=container.querySelector(".jprot-body");if(jt&&jb){if(t){jt.hidden=false;jb.innerHTML=protBreakHTML(t)+dayMealDistHTML(d);jb.querySelectorAll(".md-mode").forEach(function(b){b.onclick=function(){mealDistMode=b.getAttribute("data-mode");recalcTotals();};});}else{jt.hidden=true;jb.innerHTML="";}}}
     /* Deux défauts SILENCIEUX repérés sur les données réelles :
        — un aliment sans valeurs compte pour ZÉRO sans rien dire (31 items sur
          5 semaines : totaux sous-estimés sans le moindre signal) ;
@@ -1889,8 +1858,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         t:"Apport inhabituel pour un seul aliment : "+Math.round(sc.kcal||0)+" kcal \u00b7 "+fr1(sc.prot||0)+" g prot. \u2014 v\u00e9rifie la quantit\u00e9."};
       return null;
     }
-    function todoCount(){var n=0;MEALS.forEach(function(m){((day(d).mealItems||{})[m.k]||[]).forEach(function(it){if(itemTodo(it))n++;});});return n;}
     var mealEdit={pd:-1,dj:-1,dn:-1,co:-1},mealEditPrev=null;
+    /* Depuis le dépliant ⚠️ : ouvre le repas concerné, sélectionne l'aliment et déplie sa
+       rubrique Composition (renderMeal force tenut ouvert quand les valeurs manquent). */
+    function gotoTodo(mk,i){
+      mealOpen[mk]=true;mealEdit[mk]=i;mealEditPrev=null;
+      var md=container.querySelector('.meal[data-mk="'+mk+'"]');if(md)md.classList.add("open");
+      renderMeal(mk);
+      var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');if(host&&host.scrollIntoView)host.scrollIntoView({block:"center"});
+    }
     function renderMeal(mk){
       var host=container.querySelector('.meal-items[data-mk="'+mk+'"]');
       var arr=day(d).mealItems[mk];var ed=mealEdit[mk];var h="";
@@ -3118,6 +3094,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var dcl=document.getElementById("drawerClose");if(dcl)dcl.addEventListener("click",closeDrawer);
     var dbg=document.getElementById("drawerBg");if(dbg)dbg.addEventListener("click",closeDrawer);
     var sb=document.getElementById("settingsBtn");if(sb)sb.addEventListener("click",function(){closeDrawer();openSettings();});
+    var cc=document.getElementById("calChip");if(cc)cc.addEventListener("click",function(){
+      var vd=document.getElementById("v-day");if(vd&&!vd.classList.contains("active"))activateTab("v-day");
+      bndOpen.homecal=!bndOpen.homecal;renderCalendars();
+      cc.setAttribute("aria-expanded",bndOpen.homecal?"true":"false");cc.classList.toggle("on",bndOpen.homecal);
+      if(bndOpen.homecal){var hc=document.getElementById("homeCal");if(hc&&hc.scrollIntoView)hc.scrollIntoView({block:"center"});}
+    });
     var sc=document.getElementById("settingsClose");if(sc)sc.addEventListener("click",closeSettings);
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
     document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){activateTab(t.getAttribute("data-view"));});});wireSwipe();
