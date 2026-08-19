@@ -136,7 +136,7 @@ var PROGRAM2 = {
 /* ---------- Blocs & codes ---------- */
 var PROGRAM_BLOCKS = {
   b1:{name:"Construction", short:"B1", weeks:5, prog:PROGRAM},
-  b2:{name:"Plage", short:"B2", weeks:4, prog:PROGRAM2}
+  b2:{name:"Développement", short:"B2", weeks:4, prog:PROGRAM2}
 };
 var BLOCK_ORDER = ["b1","b2"];
 var CODES = ["A","B","C","D"];
@@ -188,7 +188,7 @@ var PLAN_SEED = {
 /* ---------- Échéances marquées sur le calendrier ---------- */
 var DEADLINES = [
   {date:"2026-07-25", label:"Départ Cannes",          icon:"🚆", short:"Départ"},
-  {date:"2026-07-27", label:"Objectif forme / plage",  icon:"🏖️", short:"Forme"},
+  {date:"2026-07-27", label:"Objectif développement", icon:"💪", short:"Dévelop."},
   {date:"2026-09-13", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
 ];
 
