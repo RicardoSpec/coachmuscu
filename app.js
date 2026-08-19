@@ -425,7 +425,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Tous repliés au chargement : l'état n'est pas persisté, donc ces valeurs
      sont ce que l'app montre à chaque ouverture. Aucun bandeau ne s'ouvre seul. */
   var bndOpen={homecal:false,hero:false,radar:false,
-              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,ebal:false,spday:false,water:false,chiffr:false,note:false,
+              eg:false,cm:false,wb:false,sp:false,rx:false,px:false,cr:false,tr:false,jprot:false,ebal:false,spday:false,slp:false,water:false,chiffr:false,note:false,
               axhelp:false,tenut:false,rgS:false,rgR:false,rgP:false};
   var BND_RENDER={};
   function bndHead(key,skin,o){
@@ -447,7 +447,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return '<div class="bnd-body'+(cls?" "+cls:"")+(bndOpen[key]?"":" collapsed")+'" data-bndb="'+key+'">'+(inner||"")+'</div>';
   }
   /* Accordéon : dans un même groupe, ouvrir un émoji referme les autres (comme le détail du radar). */
-  var BND_GROUP={jprot:"meal",ebal:"meal",spday:"meal",chiffr:"meal",water:"meal"};
+  var BND_GROUP={jprot:"meal",ebal:"meal",spday:"meal",slp:"meal",chiffr:"meal",water:"meal"};
   function wireBnd(){
     BND_RENDER={homecal:renderCalendars,hero:renderHero,dayRadar:renderDayRadar};
     document.addEventListener("click",function(e){
@@ -466,6 +466,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       b.classList.toggle("open",bndOpen[k]);
       var body=document.querySelector('[data-bndb="'+k+'"]');
       if(body)body.classList.toggle("collapsed",!bndOpen[k]);
+      if(!bndOpen[k]){
+        /* Repli dans le Journal : si tout re-rentre dans l'écran, on remonte en haut
+           (sinon on reste bloqué en bas, en-tête invisible). Après l'anim de repli (~400ms). */
+        var dv=document.getElementById("v-day");
+        if(dv&&dv.classList.contains("active"))setTimeout(function(){
+          if(document.documentElement.scrollHeight<=window.innerHeight+4)window.scrollTo({top:0,behavior:"smooth"});
+        },420);
+      }
     });
   }
   var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
@@ -480,7 +488,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     setTimeout(syncStickTop,0);
     if(id==="v-day"){renderDay();renderCalendars();}
-    else if(id==="v-sport"){renderProgram();renderTri();renderSportTabs();renderLearn();}
+    else if(id==="v-sport"){wbSkip={};renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderLearn();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
   }
@@ -1639,7 +1647,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="bnd-body cm-body'+(bndOpen.cm?'':' collapsed')+'" data-bndb="cm">'+
 
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
-'<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>'+
 '<div class="field"><span class="lbl-row"><label>VFC au r\u00e9veil (ms)</label><details class="base-hint inl"><summary>i</summary><div>La VFC (variabilit\u00e9 de la fr\u00e9quence cardiaque, en ms) mesure les micro-\u00e9carts entre deux battements de c\u0153ur. Plus elle est haute, mieux ton syst\u00e8me nerveux r\u00e9cup\u00e8re : bon indicateur de fatigue r\u00e9elle plut\u00f4t que ressentie. Une VFC basse le matin = corps encore fatigu\u00e9, tu peux all\u00e9ger la s\u00e9ance ou viser la r\u00e9cup\u00e9ration. Pour la relever : ta montre (Apple Watch \u2192 app Sant\u00e9 \u2192 Variabilit\u00e9 de la FC) la mesure la nuit ; note la valeur en ms chaque matin, au calme, pour comparer jour apr\u00e8s jour.</div></details></span><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><div class="hrv-trend"></div></div>'+
         '</div>'+
         '</div>';
@@ -1649,16 +1656,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     /* En-tête : une rangée d'émojis-dépliants en accordéon (un seul ouvert à la fois).
        🥩 protéines · ⚡ bilan énergie · 💧 eau · 🏃 sports du jour · ⚠️ aliments à chiffrer.
        Les totaux chiffrés d'antan (« x kcal · y g prot ») ont disparu : les émojis les portent. */
-    return '<div class="field"><div class="meal-head"><label>Repas</label>'+
+    return '<div class="field"><div class="meal-head">'+
           bndHead("jprot","mini",{ttl:"\ud83e\udd69",attrs:' hidden aria-label="D\u00e9tail prot\u00e9ines"'})+
           bndHead("ebal","mini",{ttl:"\u26a1",attrs:' aria-label="Bilan \u00e9nergie du jour"'})+
           bndHead("water","mini",{ttl:"\ud83d\udca7",attrs:' aria-label="Hydratation"'})+
           bndHead("spday","mini",{ttl:"\ud83c\udfc3",attrs:' aria-label="Sports du jour"'})+
+          bndHead("slp","mini",{ttl:"\ud83d\udca4",attrs:' aria-label="Sommeil"'})+
           bndHead("chiffr","mini",{ttl:"\u26a0\ufe0f",attrs:' hidden aria-label="Aliments \u00e0 chiffrer"'})+'</div>'+
           bndBody("jprot","jprot-body")+
           bndBody("ebal","ebal-body",jBalHTML(x,d))+
           bndBody("water","water-body",dfWater(x,d))+
           bndBody("spday","spday-body",sportChipsHTML(x))+
+          bndBody("slp","slp-body",'<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>')+
           bndBody("chiffr","chiffr-body")+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
 
@@ -1742,7 +1751,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(eg){var p=[],out=expend(d);if(out!=null){var net=adjIntake(d)-out;p.push((net>0?"+":"")+net+" kcal");}
         var ns=(x.sports&&x.sports.length)||0;if(ns)p.push(ns+" sport"+(ns>1?"s":""));
         eg.textContent=p.join(" \u00b7 ");}
-      if(cm){var q=[];if(x.weight)q.push(nFmt(num(x.weight))+" kg");if(x.sleep)q.push(nFmt(num(x.sleep))+" h");
+      if(cm){var q=[];if(x.weight)q.push(nFmt(num(x.weight))+" kg");
         if(x.hrv)q.push(x.hrv+" ms");if(x.water>0)q.push(x.water+" verre"+(x.water>1?"s":"")+wAddEmo(x));
         cm.textContent=q.join(" \u00b7 ");}
     }
@@ -1898,6 +1907,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
           '</div>'+
           (sumText(it)?'<div class="food-sum">'+sumText(it)+'</div>':'')+
+          '<button type="button" class="te-fiche" aria-label="Fiche produit (r\u00e9glages)" title="Fiche produit (r\u00e9glages)">\u2699\ufe0f</button>'+
           '<button type="button" class="te-scan">📷 Scanner un code-barres</button>'+
           '<button type="button" class="te-close">Fermer</button>'+
         '</div>';
@@ -1957,6 +1967,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         host.querySelector(".te-baseunit").addEventListener("change",function(){ensureNut();item.nut.baseUnit=this.value;save();recalcTotals();updEdSum();});
         ["kcal","prot","gluc","lip"].forEach(function(f){host.querySelector(".te-"+f).addEventListener("input",function(){ensureNut();item.nut[f]=this.value;save();recalcTotals();updEdSum();});});
         host.querySelector(".te-close").addEventListener("click",function(){mealEdit[mk]=-1;renderMeal(mk);});
+        var teFiche=host.querySelector(".te-fiche");
+        if(teFiche)teFiche.addEventListener("click",function(){openFoodFiche(item.name);});
         var teScan=host.querySelector(".te-scan");
         if(teScan)teScan.addEventListener("click",function(){openScanner(function(res){ensureNut();if(!item.name||item.name==="")item.name=res.name;item.unit="g";item.nut.base="100";item.nut.baseUnit="g";item.nut.kcal=res.nut.kcal;item.nut.prot=res.nut.prot;item.nut.gluc=res.nut.gluc;item.nut.lip=res.nut.lip;if(!item.qty||item.qty==="")item.qty="100";save();renderMeal(mk);recalcTotals();});});
       }
@@ -2067,6 +2079,74 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll("[data-goto]").forEach(function(el){el.onclick=function(){var g=el.getAttribute("data-goto");if(g)goSport(g);};});
   }
 
+  /* ---- Geste du moment : pont Bien-être (Journal) ↔ Objectif ----
+     Une seule carte, un seul geste à la fois. Choisi par heure du jour + délaissement.
+     Coché ici = coché dans le Journal (même état, agit sur AUJOURD'HUI). */
+  var wbSkip={};
+  function wbWhenLabel(w){return w==="matin"?"Le matin, à jeun":w==="repas"?"À un repas":w==="seance"?"Après la séance / en collation":w==="soir"?"Le soir":"";}
+  function wbSlotHour(w){return w==="matin"?8:w==="repas"?12:w==="seance"?17:w==="soir"?21:-1;}
+  function wbPool(d){
+    var x=day(d),out=[];
+    (typeof SUPPS!=="undefined"?SUPPS:[]).forEach(function(s){out.push({kind:"supp",id:s.id,icon:"💊",label:s.name,when:s.when,done:!!(x.supps&&x.supps[s.id])});});
+    (typeof ROUTINES!=="undefined"?ROUTINES:[]).forEach(function(r){out.push({kind:"rx",id:r.id,icon:r.icon||"☀️",label:r.name,done:routineDoneOn(r.id,d)});});
+    pxOrder(d).filter(function(r){return r._px;}).forEach(function(r){out.push({kind:"px",id:r.id,icon:r.icon||"🤸",label:r.name,done:pxDoneOn(r.id,d)});});
+    customRoutines().forEach(function(a){out.push({kind:"cr",id:a.id,icon:a.icon||"⏰",label:a.label,done:!!(x.customRoutines&&x.customRoutines[a.id])});});
+    return out;
+  }
+  function wbDoneOn(kind,id,iso){var x=state.days[iso];if(!x)return false;
+    if(kind==="supp")return !!(x.supps&&x.supps[id]);
+    if(kind==="rx")return !!((x.routines&&x.routines[id])||(id==="medit"&&x.meditation));
+    if(kind==="px")return !!(x.petitsExos&&x.petitsExos[id]);
+    if(kind==="cr")return !!(x.customRoutines&&x.customRoutines[id]);
+    return false;}
+  function wbNeglect(kind,id){for(var i=1;i<=21;i++){if(wbDoneOn(kind,id,isoOf(addDays(todayStr(),-i))))return i;}return 22;}
+  function wbTimeBoost(it){if(!it.when)return 0;var t=wbSlotHour(it.when);if(t<0)return 0;var diff=Math.abs((new Date().getHours())-t);return diff<=1?3:diff<=3?1:0;}
+  /* Type de jour : si tu as déjà bougé aujourd'hui, on pousse la récup (whey post-séance, étirements, mobilité).
+     Jour calme (aucun sport loggé) : bon créneau pour la mobilité douce. Toujours sous le poids de l'heure. */
+  function wbDayBoost(it){
+    var x=day(todayStr()),trained=!!(x.sports&&x.sports.length);
+    if(trained){
+      if(it.kind==="supp"&&it.when==="seance")return 2;
+      if(it.kind==="rx"&&it.id==="etire")return 2;
+      if(it.kind==="px")return 1;
+      return 0;
+    }
+    if(it.kind==="px")return 1;
+    if(it.kind==="rx"&&it.id==="etire")return 1;
+    return 0;
+  }
+  function wbPick(d){
+    var pool=wbPool(d).filter(function(it){return !it.done&&!wbSkip[it.kind+":"+it.id];});
+    if(!pool.length)return null;
+    pool.forEach(function(it){it._s=wbTimeBoost(it)*100+wbDayBoost(it)*40+wbNeglect(it.kind,it.id);});
+    pool.sort(function(a,b){return b._s-a._s;});
+    return pool[0];
+  }
+  function wbCheck(it){var iso=todayStr(),x=day(iso);
+    if(it.kind==="supp"){if(!x.supps)x.supps={};x.supps[it.id]=true;}
+    else if(it.kind==="rx"){if(!x.routines)x.routines={};x.routines[it.id]=true;if(it.id==="medit")x.meditation=true;}
+    else if(it.kind==="px"){if(!x.petitsExos)x.petitsExos={};x.petitsExos[it.id]=true;}
+    else if(it.kind==="cr"){if(!x.customRoutines)x.customRoutines={};x.customRoutines[it.id]=true;}
+    save();refreshDayForm();renderGesteMoment();
+  }
+  function renderGesteMoment(){
+    var host=document.getElementById("gesteMoment");if(!host)return;
+    var iso=todayStr(),it=wbPick(iso);
+    if(!it){
+      var pool=wbPool(iso),total=pool.length,done=pool.filter(function(p){return p.done;}).length;
+      var msg=(total&&done>=total)?"✓ Tout ton bien-être du jour est coché. Beau boulot.":"Rien de plus à te proposer pour l'instant — reviens plus tard.";
+      host.innerHTML='<div class="card pad gm-card gm-done"><div class="gm-h">🌿 Bien-être du jour</div><div class="gm-alldone">'+msg+'</div></div>';
+      return;
+    }
+    host.innerHTML='<div class="card pad gm-card"><div class="gm-h">🌿 Ton geste du moment</div>'+
+      '<div class="gm-item"><span class="gm-ic">'+esc(it.icon)+'</span><span class="gm-lbl">'+esc(it.label)+'</span></div>'+
+      (it.when?'<div class="gm-when">'+esc(wbWhenLabel(it.when))+'</div>':'')+
+      '<div class="gm-acts"><button type="button" class="btn accent gm-do">✓ Fait</button><button type="button" class="btn ghost gm-skip">Plus tard</button></div>'+
+      '<div class="gm-foot">Coché ici = coché dans le Journal (aujourd\'hui).</div>'+
+    '</div>';
+    host.querySelector(".gm-do").onclick=function(){wbCheck(it);};
+    host.querySelector(".gm-skip").onclick=function(){wbSkip[it.kind+":"+it.id]=true;renderGesteMoment();};
+  }
   function weekVizHTML(){
     var days=[];for(var i=6;i>=0;i--)days.push(isoOf(addDays(todayStr(),-i)));
     var DL=["D","L","M","M","J","V","S"];
@@ -3021,7 +3101,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function backupStaleDays(){var lb=state.config&&state.config.lastBackup;return lb?diffDays(todayStr(),lb):null;}
   function openSettings(){var s=document.getElementById("settings");if(!s)return;settingsEdit=null;settingsSessSel=null;settingsFoodSel=null;settingsFoodOpen=false;settingsFoodQuery="";settingsQualSel=null;settingsQualOpen=false;settingsQualQuery="";settingsSecOpen={};settingsGrpOpen={};renderSettings();s.hidden=false;requestAnimationFrame(function(){s.classList.add("open");});}
-  function openSettingsAt(grp,sec){openSettings();if(grp)settingsGrpOpen[grp]=true;if(sec)settingsSecOpen[sec]=true;renderSettings();var el=document.querySelector('#settingsBody .set-sectog[data-sec="'+sec+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});}  function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
+  function openSettingsAt(grp,sec){openSettings();if(grp)settingsGrpOpen[grp]=true;if(sec)settingsSecOpen[sec]=true;renderSettings();var el=document.querySelector('#settingsBody .set-sectog[data-sec="'+sec+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});}  function openFoodFiche(name){
+    var k=(""+(name||"")).trim().toLowerCase();if(!k)return;
+    openSettings();settingsGrpOpen.g_track=true;settingsFoodOpen=true;settingsFoodSel=k;renderSettings();
+    var ed=document.querySelector("#settingsBody .ff-scroll .ff-edit");if(ed&&ed.scrollIntoView)ed.scrollIntoView({block:"center"});
+  }
+  function closeSettings(){var s=document.getElementById("settings");if(!s)return;s.classList.remove("open");setTimeout(function(){s.hidden=true;},260);}
 
 /* Migration ponctuelle : le plan tri est renuméroté en 4 semaines (départ 2026-08-17).
      Si l'ancien départ par défaut (2026-07-06) est encore stocké, on l'aligne — état LOCAL (suiviMuscu_v1), pas le store partagé. */
