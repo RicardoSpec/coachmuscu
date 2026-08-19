@@ -302,6 +302,8 @@ input[type=checkbox]{accent-color:var(--primary)}
 .nut-grid input{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;font-family:inherit;text-align:center;background:#fff}
 .food-sum{margin-top:10px;font-size:13px;font-weight:700;color:var(--primary)}
 .te-close{margin-top:10px;width:auto;border:1.5px solid var(--line);background:#fff;color:var(--primary);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.te-scan{display:block;margin-top:8px;width:100%;border:1.5px solid var(--line);background:#fff;color:var(--primary);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.te-fiche{float:right;margin:-2px 0 4px 8px;width:38px;height:38px;padding:0;border:1.5px solid var(--primary);background:#eef4f8;border-radius:10px;font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
 .meal-total{margin-top:6px;font-size:12.5px;color:var(--muted)}
 .meal-total.on{color:var(--primary);font-weight:700;background:#eef4f8;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 
@@ -1225,3 +1227,15 @@ nav.tabs .tab.on{color:var(--primary)}
 .meal-head{flex-wrap:wrap}
 .meal-todo{flex:0 0 auto;font-size:11px;font-weight:800;color:#8a5a12;
   background:#fdf6e9;border:1px solid #e0a03a;border-radius:999px;padding:3px 8px;cursor:help}
+
+/* Geste du moment (onglet Objectif) — pont vers le Bien-être du Journal */
+.gm-card{border:1.5px solid var(--primary);background:linear-gradient(180deg,#f2f7fb,#fff)}
+.gm-h{font-size:13px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px}
+.gm-item{display:flex;align-items:center;gap:12px}
+.gm-ic{font-size:34px;line-height:1;flex:none}
+.gm-lbl{font-size:19px;font-weight:800;color:var(--ink)}
+.gm-when{margin-top:6px;font-size:13px;color:var(--muted)}
+.gm-acts{display:flex;gap:10px;margin-top:14px}
+.gm-acts .btn{flex:1}
+.gm-foot{margin-top:10px;font-size:12px;color:var(--muted)}
+.gm-done .gm-alldone{font-size:15px;font-weight:700;color:var(--primary)}
