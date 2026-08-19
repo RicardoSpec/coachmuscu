@@ -63,6 +63,12 @@ body{
 .app-item.soon{color:var(--muted)}
 .app-item.soon .app-ic{filter:grayscale(1);opacity:.6}
 .chip{background:rgba(255,255,255,.16);color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;font-family:var(--mono)}
+.top .scorechip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);color:#fff;border:none;border-radius:999px;padding:5px 12px;font-family:inherit;cursor:pointer;min-width:0}
+.top .scorechip .sc-ic{font-size:15px;line-height:1;flex:none}
+.top .scorechip .sc-k{font-size:13px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .scorechip .sc-v{font-size:12px;font-weight:800;font-family:var(--mono);opacity:.95;flex:none}
+.top .scorechip.on{background:rgba(255,255,255,.30)}
+.top .calchip{flex:none}
 
 /* ---------- Structure ---------- */
 main{max-width:560px;margin:0 auto;padding:16px;min-height:calc(100vh - 58px);min-height:calc(100dvh - 58px)}
@@ -685,6 +691,11 @@ nav.tabs .tab.on{color:var(--primary)}
 .tri-legacy{margin-top:7px;font-size:12px;color:var(--muted);font-style:italic}
 .tp-card{margin-bottom:14px}
 .tp-head{font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:10px}
+.tp-fold>summary{cursor:pointer;list-style:none;margin-bottom:0;display:flex;align-items:center;justify-content:space-between}
+.tp-fold>summary::-webkit-details-marker{display:none}
+.tp-fold>summary::after{content:"▸";color:var(--muted);font-weight:700;transition:transform .15s}
+.tp-fold[open]>summary::after{transform:rotate(90deg)}
+.tp-fold[open]>summary{margin-bottom:10px}
 .tp-row{display:flex;align-items:center;gap:9px;padding:5px 0}
 .tp-ic{flex:none;font-size:16px;width:24px;text-align:center}
 .tp-lbl{flex:none;width:72px;font-size:12.5px;font-weight:700;color:var(--muted)}
@@ -1229,7 +1240,7 @@ nav.tabs .tab.on{color:var(--primary)}
   background:#fdf6e9;border:1px solid #e0a03a;border-radius:999px;padding:3px 8px;cursor:help}
 
 /* Geste du moment (onglet Objectif) — pont vers le Bien-être du Journal */
-.gm-card{border:1.5px solid var(--primary);background:linear-gradient(180deg,#f2f7fb,#fff)}
+.gm-card{border:1.5px solid var(--primary);background:linear-gradient(180deg,#f2f7fb,#fff);touch-action:pan-y;will-change:transform}
 .gm-h{font-size:13px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px}
 .gm-item{display:flex;align-items:center;gap:12px}
 .gm-ic{font-size:34px;line-height:1;flex:none}
