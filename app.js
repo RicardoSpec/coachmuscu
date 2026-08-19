@@ -399,7 +399,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(iso<"2026-06-22")return {t:"Avant le Vercors 🧗",p:"Priorité escalade : monte le volume de grimpe pour arriver prêt. Garde 2 séances muscu max par semaine d'ici là."};
     if(iso<="2026-06-28")return {t:"Semaine Vercors 🧗",p:"Profite de la grimpe ! La muscu démarre à 4 séances au retour, le 27/06."};
     if(iso<="2026-07-31")return {t:"Bloc 1 — Construction",p:"Surcharge progressive : dès que tu boucles le haut de la fourchette de reps sur toutes les séries, ajoute du poids. Objectif 27 juillet. Le triathlon prendra le relais à la mi-août."};
-    if(iso<="2026-08-28")return {t:"Bloc 2 — Plage ☀️",p:"Focus épaules / dos / bras : c'est ce qui ressort le plus. En parallèle le triathlon reprend (17/08 → Dinard) : surveille la fatigue en cumulant les deux."};
+    if(iso<="2026-08-28")return {t:"Bloc 2 — Développement 💪",p:"Focus épaules / dos / bras : c'est ce qui ressort le plus. En parallèle le triathlon reprend (17/08 → Dinard) : surveille la fatigue en cumulant les deux."};
     if(iso<="2026-09-13")return {t:"Affûtage triathlon 🏁",p:"On réduit le volume, on garde un peu d'intensité. Sommeil et récup prioritaires. Course le dimanche 13 septembre à Dinard !"};
     return {t:"Bravo 👏",p:"Gros été bouclé. Note tes ressentis et planifie la suite."};
   }
@@ -447,7 +447,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return '<div class="bnd-body'+(cls?" "+cls:"")+(bndOpen[key]?"":" collapsed")+'" data-bndb="'+key+'">'+(inner||"")+'</div>';
   }
   /* Accordéon : dans un même groupe, ouvrir un émoji referme les autres (comme le détail du radar). */
-  var BND_GROUP={jprot:"meal",ebal:"meal",spday:"meal",slp:"meal",chiffr:"meal",water:"meal"};
+  var BND_GROUP={jprot:"meal",ebal:"meal",spday:"meal",slp:"meal",tr:"meal",chiffr:"meal",water:"meal"};
   function wireBnd(){
     BND_RENDER={homecal:renderCalendars,hero:renderHero,dayRadar:renderDayRadar};
     document.addEventListener("click",function(e){
@@ -792,9 +792,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="pf-note">\ud83d\udcaa profil complet \u00b7 \ud83c\udf31 \u00e0 compl\u00e9ter dans la journ\u00e9e (c\u00e9r\u00e9ale + l\u00e9gumineuse) \u00b7 \ud83d\udd34 ultra-transform\u00e9 : pratique en d\u00e9pannage, pas la base.</div></div>';
   }
   function nutriTip(tot){
-    if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour la forme plage.';
+    if(!tot)return 'Note tes repas pour suivre ta cible protéines — c\'est ton levier n°1 pour ton développement.';
     var ep=(tot.protEff!=null?tot.protEff:tot.prot);
-    if(ep>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la plage — garde ce rythme.';
+    if(ep>=130)return '✓ Cible tenue. Les protéines sont ton point clé d\'ici la fin du bloc — garde ce rythme.';
     var r=Math.round(130-ep);
     return 'Encore ~'+r+' g. Un panier TGTG penche souvent sucre/gras : le complément protéiné se choisit ci-dessous.';
   }
@@ -988,7 +988,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       (radarDetail?('<div class="radar-legend">'+legend+'</div><div class="radar-sub">R\u00e9alis\u00e9 vs objectif \u2014 plus la forme touche le bord, plus ta journ\u00e9e est compl\u00e8te.</div>'):'')+'</div>'):'';
     return head+body;
   }
-  function renderDayRadar(){var h=document.getElementById("dayRadar");if(!h)return;h.innerHTML=radarBlockHTML(dayDate,"dayRadar");var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderDayRadar();};}
+  function renderDayScoreChip(){var el=document.getElementById("dayScoreVal");if(!el)return;var A=radarDay(dayDate);var o=Math.round(A.reduce(function(s,a){return s+a.r;},0)/A.length*100);el.textContent=o+" %";var cc=document.getElementById("dayScoreChip");if(cc)cc.classList.toggle("on",!!bndOpen.radar);}
+  function renderDayRadar(){var h=document.getElementById("dayRadar");if(!h)return;h.innerHTML=radarBlockHTML(dayDate,"dayRadar");var dt=h.querySelector(".radar-det");if(dt)dt.onclick=function(){radarDetail=!radarDetail;renderDayRadar();};renderDayScoreChip();}
   function radarPeriodAxes(per){
     var accum={},order=[],days=0,end=new Date();
     for(var i=0;i<per;i++){var dt=new Date(end);dt.setDate(dt.getDate()-i);var iso=isoOf(dt);if(!state.days[iso])continue;var A=radarDay(iso);if(!A.length)continue;days++;A.forEach(function(a){if(!(a.lab in accum)){accum[a.lab]={ic:a.ic,sum:0,n:0};order.push(a.lab);}accum[a.lab].sum+=a.r;accum[a.lab].n++;});}
@@ -1522,7 +1523,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var rows=TRI_DISC.map(function(p){var dz=p[0],tg=TRI_TARGETS[dz],b=triBest(dz),pct=tg.v>0?Math.min(100,Math.round(b/tg.v*100)):0;
       return '<div class="tp-row"><span class="tp-ic">'+tg.icon+'</span><span class="tp-lbl">'+esc(p[1])+'</span><div class="tp-bar"><i style="width:'+pct+'%"></i></div><span class="tp-val">'+(b>0?nFmt(b)+" / ":"— / ")+tg.v+" "+tg.u+'</span></div>';
     }).join("");
-    host.innerHTML='<div class="card pad tp-card"><div class="tp-head">Vers la distance olympique 🏁</div>'+rows+'<div class="tp-note">Meilleure distance loguée par discipline (renseigne distance + durée dans une séance).</div></div>';
+    host.innerHTML='<details class="card pad tp-card tp-fold"><summary class="tp-head">Vers la distance olympique 🏁</summary>'+rows+'<div class="tp-note">Meilleure distance loguée par discipline (renseigne distance + durée dans une séance).</div></details>';
   }
   function renderTriDetail(){
     if(!currentTri)return;
@@ -1648,6 +1649,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
         '<div class="field"><label>Poids (kg)</label><input type="number" inputmode="decimal" step="0.1" class="f-weight" placeholder="ex : 68,4"></div>'+
 '<div class="field"><span class="lbl-row"><label>VFC au r\u00e9veil (ms)</label><details class="base-hint inl"><summary>i</summary><div>La VFC (variabilit\u00e9 de la fr\u00e9quence cardiaque, en ms) mesure les micro-\u00e9carts entre deux battements de c\u0153ur. Plus elle est haute, mieux ton syst\u00e8me nerveux r\u00e9cup\u00e8re : bon indicateur de fatigue r\u00e9elle plut\u00f4t que ressentie. Une VFC basse le matin = corps encore fatigu\u00e9, tu peux all\u00e9ger la s\u00e9ance ou viser la r\u00e9cup\u00e9ration. Pour la relever : ta montre (Apple Watch \u2192 app Sant\u00e9 \u2192 Variabilit\u00e9 de la FC) la mesure la nuit ; note la valeur en ms chaque matin, au calme, pour comparer jour apr\u00e8s jour.</div></details></span><input type="number" inputmode="numeric" step="1" class="f-hrv" placeholder="ex : 52"><div class="hrv-trend"></div></div>'+
+        '<div class="field supps-field">'+bndHead("note","sub",{ttl:"📝 Note du jour"})+
+          '<div class="bnd-body note-body'+(bndOpen.note?'':' collapsed')+'" data-bndb="note"><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
+        '</div>'+
         '</div>'+
         '</div>';
   }
@@ -1662,12 +1666,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           bndHead("water","mini",{ttl:"\ud83d\udca7",attrs:' aria-label="Hydratation"'})+
           bndHead("spday","mini",{ttl:"\ud83c\udfc3",attrs:' aria-label="Sports du jour"'})+
           bndHead("slp","mini",{ttl:"\ud83d\udca4",attrs:' aria-label="Sommeil"'})+
+          bndHead("tr","mini",{ttl:"\ud83d\udca9",attrs:' aria-label="Transit"'})+
           bndHead("chiffr","mini",{ttl:"\u26a0\ufe0f",attrs:' hidden aria-label="Aliments \u00e0 chiffrer"'})+'</div>'+
           bndBody("jprot","jprot-body")+
           bndBody("ebal","ebal-body",jBalHTML(x,d))+
           bndBody("water","water-body",dfWater(x,d))+
           bndBody("spday","spday-body",sportChipsHTML(x))+
           bndBody("slp","slp-body",'<div class="field"><label>Sommeil (h)</label><input type="number" inputmode="decimal" step="0.5" class="f-sleep" placeholder="ex : 7,5"></div>')+
+          bndBody("tr","tr-body",'<div class="stools f-stools"></div>')+
           bndBody("chiffr","chiffr-body")+
           MEALS.map(function(m){return '<div class="meal'+(mealOpen[m.k]?" open":"")+'" data-mk="'+m.k+'"><button type="button" class="meal-h" data-mk="'+m.k+'"><span class="meal-lbl">'+m.label+'</span><span class="meal-sum" data-sum="'+m.k+'"></span><span class="meal-chev">▾</span></button><div class="meal-items" data-mk="'+m.k+'"></div></div>';}).join("")+
 
@@ -1724,13 +1730,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
                 (a.note?'<textarea class="f-crnote" data-id="'+a.id+'" rows="2" placeholder="Note du jour\u2026"></textarea>':'')+
               '</div>';}).join(""):'<div class="supp-hint">Cr\u00e9e tes ancrages dans R\u00e9glages \u25b8 Ancrages de routines.</div>')+
           '</div>'+
-        '</div>'+
-        '<div class="field supps-field">'+
-          bndHead("tr","sub",{ttl:"💩 Transit",cls:"tr-meta",meta:""})+
-          '<div class="bnd-body tr-body'+(bndOpen.tr?'':' collapsed')+'" data-bndb="tr"><div class="stools f-stools"></div></div>'+
-        '</div>'+
-        '<div class="field supps-field">'+bndHead("note","sub",{ttl:"📝 Note du jour"})+
-          '<div class="bnd-body note-body'+(bndOpen.note?'':' collapsed')+'" data-bndb="note"><textarea class="f-note" placeholder="ressenti, énergie, douleurs…"></textarea></div>'+
         '</div>'+
           '</div>'+
         '</div>';
@@ -2087,7 +2086,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function wbSlotHour(w){return w==="matin"?8:w==="repas"?12:w==="seance"?17:w==="soir"?21:-1;}
   function wbPool(d){
     var x=day(d),out=[];
-    (typeof SUPPS!=="undefined"?SUPPS:[]).forEach(function(s){out.push({kind:"supp",id:s.id,icon:"💊",label:s.name,when:s.when,done:!!(x.supps&&x.supps[s.id])});});
     (typeof ROUTINES!=="undefined"?ROUTINES:[]).forEach(function(r){out.push({kind:"rx",id:r.id,icon:r.icon||"☀️",label:r.name,done:routineDoneOn(r.id,d)});});
     pxOrder(d).filter(function(r){return r._px;}).forEach(function(r){out.push({kind:"px",id:r.id,icon:r.icon||"🤸",label:r.name,done:pxDoneOn(r.id,d)});});
     customRoutines().forEach(function(a){out.push({kind:"cr",id:a.id,icon:a.icon||"⏰",label:a.label,done:!!(x.customRoutines&&x.customRoutines[a.id])});});
@@ -2142,10 +2140,31 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="gm-item"><span class="gm-ic">'+esc(it.icon)+'</span><span class="gm-lbl">'+esc(it.label)+'</span></div>'+
       (it.when?'<div class="gm-when">'+esc(wbWhenLabel(it.when))+'</div>':'')+
       '<div class="gm-acts"><button type="button" class="btn accent gm-do">✓ Fait</button><button type="button" class="btn ghost gm-skip">Plus tard</button></div>'+
-      '<div class="gm-foot">Coché ici = coché dans le Journal (aujourd\'hui).</div>'+
+      '<div class="gm-foot">Coch\u00e9 ici = coch\u00e9 dans le Journal. Glisse la carte pour passer.</div>'+
     '</div>';
     host.querySelector(".gm-do").onclick=function(){wbCheck(it);};
-    host.querySelector(".gm-skip").onclick=function(){wbSkip[it.kind+":"+it.id]=true;renderGesteMoment();};
+    var doSkip=function(){wbSkip[it.kind+":"+it.id]=true;renderGesteMoment();};
+    host.querySelector(".gm-skip").onclick=doSkip;
+    /* Glisser horizontalement (gauche ou droite) = passer au geste suivant (comme « Plus tard »). */
+    (function(card){
+      if(!card)return;
+      var sx=0,sy=0,drag=false;
+      function begin(x,y){sx=x;sy=y;drag=true;card.style.transition="none";}
+      function slide(x,y){if(!drag)return;var dx=x-sx;if(Math.abs(dx)>Math.abs(y-sy)){card.style.transform="translateX("+dx+"px)";card.style.opacity=""+Math.max(.35,1-Math.abs(dx)/320);}}
+      function finish(x,y){if(!drag)return;drag=false;var dx=x-sx,dy=y-sy;
+        if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)){
+          card.style.transition="transform .18s ease,opacity .18s ease";
+          card.style.transform="translateX("+(dx>0?1:-1)*420+"px)";card.style.opacity="0";
+          setTimeout(doSkip,150);
+        }else{card.style.transition="transform .18s ease,opacity .18s ease";card.style.transform="";card.style.opacity="";}
+      }
+      card.addEventListener("touchstart",function(e){var t=e.touches[0];begin(t.clientX,t.clientY);},{passive:true});
+      card.addEventListener("touchmove",function(e){var t=e.touches[0];slide(t.clientX,t.clientY);},{passive:true});
+      card.addEventListener("touchend",function(e){var t=(e.changedTouches&&e.changedTouches[0])||{clientX:sx,clientY:sy};finish(t.clientX,t.clientY);});
+      card.addEventListener("pointerdown",function(e){if(e.pointerType==="touch")return;begin(e.clientX,e.clientY);});
+      card.addEventListener("pointermove",function(e){if(e.pointerType==="touch")return;slide(e.clientX,e.clientY);});
+      card.addEventListener("pointerup",function(e){if(e.pointerType==="touch")return;finish(e.clientX,e.clientY);});
+    })(host.querySelector(".gm-card"));
   }
   function weekVizHTML(){
     var days=[];for(var i=6;i>=0;i--)days.push(isoOf(addDays(todayStr(),-i)));
@@ -3184,6 +3203,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       bndOpen.homecal=!bndOpen.homecal;renderCalendars();
       cc.setAttribute("aria-expanded",bndOpen.homecal?"true":"false");cc.classList.toggle("on",bndOpen.homecal);
       if(bndOpen.homecal){var hc=document.getElementById("homeCal");if(hc&&hc.scrollIntoView)hc.scrollIntoView({block:"center"});}
+    });
+    var dsc=document.getElementById("dayScoreChip");if(dsc)dsc.addEventListener("click",function(){
+      var vd=document.getElementById("v-day");if(vd&&!vd.classList.contains("active"))activateTab("v-day");
+      bndOpen.radar=!bndOpen.radar;renderDayRadar();
+      dsc.setAttribute("aria-expanded",bndOpen.radar?"true":"false");
+      if(bndOpen.radar){var dr=document.getElementById("dayRadar");if(dr&&dr.scrollIntoView)dr.scrollIntoView({block:"center"});}
     });
     var sc=document.getElementById("settingsClose");if(sc)sc.addEventListener("click",closeSettings);
     document.addEventListener("keydown",function(e){if(e.key==="Escape"){closeDrawer();closeSettings();closeDaySheet();}});
