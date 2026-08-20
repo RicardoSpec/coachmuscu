@@ -2152,10 +2152,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<div class="goal-meta"><b>'+pct+'%</b> · '+done+'/'+total+' séances · '+remain+' restante'+(remain>1?"s":"")+'</div>'+
       '</div>';
     }
-    host.innerHTML='<div class="card pad"><div class="sec-title">Objectifs</div>'+
-      goal("💪 Muscu","Bloc 1 · obj. 27 juil.",blockDone("b1"),PROGRAM_BLOCKS.b1.weeks*CODES.length,daysUntil(MUSCU_DEADLINE),"muscu")+
-      goal("🏊 Triathlon","Dinard · "+frDateShort(triRaceDate()),triDoneCount(),30,daysUntil(triRaceDate()),"tri")+
-    '</div>';
+    var cards="";
+    if(actEnabled("muscu")){var mDl=cfgActs().muscu.deadline||MUSCU_DEADLINE;cards+=goal("💪 "+esc(actName("muscu")),(cfgActs().muscu.deadline?("Objectif · "+frDateShort(mDl)):esc(actName("muscu"))),blockDone("b1"),PROGRAM_BLOCKS.b1.weeks*CODES.length,daysUntil(mDl),"muscu");}
+    if(actEnabled("tri"))cards+=goal("🏊 "+esc(actName("tri")),"Dinard · "+frDateShort(triRaceDate()),triDoneCount(),30,daysUntil(triRaceDate()),"tri");
+    host.innerHTML=cards?('<div class="card pad"><div class="sec-title">Objectifs</div>'+cards+'</div>'):"";
     host.querySelectorAll("[data-goto]").forEach(function(el){el.onclick=function(){var g=el.getAttribute("data-goto");if(g)goSport(g);};});
   }
 
