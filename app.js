@@ -2491,8 +2491,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(!state.config)state.config={};
     if(!state.config.activities)state.config.activities={};
     var a=state.config.activities;
-    if(!a.muscu)a.muscu={enabled:true,start:MUSCU_START,name:"Musculation",desc:""};
-    if(!a.tri)a.tri={enabled:true,start:TRI_START,name:"Triathlon Dinard",desc:""};
+    if(!a.muscu)a.muscu={enabled:false,start:MUSCU_START,name:"Musculation",desc:""};
+    if(!a.tri)a.tri={enabled:false,start:TRI_START,name:"Triathlon Dinard",desc:""};
     return a;
   }
   function actEnabled(k){return cfgActs()[k].enabled!==false;}
