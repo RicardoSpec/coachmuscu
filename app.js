@@ -475,21 +475,37 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     setTimeout(syncStickTop,0);
     if(id==="v-day"){renderDay();renderCalendars();}
-    else if(id==="v-sport"){wbIdx=0;renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderLearn();}
+    else if(id==="v-sport"){wbIdx=0;renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderSportLib();renderLearn();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
   }
   /* Sous-onglets de l'onglet Sport : construits à partir des activités actives (Réglages). */
   var sportSel=null;  /* défaut = sport principal, résolu au 1er rendu */
   function sportActs(){var a=[];if(actEnabled("muscu"))a.push("muscu");if(actEnabled("tri"))a.push("tri");var f=sportFocus(),i=a.indexOf(f);if(i>0){a.splice(i,1);a.unshift(f);}return a;}
+  function renderSportLib(){
+    var host=document.getElementById("sportLib");if(!host)return;
+    if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";return;}
+    var active=(SPORTS_LIB.order||[]).filter(function(id){var uc=sportUCfg(id);return uc.on!==false&&num(uc.target)>num(uc.cur);});
+    if(!active.length){host.innerHTML="";return;}
+    var ORDER=[1,2,3,4,5,6,0],DN={1:"Lun",2:"Mar",3:"Mer",4:"Jeu",5:"Ven",6:"Sam",0:"Dim"};
+    host.innerHTML='<h2 class="page" style="margin-top:22px">Mes sports</h2>'+active.map(function(id){
+      var sp=SPORTS_LIB[id],uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0,mins=num(uc.minutes)||45;
+      var nx=(sp.levels||[])[cur+1]||{},themes=(nx.focus&&nx.focus.length)?nx.focus:["Séance libre"],days=(uc.days||[]).slice();
+      var week;
+      if(days.length){var od=ORDER.filter(function(dw){return days.indexOf(dw)>=0;});
+        week=od.map(function(dw,i){return '<div class="sl-sess"><span class="sl-d">'+DN[dw]+'</span><span class="sl-t">'+esc(themes[i%themes.length])+'</span><span class="sl-m">~'+mins+' min</span></div>';}).join("");
+      }else{week='<div class="sl-empty">Choisis tes jours d\'entraînement dans Réglages ▸ Sports & niveaux pour générer la semaine.</div>';}
+      return '<div class="card pad sl-card"><div class="sl-h"><span class="sl-ic">'+esc(sp.icon||"•")+'</span><span class="sl-name">'+esc(sp.name||id)+'</span><span class="sl-lv">niv. '+cur+' → '+tgt+'</span></div>'+
+        '<div class="sl-goal">Cap sur le palier '+(cur+1)+' · '+esc(nx.t||"")+'</div>'+week+'</div>';
+    }).join("");
+  }
   function renderSportTabs(){
     var host=document.getElementById("sportSub");if(!host)return;
     var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
     var acts=sportActs();
     if(!acts.length){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';if(pm)pm.hidden=true;if(pt)pt.hidden=true;return;}
     if(acts.indexOf(sportSel)<0)sportSel=acts[0];
-    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>'+
-      '<div class="sport-solo-hint">'+(actEnabled("tri")?"":"🏊 Triathlon désactivé")+(actEnabled("muscu")?"":"💪 Musculation désactivée")+' — réactive-la dans Réglages ▸ Activités préparées.</div>';}
+    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>';}
     else{host.innerHTML=acts.map(function(k){return '<button class="subtab'+(k===sportSel?" on":"")+'" data-sport="'+k+'">'+esc((k==="muscu"?"💪 ":"🏊 ")+actName(k))+'</button>';}).join("");}
     if(pm)pm.hidden=(sportSel!=="muscu");if(pt)pt.hidden=(sportSel!=="tri");
     host.querySelectorAll("[data-sport]").forEach(function(b){b.onclick=function(){sportSel=b.getAttribute("data-sport");renderSportTabs();window.scrollTo(0,0);};});
@@ -1439,7 +1455,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var kgEl=row.querySelector(".in-kg"),rEl=row.querySelector(".in-r");
       if(kgEl)kgEl.value=rec.kg||"";
       if(rEl)rEl.value=rec.r||"";
-      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};save();}
+      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};var v=s.sets[exo][idx];if((v.kg&&(""+v.kg).trim())||(v.r&&(""+v.r).trim()))linkSessionSport("Muscu",s.date||todayStr());save();}
       if(kgEl)kgEl.addEventListener("input",upd);
       if(rEl)rEl.addEventListener("input",upd);
     });
@@ -2077,13 +2093,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
      Une seule carte, un seul geste à la fois. Choisi par heure du jour + délaissement.
      Coché ici = coché dans le Journal (même état, agit sur AUJOURD'HUI). */
   var wbIdx=0;
+  var gmDetail=false;
   function wbWhenLabel(w){return w==="matin"?"Le matin, à jeun":w==="repas"?"À un repas":w==="seance"?"Après la séance / en collation":w==="soir"?"Le soir":"";}
   function wbSlotHour(w){return w==="matin"?8:w==="repas"?12:w==="seance"?17:w==="soir"?21:-1;}
   function wbPool(d){
     var x=day(d),out=[];
-    (typeof ROUTINES!=="undefined"?ROUTINES:[]).forEach(function(r){out.push({kind:"rx",id:r.id,icon:r.icon||"☀️",label:r.name,done:routineDoneOn(r.id,d)});});
-    pxOrder(d).filter(function(r){return r._px;}).forEach(function(r){out.push({kind:"px",id:r.id,icon:r.icon||"🤸",label:r.name,done:pxDoneOn(r.id,d)});});
-    customRoutines().forEach(function(a){out.push({kind:"cr",id:a.id,icon:a.icon||"⏰",label:a.label,done:!!(x.customRoutines&&x.customRoutines[a.id])});});
+    (typeof ROUTINES!=="undefined"?ROUTINES:[]).forEach(function(r){out.push({kind:"rx",id:r.id,icon:r.icon||"☀️",label:r.name,done:routineDoneOn(r.id,d),link:r.link,linkLabel:r.linkLabel});});
+    pxOrder(d).filter(function(r){return r._px;}).forEach(function(r){out.push({kind:"px",id:r.id,icon:r.icon||"🤸",label:r.name,done:pxDoneOn(r.id,d),link:r.link,linkLabel:r.linkLabel});});
+    customRoutines().forEach(function(a){out.push({kind:"cr",id:a.id,icon:a.icon||"⏰",label:a.label,done:!!(x.customRoutines&&x.customRoutines[a.id]),link:a.link,note:a.note});});
     return out;
   }
   function wbDoneOn(kind,id,iso){var x=state.days[iso];if(!x)return false;
@@ -2138,37 +2155,31 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     if(wbIdx<0)wbIdx=0;if(wbIdx>order.length-1)wbIdx=order.length-1;
     var it=order[wbIdx],pos=(wbIdx+1)+" / "+order.length;
+    var det=!!gmDetail;
+    var help="";
+    if(det){
+      var bits=[];
+      if(it.note)bits.push('<div class="gm-note">'+esc(it.note)+'</div>');
+      if(it.link)bits.push('<a class="gm-link" href="'+esc(it.link)+'" target="_blank" rel="noopener">'+esc(it.linkLabel||"Voir comment faire")+' ↗</a>');
+      if(!bits.length)bits.push('<div class="gm-note gm-note-empty">Pas de guide pour ce geste — fais-le tranquillement, à ton rythme.</div>');
+      help='<div class="gm-help">'+bits.join("")+'</div>';
+    }
     host.innerHTML='<div class="card pad gm-card"><div class="gm-h">🌿 Ton geste du moment</div>'+
-      '<div class="gm-item"><span class="gm-ic">'+esc(it.icon)+'</span><span class="gm-lbl">'+esc(it.label)+'</span></div>'+
+      '<div class="gm-nav"><button type="button" class="gm-arrow gm-prev" aria-label="Précédent"'+(wbIdx<=0?" disabled":"")+'>‹</button>'+
+        '<div class="gm-item"><span class="gm-ic">'+esc(it.icon)+'</span><span class="gm-lbl">'+esc(it.label)+'</span></div>'+
+        '<button type="button" class="gm-arrow gm-next" aria-label="Suivant"'+(wbIdx>=order.length-1?" disabled":"")+'>›</button></div>'+
       (it.when?'<div class="gm-when">'+esc(wbWhenLabel(it.when))+'</div>':'')+
+      '<button type="button" class="gm-detog'+(det?" open":"")+'">Comment faire<span class="bnd-chev">▾</span></button>'+help+
       '<div class="gm-acts"><button type="button" class="btn accent gm-do">✓ Fait</button><button type="button" class="btn ghost gm-skip">Plus tard</button></div>'+
-      '<div class="gm-foot">Coch\u00e9 = coch\u00e9 dans le Journal. Glisse : \u2190 suivant \u00b7 pr\u00e9c\u00e9dent \u2192 \u00b7 '+pos+'</div>'+
+      '<div class="gm-foot">Coché = coché dans le Journal · '+pos+'</div>'+
     '</div>';
     host.querySelector(".gm-do").onclick=function(){wbCheck(it);};
-    var goNext=function(){wbIdx=Math.min(wbIdx+1,order.length-1);renderGesteMoment();};
-    var goPrev=function(){wbIdx=Math.max(wbIdx-1,0);renderGesteMoment();};
+    var goNext=function(){wbIdx=Math.min(wbIdx+1,order.length-1);gmDetail=false;renderGesteMoment();};
+    var goPrev=function(){wbIdx=Math.max(wbIdx-1,0);gmDetail=false;renderGesteMoment();};
     host.querySelector(".gm-skip").onclick=goNext;
-    /* Glisser : vers la gauche = suivant, vers la droite = précédent. */
-    (function(card){
-      if(!card)return;
-      var sx=0,sy=0,drag=false;
-      function begin(x,y){sx=x;sy=y;drag=true;card.style.transition="none";}
-      function slide(x,y){if(!drag)return;var dx=x-sx;if(Math.abs(dx)>Math.abs(y-sy)){card.style.transform="translateX("+dx+"px)";card.style.opacity=""+Math.max(.35,1-Math.abs(dx)/320);}}
-      function finish(x,y){if(!drag)return;drag=false;var dx=x-sx,dy=y-sy;
-        if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)){
-          var back=dx>0;
-          card.style.transition="transform .18s ease,opacity .18s ease";
-          card.style.transform="translateX("+(back?1:-1)*420+"px)";card.style.opacity="0";
-          setTimeout(back?goPrev:goNext,150);
-        }else{card.style.transition="transform .18s ease,opacity .18s ease";card.style.transform="";card.style.opacity="";}
-      }
-      card.addEventListener("touchstart",function(e){var t=e.touches[0];begin(t.clientX,t.clientY);},{passive:true});
-      card.addEventListener("touchmove",function(e){var t=e.touches[0];slide(t.clientX,t.clientY);},{passive:true});
-      card.addEventListener("touchend",function(e){var t=(e.changedTouches&&e.changedTouches[0])||{clientX:sx,clientY:sy};finish(t.clientX,t.clientY);});
-      card.addEventListener("pointerdown",function(e){if(e.pointerType==="touch")return;begin(e.clientX,e.clientY);});
-      card.addEventListener("pointermove",function(e){if(e.pointerType==="touch")return;slide(e.clientX,e.clientY);});
-      card.addEventListener("pointerup",function(e){if(e.pointerType==="touch")return;finish(e.clientX,e.clientY);});
-    })(host.querySelector(".gm-card"));
+    host.querySelector(".gm-next").onclick=goNext;
+    host.querySelector(".gm-prev").onclick=goPrev;
+    host.querySelector(".gm-detog").onclick=function(){gmDetail=!gmDetail;renderGesteMoment();};
   }
   function weekVizHTML(){
     var days=[];for(var i=6;i>=0;i--)days.push(isoOf(addDays(todayStr(),-i)));
@@ -2477,7 +2488,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function startOfWeekMonday(d){var dow=d.getDay();var diff=(dow===0?-6:1-dow);var n=new Date(d);n.setDate(d.getDate()+diff);return n;}
 
   function legendHTML(){
-    return '<details class="base-hint inl cal-i"><summary>i</summary><div class="cal-leg"><span>🏋️ '+esc(actName("muscu"))+'</span><span>🏊🚴🏃 '+esc(actName("tri"))+'</span><span>📚 Révision</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">Séance faite = grisée + ✓ · touche un jour pour changer son état</span></div></details>';
+    return '<details class="base-hint inl cal-i"><summary>i</summary><div class="cal-leg"><span>🏋️ '+esc(actName("muscu"))+'</span><span>🏊🚴🏃 '+esc(actName("tri"))+'</span>'+((typeof SPORTS_LIB!=="undefined")?'<span>🏅 Sport (biblio)</span>':'')+'<span>📚 Révision</span><span><i class="lg ev-dot"></i>Événement</span><span class="lg-note">Séance faite = grisée + ✓ · touche un jour pour changer son état</span></div></details>';
   }
   function monthGridHTML(y,m){
     var first=new Date(y,m,1),last=new Date(y,m+1,0);
@@ -2932,7 +2943,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }).join("");
     var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;
     var sportsLibInner=!_sl?'<p class="set-note">Bibliothèque indisponible.</p>':
-      '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite. <br><i>Muscu et Triathlon ne sont pas ici : ils ont leur propre programme, réglé dans « Activités préparées » ci-dessus.</i></p>'+
+      '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite.</p>'+
       (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp)return "";
         var uc=sportUCfg(id),open=!!settingsSecOpen["splib_"+id],on=uc.on!==false,maxN=(sp.levels||[]).length-1;
         var cur=Math.max(0,Math.min(maxN,num(uc.cur)||0)),tgt=Math.max(0,Math.min(maxN,num(uc.target)||0));
