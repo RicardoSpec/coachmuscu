@@ -488,7 +488,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var acts=sportActs();
     if(!acts.length){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';if(pm)pm.hidden=true;if(pt)pt.hidden=true;return;}
     if(acts.indexOf(sportSel)<0)sportSel=acts[0];
-    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>';}
+    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>'+
+      '<div class="sport-solo-hint">'+(actEnabled("tri")?"":"🏊 Triathlon désactivé")+(actEnabled("muscu")?"":"💪 Musculation désactivée")+' — réactive-la dans Réglages ▸ Activités préparées.</div>';}
     else{host.innerHTML=acts.map(function(k){return '<button class="subtab'+(k===sportSel?" on":"")+'" data-sport="'+k+'">'+esc((k==="muscu"?"💪 ":"🏊 ")+actName(k))+'</button>';}).join("");}
     if(pm)pm.hidden=(sportSel!=="muscu");if(pt)pt.hidden=(sportSel!=="tri");
     host.querySelectorAll("[data-sport]").forEach(function(b){b.onclick=function(){sportSel=b.getAttribute("data-sport");renderSportTabs();window.scrollTo(0,0);};});
@@ -533,7 +534,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Prochaine séance planifiée, TOUS sports actifs confondus (lue depuis le calendrier). */
   function nextScheduled(){
     rebuildSchedule();var cur=todayStr(),g=0;
-    while(g<420){g++;var list=sessionsOn(cur);for(var i=0;i<list.length;i++){if(!list[i].done)return {iso:cur,s:list[i]};}cur=isoOf(addDays(cur,1));}
+    while(g<420){g++;
+      var list=sessionsOn(cur);for(var i=0;i<list.length;i++){if(!list[i].done)return {iso:cur,s:list[i]};}
+      var sl=(typeof sportSessionsOn==="function")?sportSessionsOn(cur):[];for(var j=0;j<sl.length;j++){if(!sl[j].done)return {iso:cur,s:{kind:"sport",id:sl[j].id,icon:sl[j].icon,name:sl[j].name,label:sl[j].name,disc:null,done:false}};}
+      cur=isoOf(addDays(cur,1));
+    }
     return null;
   }
   /* Heures de révision d'un jour (même règle que l'app DSCG) — pour le repère 📚. */
@@ -577,12 +582,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var hero=document.getElementById("heroCard");if(!hero)return;
     var next=nextScheduled();
     if(!next){hero.className="hero";hero.innerHTML='<div class="hero-body" style="padding-top:18px"><div class="lbl">Bravo</div><h2>Tout est bouclé 🎉</h2><div class="meta">Plus de séance planifiée pour l\'instant.</div></div>';return;}
-    var s=next.s, muscu=(s.kind==="muscu");
-    var icon=muscu?"🏋️":triIcon(s.disc);
+    var s=next.s, muscu=(s.kind==="muscu"), sport=(s.kind==="sport");
+    var icon=sport?(s.icon||"•"):(muscu?"🏋️":triIcon(s.disc));
     var when=whenLabel(next.iso);
     var body="";
     if(bndOpen.hero){
-      if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=progOf(s.block,s.code);
+      if(sport){
+        body='<div class="stitle">Progression sport</div>'+
+             '<h2>'+esc(s.icon||"")+' '+esc(s.name)+'</h2>'+
+             '<div class="meta">'+when+'</div>'+
+             '<div class="row2"><button class="btn accent" id="quickDoneSport">✓ Marquer faite</button></div>';
+      }else if(muscu){var blk=PROGRAM_BLOCKS[s.block],p=progOf(s.block,s.code);
         body='<div class="stitle">'+esc(blk.name)+' · Semaine '+s.w+' · '+esc(p.sub)+'</div>'+
              '<h2>'+esc(p.title.split("—")[0].trim())+' <span class="num">'+s.code+'</span></h2>'+
              '<div class="meta">'+p.exos.length+' exercices · '+when+'</div>'+
@@ -594,7 +604,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
              '<div class="row2"><button class="btn accent" id="goSessionTri">Ouvrir la séance</button><button class="btn ghost" id="quickDoneTri">Marquer faite</button></div>';
       }
     }
-    if(bndOpen.hero){
+    if(bndOpen.hero&&!sport){
       var fp={type:muscu?"muscu":({nat:"natation",velo:"velo",course:"course"}[s.disc]||"course"),dur:60};
       if(!muscu){var _r=(state.tri||{})[s.w+"_"+s.disc],_du=_r?num(_r.dur):NaN;if(!isNaN(_du)&&_du>0)fp.dur=Math.round(_du);}
       body+='<button type="button" class="btn ghost hero-fuel">\ud83c\udf4c Comment m\'alimenter <b>'+(fuelOpen?"\u2212":"\uff0b")+'</b></button>'+
@@ -605,7 +615,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       +(bndOpen.hero?'<div class="hero-body">'+body+'</div>':'');
     var _hf=hero.querySelector(".hero-fuel");if(_hf)_hf.onclick=function(){fuelOpen=!fuelOpen;renderHero();};
     if(bndOpen.hero){
-      if(muscu){
+      if(sport){
+        var qds=hero.querySelector("#quickDoneSport");if(qds)qds.onclick=function(){toggleSportSess(s.id,next.iso);renderChip();renderHero();renderCalendars();renderDayRadar();};
+      }else if(muscu){
         var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
         var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();linkSessionSport("Muscu",r.date);save();renderChip();renderHero();renderCalendars();};
       }else{
@@ -1524,7 +1536,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         (currentTri.w===TRI.length?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — dimanche 13 septembre, départ 9h (Grande Plage, Saint-Lunaire). Affûtage, sommeil, et on profite !</p></div>':'')+
         '<div class="field" style="margin-top:12px"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'Annuler':'Marquer comme faite')+'</button></div>'+
         (rec.done?'<div class="donedate"><label>Faite le <input type="date" id="triDoneDate" value="'+esc(rec.date||todayStr())+'"></label></div>':'')+
-        '<div class="field"><label>Réalisé</label><div class="tri-io"><input type="number" inputmode="decimal" step="0.1" min="0" class="t-dist" placeholder="'+(dz==="nat"?"ex : 1300":"ex : "+(dz==="velo"?"32":"7,5"))+'"><span class="tri-u">'+_TT[dz].u+'</span><input type="number" inputmode="decimal" step="1" min="0" class="t-dur" placeholder="min"><span class="tri-u">min</span></div><div class="tri-pace" hidden></div>'+(rec.val?'<div class="tri-legacy">Ancien réalisé : '+esc(rec.val)+'</div>':'')+'</div>'+
+        '<div class="field"><label>Réalisé</label><div class="tri-io"><input type="number" inputmode="decimal" step="0.1" min="0" class="t-dist" placeholder="'+(dz==="nat"?"ex : 1300":"ex : "+(dz==="velo"?"32":"7,5"))+'"><span class="tri-u">'+triTargets()[dz].u+'</span><input type="number" inputmode="decimal" step="1" min="0" class="t-dur" placeholder="min"><span class="tri-u">min</span></div><div class="tri-pace" hidden></div>'+(rec.val?'<div class="tri-legacy">Ancien réalisé : '+esc(rec.val)+'</div>':'')+'</div>'+
         '<div class="field"><label>Ressenti / notes</label><textarea class="t-note" placeholder="sensations, allure, météo…"></textarea></div>'+
       '</div>';
     var di=wrap.querySelector(".t-dist"),du=wrap.querySelector(".t-dur"),pc=wrap.querySelector(".tri-pace");
@@ -2410,9 +2422,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function triTargets(){var a=cfgActs().tri,d=(a&&a.dist)||{},out={};for(var k in TRI_TARGETS){var v=(d[k]!=null&&d[k]!=="")?num(d[k]):TRI_TARGETS[k].v;out[k]={v:(isNaN(v)?TRI_TARGETS[k].v:v),u:TRI_TARGETS[k].u,icon:TRI_TARGETS[k].icon};}return out;}
   /* Config utilisateur des sports de la bibliothèque (activation + niveau actuel/visé). state.config.sportsUser — pas de nouvelle clé. */
   function sportsUser(){if(!state.config)state.config={};if(!state.config.sportsUser)state.config.sportsUser={};return state.config.sportsUser;}
-  function sportUCfg(id){var u=sportsUser(),sp=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[id])||{};if(!u[id])u[id]={on:!!sp.defaultOn,cur:0,target:0,minutes:45,days:[]};if(u[id].minutes==null)u[id].minutes=45;if(!u[id].days)u[id].days=[];return u[id];}
+  function sportUCfg(id){var u=sportsUser(),sp=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[id])||{};if(!u[id])u[id]={on:!!sp.defaultOn,cur:0,target:0,minutes:45,days:[],lvlBase:0};if(u[id].minutes==null)u[id].minutes=45;if(!u[id].days)u[id].days=[];if(u[id].lvlBase==null)u[id].lvlBase=0;return u[id];}
   function setSportU(id,patch){var c=sportUCfg(id);for(var k in patch)if(patch.hasOwnProperty(k))c[k]=patch[k];save();}
   function sportSessDone(id,iso){var m=state.sportSess||{};return !!m[id+"|"+iso];}
+  function sportDoneCount(id){var m=state.sportSess||{},c=0,pre=id+"|";for(var k in m)if(m.hasOwnProperty(k)&&k.indexOf(pre)===0&&m[k])c++;return c;}
   function toggleSportSess(id,iso){if(!state.sportSess)state.sportSess={};var k=id+"|"+iso;if(state.sportSess[k])delete state.sportSess[k];else state.sportSess[k]=true;save();}
   function sportFocus(){var f=state.config&&state.config.sportFocus;return (f&&cfgActs()[f])?f:"muscu";}
   function setFocus(k){if(!state.config)state.config={};state.config.sportFocus=k;save();}
@@ -2919,7 +2932,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }).join("");
     var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;
     var sportsLibInner=!_sl?'<p class="set-note">Bibliothèque indisponible.</p>':
-      '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite.</p>'+
+      '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite. <br><i>Muscu et Triathlon ne sont pas ici : ils ont leur propre programme, réglé dans « Activités préparées » ci-dessus.</i></p>'+
       (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp)return "";
         var uc=sportUCfg(id),open=!!settingsSecOpen["splib_"+id],on=uc.on!==false,maxN=(sp.levels||[]).length-1;
         var cur=Math.max(0,Math.min(maxN,num(uc.cur)||0)),tgt=Math.max(0,Math.min(maxN,num(uc.target)||0));
@@ -2956,6 +2969,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
                   '<div class="splib-hint" style="margin-top:8px">Ces séances apparaissent dans le calendrier sur les jours choisis (à venir).</div></div>';}
             }
             body=sel+prog+cad+week;
+            if(tgt>cur){var doneN=sportDoneCount(id),since=Math.max(0,doneN-(num(uc.lvlBase)||0)),THR=8,nx=(sp.levels||[])[cur+1]||{};
+              body+=(since>=THR)?
+                ('<div class="splib-levelup"><div class="splib-lu-h">🎉 '+since+' séances validées depuis le niveau '+cur+'.</div><div class="splib-lu-d">Prêt à passer au palier '+(cur+1)+' · '+esc(nx.t||"")+' ?</div><button type="button" class="btn accent splib-lvbtn" data-sp="'+esc(id)+'">Passer au niveau '+(cur+1)+'</button></div>')
+                :('<div class="splib-prog2">Séances validées à ce palier : <b>'+since+'</b> / '+THR+' <span class="splib-prog2-s">avant de te suggérer le palier suivant</span></div>');
+            }
           }
         }
         var badge=on?((tgt>cur)?('niv. '+cur+' → '+tgt):('niv. '+cur)):'désactivé';
@@ -3056,7 +3074,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
     host.querySelectorAll(".splib-head").forEach(function(b){b.onclick=function(){var id="splib_"+b.getAttribute("data-splib");settingsSecOpen[id]=!settingsSecOpen[id];renderSettings();};});
     host.querySelectorAll(".splib-on").forEach(function(cb){cb.onchange=function(){setSportU(cb.getAttribute("data-sp"),{on:cb.checked});renderSettings();};});
-    host.querySelectorAll(".splib-cur").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{cur:num(s.value)});renderSettings();};});
+    host.querySelectorAll(".splib-cur").forEach(function(s){s.onchange=function(){var id=s.getAttribute("data-sp");setSportU(id,{cur:num(s.value),lvlBase:sportDoneCount(id)});renderSettings();};});
+    host.querySelectorAll(".splib-lvbtn").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),uc=sportUCfg(id),mx=((SPORTS_LIB[id]||{}).levels||[]).length-1,nc=Math.min((num(uc.cur)||0)+1,mx);setSportU(id,{cur:nc,lvlBase:sportDoneCount(id)});renderSettings();};});
     host.querySelectorAll(".splib-tgt").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{target:num(s.value)});renderSettings();};});
     host.querySelectorAll(".splib-dow").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),dw=num(b.getAttribute("data-dw")),uc=sportUCfg(id),d=(uc.days||[]).slice(),i=d.indexOf(dw);if(i>=0)d.splice(i,1);else d.push(dw);setSportU(id,{days:d});renderSettings();};});
     host.querySelectorAll(".splib-min").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{minutes:num(s.value)});renderSettings();};});
