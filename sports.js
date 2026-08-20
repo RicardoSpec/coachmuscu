@@ -21,7 +21,25 @@
 
 var SPORTS_LIB = {
 
-  order: ["nage", "course", "velo", "escalade", "tennis"],
+  order: ["muscu", "nage", "course", "velo", "escalade", "tennis"],
+
+  /* ------------------------------------------------------------ MUSCULATION */
+  muscu: {
+    name: "Musculation", icon: "💪", defaultOn: false, metric: "niveau de force / structure d'entraînement",
+    levels: [
+      { n:0,  t:"Jamais entraîné",     d:"tu n'as pas d'habitude de renforcement.", focus:["Bouger régulièrement", "Gainage et mobilité de base"] },
+      { n:1,  t:"Poids du corps",      d:"tu fais des squats, pompes (genoux ok), gainage.", focus:["Maîtriser squat / pompe / gainage", "Régularité 2×/sem"] },
+      { n:2,  t:"Mouvements de base",  d:"tu connais les patrons : squat, charnière, poussée, tirage.", focus:["Technique avant charge", "Amplitude complète"] },
+      { n:3,  t:"Charges légères",     d:"tu ajoutes haltères / élastiques proprement.", focus:["Progression de charge douce", "Tempo contrôlé"] },
+      { n:4,  t:"Full-body structuré", d:"tu suis un programme full-body régulier.", focus:["3 séances/sem", "Surcharge progressive"] },
+      { n:5,  t:"Split débutant",      d:"tu répartis haut / bas du corps.", focus:["Volume par groupe musculaire", "Récupération entre séances"] },
+      { n:6,  t:"Split structuré",     d:"tu suis un split A/B/C/D périodisé.", focus:["Suivi des charges", "Gestion fatigue"] },
+      { n:7,  t:"Périodisation",       d:"tu alternes blocs (volume / intensité).", focus:["Blocs de progression", "Décharge planifiée"] },
+      { n:8,  t:"Force développée",    d:"tu travailles des charges lourdes en sécurité.", focus:["Force max (séries courtes)", "Technique sous charge"] },
+      { n:9,  t:"Confirmé",            d:"tu ajustes ton programme selon tes points faibles.", focus:["Individualisation", "Points faibles ciblés"] },
+      { n:10, t:"Avancé",              d:"tu maîtrises programmation et récupération sur le long terme.", focus:["Planification annuelle", "Optimisation récupération / nutrition"] }
+    ]
+  },
 
   /* -------------------------------------------------------------- NATATION */
   nage: {
