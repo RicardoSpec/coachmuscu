@@ -186,11 +186,9 @@ var PLAN_SEED = {
 };
 
 /* ---------- Échéances marquées sur le calendrier ---------- */
-var DEADLINES = [
-  {date:"2026-07-25", label:"Départ Cannes",          icon:"🚆", short:"Départ"},
-  {date:"2026-07-27", label:"Objectif développement", icon:"💪", short:"Dévelop."},
-  {date:"2026-09-13", label:"Triathlon Dinard",        icon:"🏊", short:"Triathlon"}
-];
+/* Échéances : plus de semis EN DUR. Une app vierge n'affiche aucune échéance ;
+   elles viennent de l'état sauvegardé / import (store partagé planning). */
+var DEADLINES = [];
 
 /* ---------- Plan Triathlon Dinard — Distance Olympique. RECONFIGURÉ le 16/08 :
    plan de REPRISE sur 4 semaines (Reprise · Charge · Affinage · Affûtage), 3 séances/sem.
