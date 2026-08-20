@@ -467,6 +467,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
   var mealSuppOpen={}; /* panneau compléments par repas (💊) — session */
+  var teRenaming=false; /* renommage inline de l'aliment dans l'étiquette ouverte */
+  var objCreating=false; /* formulaire "nouvel objectif multi-sports" (Réglages) */
+  function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
+  function addObj(o){cfgObjs().push(o);save();}
+  function delObj(id){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a.splice(i,1);break;}save();}
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
@@ -475,7 +480,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     setTimeout(syncStickTop,0);
     if(id==="v-day"){renderDay();renderCalendars();}
-    else if(id==="v-sport"){wbIdx=0;renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderSportLib();renderLearn();}
+    else if(id==="v-sport"){wbIdx=0;renderObjectives();renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderSportLib();renderLearn();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
   }
@@ -495,20 +500,55 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(days.length){var od=ORDER.filter(function(dw){return days.indexOf(dw)>=0;});
         week=od.map(function(dw,i){return '<div class="sl-sess"><span class="sl-d">'+DN[dw]+'</span><span class="sl-t">'+esc(themes[i%themes.length])+'</span><span class="sl-m">~'+mins+' min</span></div>';}).join("");
       }else{week='<div class="sl-empty">Choisis tes jours d\'entraînement dans Réglages ▸ Sports & niveaux pour générer la semaine.</div>';}
-      return '<div class="card pad sl-card"><div class="sl-h"><span class="sl-ic">'+esc(sp.icon||"•")+'</span><span class="sl-name">'+esc(sp.name||id)+'</span><span class="sl-lv">niv. '+cur+' → '+tgt+'</span></div>'+
-        '<div class="sl-goal">Cap sur le palier '+(cur+1)+' · '+esc(nx.t||"")+'</div>'+week+'</div>';
+      var fc=sportForecast(id),fcLine="";
+      if(fc&&fc.deadline){
+        if(fc.perWeek>0&&fc.fits===true)fcLine='<div class="sl-fc ok">✅ Dans les temps (marge ~'+Math.max(0,fc.marginW)+' sem)</div>';
+        else if(fc.perWeek>0&&fc.fits===false)fcLine='<div class="sl-fc no">⚠️ Trop juste — il faudrait ~'+fc.neededPerWeek+' séances/sem</div>';
+        else if(fc.neededPerWeek)fcLine='<div class="sl-fc no">Pour l\'échéance : ~'+fc.neededPerWeek+' séances/sem</div>';
+      }
+      return '<details class="card pad sl-card sl-fold"><summary class="sl-h"><span class="sl-ic">'+esc(sp.icon||"•")+'</span><span class="sl-name">'+esc(sp.name||id)+'</span><span class="sl-lv">niv. '+cur+' → '+tgt+'</span></summary>'+
+        '<div class="sl-goal">Cap sur le palier '+(cur+1)+' · '+esc(nx.t||"")+'</div>'+fcLine+week+'</details>';
     }).join("");
   }
+  /* ---- Phase 1 : modèle « objectif » (dérivé de l'existant, sans migration).
+     Un objectif = un ou plusieurs sports + une deadline optionnelle. ---- */
+  function objectives(){
+    var out=[],covered={};
+    if(actEnabled("tri")){out.push({id:"tri",icon:"🏊",name:actName("tri"),sports:["nage","velo","course"],deadline:triRaceDate()});covered.nage=covered.velo=covered.course=1;}
+    if(actEnabled("muscu")){out.push({id:"muscu",icon:"💪",name:actName("muscu"),sports:["muscu"],deadline:(cfgActs().muscu.deadline||null)});covered.muscu=1;}
+    cfgObjs().forEach(function(o){var sps=(o.sports||[]).slice();out.push({id:o.id,icon:o.icon||"🎯",name:o.name,sports:sps,deadline:o.deadline||null,custom:true,kind:o.kind||"sport"});sps.forEach(function(sp){covered[sp]=1;});});
+    if(typeof SPORTS_LIB!=="undefined")(SPORTS_LIB.order||[]).forEach(function(sid){
+      if(covered[sid])return;var uc=sportUCfg(sid);
+      if(uc.on!==false&&num(uc.target)>num(uc.cur))out.push({id:"sport-"+sid,icon:(SPORTS_LIB[sid]||{}).icon||"•",name:(SPORTS_LIB[sid]||{}).name||sid,sports:[sid],deadline:(uc.deadline||null)});
+    });
+    return out;
+  }
+  function sportLevelStr(sid){var uc=sportUCfg(sid),c=num(uc.cur)||0,t=num(uc.target)||0;return t>c?("niv. "+c+" → "+t):("niv. "+c);}
+  function renderObjectives(){
+    var host=document.getElementById("objectivesTop");if(!host)return;
+    var objs=objectives();
+    if(!objs.length){host.innerHTML="";return;}
+    host.innerHTML='<div class="obj-list">'+objs.map(function(o){
+      var dl="";
+      if(o.deadline){var dn=daysUntil(o.deadline);dl='<span class="obj-dl'+(dn<=14?" soon":"")+'">'+(dn>=0?("J-"+dn):("J+"+(-dn)))+' · '+esc(frDateShort(o.deadline))+'</span>';}
+      var sportsLine=o.sports.length?o.sports.map(function(sid){
+        var nm=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[sid])?SPORTS_LIB[sid].name:sid;
+        var lvl=(sid!=="muscu"||o.id!=="muscu")?(' <span class="obj-lv">'+esc(sportLevelStr(sid))+'</span>'):"";
+        return '<span class="obj-sp">'+esc(nm)+lvl+'</span>';
+      }).join(""):(o.kind==="other"?'<span class="obj-sp">Objectif personnel</span>':"");
+      return '<div class="obj-card"><div class="obj-h"><span class="obj-ic">'+esc(o.icon)+'</span><span class="obj-name">'+esc(o.name)+'</span>'+dl+'</div><div class="obj-sports">'+sportsLine+'</div></div>';
+    }).join("")+'</div>';
+  }
   function renderSportTabs(){
-    var host=document.getElementById("sportSub");if(!host)return;
+    var host=document.getElementById("sportSub");
     var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
-    var acts=sportActs();
-    if(!acts.length){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';if(pm)pm.hidden=true;if(pt)pt.hidden=true;return;}
-    if(acts.indexOf(sportSel)<0)sportSel=acts[0];
-    if(acts.length<2){host.innerHTML='<div class="sport-solo">'+esc((sportSel==="muscu"?"💪 ":"🏊 ")+actName(sportSel))+'</div>';}
-    else{host.innerHTML=acts.map(function(k){return '<button class="subtab'+(k===sportSel?" on":"")+'" data-sport="'+k+'">'+esc((k==="muscu"?"💪 ":"🏊 ")+actName(k))+'</button>';}).join("");}
-    if(pm)pm.hidden=(sportSel!=="muscu");if(pt)pt.hidden=(sportSel!=="tri");
-    host.querySelectorAll("[data-sport]").forEach(function(b){b.onclick=function(){sportSel=b.getAttribute("data-sport");renderSportTabs();window.scrollTo(0,0);};});
+    var mOn=actEnabled("muscu"),tOn=actEnabled("tri");
+    if(pm)pm.hidden=!mOn;if(pt)pt.hidden=!tOn;
+    var mt=document.getElementById("muscuTitle");if(mt)mt.textContent="💪 "+actName("muscu");
+    var tt=document.getElementById("triTitle");if(tt)tt.textContent="🏊 "+actName("tri");
+    if(!host)return;
+    if(!mOn&&!tOn){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';return;}
+    host.innerHTML="";
   }
   function goSport(sel){sportSel=sel;activateTab("v-sport");}
   function renderLearn(){var h=document.getElementById("learnPane");if(!h)return;
@@ -594,6 +634,28 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
      Le sens inverse n'est pas fait : une pastille est grossière, une séance a une cible précise. */
   function linkSessionSport(sport,iso){if(!sport||!iso)return;var xx=day(iso);if(xx.sports.indexOf(sport)<0)xx.sports.push(sport);}
 
+  /* Phase 4 — conseil nutrition adapté à l'entraînement du jour (advisory, ne touche pas les objectifs). */
+  function trainLoadToday(){
+    var d=todayStr(),strength=false,endur=false,n=0;
+    (sessionsOn(d)||[]).forEach(function(s){n++;if(s.kind==="muscu")strength=true;else endur=true;});
+    if(typeof sportSessionsOn==="function")(sportSessionsOn(d)||[]).forEach(function(s){n++;if(s.id==="muscu")strength=true;else if(["nage","velo","course"].indexOf(s.id)>=0)endur=true;else strength=strength;});
+    var lg=(day(d).sports||[]);
+    if(lg.indexOf("Muscu")>=0)strength=true;
+    ["Natation","Vélo","Course"].forEach(function(x){if(lg.indexOf(x)>=0)endur=true;});
+    var extra=lg.filter(function(x){return ["Muscu","Natation","Vélo","Course","Repos","Autre"].indexOf(x)<0;}).length;
+    n+=lg.length;
+    return {strength:strength,endur:endur,any:(strength||endur||extra>0),big:(n>=3)};
+  }
+  function renderNutriAdapt(){
+    var host=document.getElementById("nutriAdapt");if(!host)return;
+    var L=trainLoadToday(),ic,msg;
+    if(!L.any){ic="🛌";msg="Journée sans séance prévue — énergie normale. Garde le cap sur tes protéines pour la récupération.";}
+    else if(L.big){ic="🔥";msg="Grosse journée (plusieurs séances) — monte l'énergie via les glucides, hydrate-toi bien, et vise le haut de ta fourchette protéines.";}
+    else if(L.strength&&L.endur){ic="💪🏃";msg="Muscu + endurance aujourd'hui — glucides autour des séances pour l'énergie, protéines réparties sur la journée, et hydratation.";}
+    else if(L.strength){ic="💪";msg="Journée muscu — priorité protéines réparties sur la journée, et des glucides autour de la séance pour l'énergie.";}
+    else{ic="🏃";msg="Journée endurance — glucides avant/pendant l'effort, protéines pour la récup, et bien t'hydrater.";}
+    host.innerHTML='<div class="nuta-card"><span class="nuta-ic">'+ic+'</span><div class="nuta-tx"><div class="nuta-h">Nutrition du jour</div><div class="nuta-m">'+esc(msg)+'</div></div></div>';
+  }
   function renderHero(){
     var hero=document.getElementById("heroCard");if(!hero)return;
     var next=nextScheduled();
@@ -1261,6 +1323,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var hd=document.getElementById("dayHead");if(hd)hd.hidden=!isTd;
     renderChip();
     renderHero();
+    renderNutriAdapt();
     renderDayRadar();
     buildDayForm(document.getElementById("dayLog"),d);
     var bn=document.getElementById("backupNudge");
@@ -1901,7 +1964,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(ed>-1&&arr[ed]){
         var it=arr[ed];
         var _full=nutFilled(it);
-        h+='<div class="tag-editor"><div class="te-title">'+esc(it.name)+'</div>'+
+        h+='<div class="tag-editor"><div class="te-title">'+(teRenaming?('<input class="te-name-in" value="'+esc(it.name)+'" aria-label="Renommer l\'aliment"><button type="button" class="te-name-ok" aria-label="Valider">✓</button>'):('<span class="te-name">'+esc(it.name)+'</span><button type="button" class="te-rename" aria-label="Renommer" title="Renommer">✏️</button>'))+'</div>'+
           '<div class="te-row"><label>Quantité<input type="number" inputmode="decimal" step="any" class="te-qty" placeholder="ex : 150" value="'+esc(it.qty)+'"></label>'+
           '<label>Unité<select class="te-unit">'+unitOptions(it.unit||"g")+'</select></label></div>'+
           bndHead("tenut","sub",{ttl:"\ud83e\uddea Composition",cls:"te-state",meta:(_full?"\u2705":"\u26a0\ufe0f")})+
@@ -1916,16 +1979,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
           '</div>'+
           (sumText(it)?'<div class="food-sum">'+sumText(it)+'</div>':'')+
-          '<button type="button" class="te-fiche" aria-label="Fiche produit (r\u00e9glages)" title="Fiche produit (r\u00e9glages)">\u2699\ufe0f</button>'+
           '<button type="button" class="te-scan">📷 Scanner un code-barres</button>'+
-          '<button type="button" class="te-close">Fermer</button>'+
+          '<div class="te-foot"><button type="button" class="te-fiche" aria-label="Fiche produit (r\u00e9glages)" title="Fiche produit (r\u00e9glages)">\u2699\ufe0f</button><button type="button" class="te-close">Fermer</button></div>'+
         '</div>';
       }
       host.innerHTML=h;
       var _sum=container.querySelector('.meal-sum[data-sum="'+mk+'"]');if(_sum){var _a=day(d).mealItems[mk]||[],_p=0;_a.forEach(function(it){var s=scaleNut(it);if(s&&s.prot)_p+=s.prot;});(typeof SUPPS!=="undefined"?SUPPS:[]).forEach(function(sp){var xx=day(d);if(xx.supps&&xx.supps[sp.id]&&sp.prot&&(((xx.suppMeal&&xx.suppMeal[sp.id])||"co")===mk))_p+=sp.prot*((xx.supps2&&xx.supps2[sp.id])?2:1);});var _t=0;_a.forEach(function(it){if(itemTodo(it))_t++;});
         _sum.textContent=fr1(_p)+" / "+Math.round(130/MEALS.length)+" g prot"+(_p>=Math.round(130/MEALS.length)?" ✓":"")+(_t?(" \u00b7 "+_t+" \u00e0 chiffrer"):"");}
       host.querySelectorAll(".tag").forEach(function(tg){
-        tg.addEventListener("click",function(e){if(e.target.classList.contains("tag-x")||(e.target.closest&&e.target.closest(".fq")))return;var i=parseInt(tg.getAttribute("data-i"),10);mealEdit[mk]=(mealEdit[mk]===i?-1:i);renderMeal(mk);});
+        tg.addEventListener("click",function(e){if(e.target.classList.contains("tag-x")||(e.target.closest&&e.target.closest(".fq")))return;var i=parseInt(tg.getAttribute("data-i"),10);teRenaming=false;mealEdit[mk]=(mealEdit[mk]===i?-1:i);renderMeal(mk);});
       });
       host.querySelectorAll(".tag-x").forEach(function(b){
         b.addEventListener("click",function(e){e.stopPropagation();var i=parseInt(b.getAttribute("data-i"),10);day(d).mealItems[mk].splice(i,1);if(mealEdit[mk]===i)mealEdit[mk]=-1;else if(mealEdit[mk]>i)mealEdit[mk]--;save();renderMeal(mk);recalcTotals();});
@@ -1975,7 +2037,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         host.querySelector(".te-base").addEventListener("input",function(){ensureNut();item.nut.base=this.value;save();recalcTotals();updEdSum();});
         host.querySelector(".te-baseunit").addEventListener("change",function(){ensureNut();item.nut.baseUnit=this.value;save();recalcTotals();updEdSum();});
         ["kcal","prot","gluc","lip"].forEach(function(f){host.querySelector(".te-"+f).addEventListener("input",function(){ensureNut();item.nut[f]=this.value;save();recalcTotals();updEdSum();});});
-        host.querySelector(".te-close").addEventListener("click",function(){mealEdit[mk]=-1;renderMeal(mk);});
+        host.querySelector(".te-close").addEventListener("click",function(){teRenaming=false;mealEdit[mk]=-1;renderMeal(mk);});
+        var teRen=host.querySelector(".te-rename");
+        if(teRen)teRen.addEventListener("click",function(){teRenaming=true;renderMeal(mk);var inp=host.querySelector(".te-name-in");if(inp){inp.focus();inp.select&&inp.select();}});
+        var teNameIn=host.querySelector(".te-name-in");
+        if(teNameIn){
+          var commit=function(){var v=(teNameIn.value||"").trim();if(v)item.name=v;teRenaming=false;save();renderMeal(mk);};
+          teNameIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();commit();}else if(e.key==="Escape"){teRenaming=false;renderMeal(mk);}});
+          var teOk=host.querySelector(".te-name-ok");if(teOk)teOk.addEventListener("click",commit);
+        }
         var teFiche=host.querySelector(".te-fiche");
         if(teFiche)teFiche.addEventListener("click",function(){openFoodFiche(item.name);});
         var teScan=host.querySelector(".te-scan");
@@ -2433,8 +2503,32 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function triTargets(){var a=cfgActs().tri,d=(a&&a.dist)||{},out={};for(var k in TRI_TARGETS){var v=(d[k]!=null&&d[k]!=="")?num(d[k]):TRI_TARGETS[k].v;out[k]={v:(isNaN(v)?TRI_TARGETS[k].v:v),u:TRI_TARGETS[k].u,icon:TRI_TARGETS[k].icon};}return out;}
   /* Config utilisateur des sports de la bibliothèque (activation + niveau actuel/visé). state.config.sportsUser — pas de nouvelle clé. */
   function sportsUser(){if(!state.config)state.config={};if(!state.config.sportsUser)state.config.sportsUser={};return state.config.sportsUser;}
-  function sportUCfg(id){var u=sportsUser(),sp=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[id])||{};if(!u[id])u[id]={on:!!sp.defaultOn,cur:0,target:0,minutes:45,days:[],lvlBase:0};if(u[id].minutes==null)u[id].minutes=45;if(!u[id].days)u[id].days=[];if(u[id].lvlBase==null)u[id].lvlBase=0;return u[id];}
+  function sportUCfg(id){var u=sportsUser(),sp=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[id])||{};if(!u[id])u[id]={on:!!sp.defaultOn,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""};if(u[id].minutes==null)u[id].minutes=45;if(!u[id].days)u[id].days=[];if(u[id].lvlBase==null)u[id].lvlBase=0;if(u[id].deadline==null)u[id].deadline="";return u[id];}
   function setSportU(id,patch){var c=sportUCfg(id);for(var k in patch)if(patch.hasOwnProperty(k))c[k]=patch[k];save();}
+  /* Prévision : ~8 séances par palier. Selon jours/sem + deadline → « ça rentre ? » et fréquence nécessaire. */
+  var SESS_PER_LEVEL=8;
+  function sportForecast(id){
+    var uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0;
+    if(tgt<=cur)return null;
+    var need=(tgt-cur)*SESS_PER_LEVEL,perWeek=(uc.days||[]).length,r={need:need,perWeek:perWeek,steps:tgt-cur,deadline:uc.deadline||""};
+    if(perWeek>0){r.weeks=Math.ceil(need/perWeek);r.finish=isoOf(addDays(todayStr(),r.weeks*7));}
+    if(uc.deadline){var dl=daysUntil(uc.deadline);r.dlDays=dl;var wl=dl/7;r.neededPerWeek=(wl>0)?Math.ceil(need/wl):null;if(perWeek>0){r.fits=(r.weeks*7<=dl);r.marginW=Math.round((dl-r.weeks*7)/7);}}
+    return r;
+  }
+  function forecastHTML(id){
+    var f=sportForecast(id);if(!f)return"";
+    var lines=[];
+    lines.push('<b>~'+f.need+' séances</b> estimées pour '+f.steps+' palier'+(f.steps>1?'s':'')+' (~'+SESS_PER_LEVEL+'/palier).');
+    if(f.perWeek>0&&f.finish){lines.push('À '+f.perWeek+' séance'+(f.perWeek>1?'s':'')+'/sem → objectif vers <b>'+esc(frDateShort(f.finish))+'</b> (~'+f.weeks+' sem).');}
+    else if(!f.perWeek){lines.push('Choisis tes jours d\'entraînement pour estimer la date d\'atteinte.');}
+    var verdict="";
+    if(f.deadline){
+      if(f.perWeek>0&&f.fits===true)verdict='<span class="fc-ok">✅ Ça rentre — marge ~'+Math.max(0,f.marginW)+' sem avant l\'échéance.</span>';
+      else if(f.perWeek>0&&f.fits===false)verdict='<span class="fc-no">⚠️ Trop juste : fini ~'+Math.abs(f.marginW)+' sem après l\'échéance. Il faudrait ~'+f.neededPerWeek+' séances/sem.</span>';
+      else if(f.neededPerWeek)verdict='<span class="fc-no">Pour tenir l\'échéance : ~<b>'+f.neededPerWeek+' séances/sem</b>.</span>';
+    }
+    return '<div class="splib-fc">'+lines.map(function(l){return '<div>'+l+'</div>';}).join("")+(verdict?'<div class="fc-v">'+verdict+'</div>':"")+'</div>';
+  }
   function sportSessDone(id,iso){var m=state.sportSess||{};return !!m[id+"|"+iso];}
   function sportDoneCount(id){var m=state.sportSess||{},c=0,pre=id+"|";for(var k in m)if(m.hasOwnProperty(k)&&k.indexOf(pre)===0&&m[k])c++;return c;}
   function toggleSportSess(id,iso){if(!state.sportSess)state.sportSess={};var k=id+"|"+iso;if(state.sportSess[k])delete state.sportSess[k];else state.sportSess[k]=true;save();}
@@ -2620,7 +2714,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         '<label>🚴 Vélo (km)<input type="number" inputmode="decimal" step="0.1" class="act-f-dvelo" value="'+esc(triTargets().velo.v)+'"></label>'+
         '<label>🏃 Course (km)<input type="number" inputmode="decimal" step="0.1" class="act-f-dcourse" value="'+esc(triTargets().course.v)+'"></label>'+
       '</div>'
-    ):"")+
+    ):(
+      '<label class="act-flabel">Objectif — échéance (optionnel)</label><input type="date" class="act-f-deadline" value="'+esc(a.deadline||"")+'">'
+    ))+
     '<label class="act-flabel">Description (optionnel)</label><textarea class="act-f-desc" rows="2" placeholder="ex. objectif, type de programme…">'+esc(a.desc||"")+'</textarea>'+
     '<div class="set-form-btns"><button class="btn act-f-save">Enregistrer</button><button class="btn ghost act-f-cancel">Annuler</button></div>'+
   '</div>';}
@@ -2644,6 +2740,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         var rd=(f.querySelector(".act-f-race")||{}).value;if(rd&&(""+rd).trim())patch.raceDate=(""+rd).trim();
         var dn=(f.querySelector(".act-f-dnat")||{}).value,dv=(f.querySelector(".act-f-dvelo")||{}).value,dc=(f.querySelector(".act-f-dcourse")||{}).value;
         patch.dist={nat:(""+(dn||"")).trim(),velo:(""+(dv||"")).trim(),course:(""+(dc||"")).trim()};
+      }else{
+        var dl=(f.querySelector(".act-f-deadline")||{}).value;patch.deadline=(""+(dl||"")).trim();
       }
       setAct(k,patch);settingsActEdit=null;renderSettings();renderCalendars();
     };
@@ -2944,6 +3042,21 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;
     var sportsLibInner=!_sl?'<p class="set-note">Bibliothèque indisponible.</p>':
       '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite.</p>'+
+      (function(){
+        var objs=cfgObjs();
+        var list=objs.map(function(o){var sn=(o.sports||[]).map(function(sid){return (_sl[sid]||{}).name||sid;}).join(" · ");
+          return '<div class="objc-row"><span class="objc-ic">'+esc(o.icon||"🎯")+'</span><span class="objc-tx"><b>'+esc(o.name)+'</b><span class="objc-sub">'+esc(sn)+(o.deadline?(' · '+esc(frDateShort(o.deadline))):"")+'</span></span><button type="button" class="objc-del" data-obj="'+esc(o.id)+'" aria-label="Supprimer">✕</button></div>';
+        }).join("");
+        var form=objCreating?('<div class="objc-form">'+
+          '<label class="act-flabel">Nom de l\'objectif</label><input type="text" class="objc-name" placeholder="ex : Séjour escalade, DSCG octobre…">'+
+          '<label class="act-flabel">Type</label><div class="objc-types"><button type="button" class="objc-type on" data-type="sport">🏅 Sportif</button><button type="button" class="objc-type" data-type="other">📚 Autre (intellectuel…)</button></div>'+
+          '<div class="objc-sportsblk"><label class="act-flabel">Sports couverts</label><div class="objc-sports">'+(_sl.order||[]).map(function(sid){var sp=_sl[sid];return '<label class="objc-cb"><input type="checkbox" class="objc-sp" value="'+esc(sid)+'"> '+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</label>';}).join("")+'</div></div>'+
+          '<div class="objc-iconblk" hidden><label class="act-flabel">Icône</label><div class="objc-icons">'+["📚","🎓","🧠","🎯","💼"].map(function(e,i){return '<button type="button" class="objc-icon'+(i===0?" on":"")+'">'+e+'</button>';}).join("")+'</div></div>'+
+          '<label class="act-flabel">Échéance (optionnel)</label><input type="date" class="objc-dl">'+
+          '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
+        '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
+        return '<div class="objc-box"><div class="objc-h">🎯 Mes objectifs</div>'+(list||'<div class="objc-empty">Aucun objectif personnalisé. Regroupe plusieurs sports sous une même cible datée (comme le triathlon).</div>')+form+'</div>';
+      })()+
       (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp)return "";
         var uc=sportUCfg(id),open=!!settingsSecOpen["splib_"+id],on=uc.on!==false,maxN=(sp.levels||[]).length-1;
         var cur=Math.max(0,Math.min(maxN,num(uc.cur)||0)),tgt=Math.max(0,Math.min(maxN,num(uc.target)||0));
@@ -2957,7 +3070,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           }else{
             var sel='<div class="splib-sel">'+
               '<label>Niveau actuel<select class="splib-cur" data-sp="'+esc(id)+'">'+optsFor(cur)+'</select></label>'+
-              '<label>Niveau visé<select class="splib-tgt" data-sp="'+esc(id)+'">'+optsFor(tgt)+'</select></label></div>';
+              '<label>Niveau visé<select class="splib-tgt" data-sp="'+esc(id)+'">'+optsFor(tgt)+'</select></label></div>'+
+              '<div class="splib-obj"><label>Objectif — échéance (optionnel)<input type="date" class="splib-dl" data-sp="'+esc(id)+'" value="'+esc(uc.deadline||"")+'"></label></div>';
             var prog;
             if(tgt<=cur){prog='<div class="splib-hint">Choisis un niveau visé plus haut que ton niveau actuel pour afficher ton parcours.</div>';}
             else{prog='<div class="splib-prog"><div class="splib-prog-h">Ton parcours — niveau '+cur+' → '+tgt+' ('+(tgt-cur)+' palier'+((tgt-cur)>1?'s':'')+')</div>'+
@@ -2981,6 +3095,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             }
             body=sel+prog+cad+week;
             if(tgt>cur){var doneN=sportDoneCount(id),since=Math.max(0,doneN-(num(uc.lvlBase)||0)),THR=8,nx=(sp.levels||[])[cur+1]||{};
+              body+=forecastHTML(id);
               body+=(since>=THR)?
                 ('<div class="splib-levelup"><div class="splib-lu-h">🎉 '+since+' séances validées depuis le niveau '+cur+'.</div><div class="splib-lu-d">Prêt à passer au palier '+(cur+1)+' · '+esc(nx.t||"")+' ?</div><button type="button" class="btn accent splib-lvbtn" data-sp="'+esc(id)+'">Passer au niveau '+(cur+1)+'</button></div>')
                 :('<div class="splib-prog2">Séances validées à ce palier : <b>'+since+'</b> / '+THR+' <span class="splib-prog2-s">avant de te suggérer le palier suivant</span></div>');
@@ -3090,6 +3205,27 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".splib-tgt").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{target:num(s.value)});renderSettings();};});
     host.querySelectorAll(".splib-dow").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),dw=num(b.getAttribute("data-dw")),uc=sportUCfg(id),d=(uc.days||[]).slice(),i=d.indexOf(dw);if(i>=0)d.splice(i,1);else d.push(dw);setSportU(id,{days:d});renderSettings();};});
     host.querySelectorAll(".splib-min").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{minutes:num(s.value)});renderSettings();};});
+    host.querySelectorAll(".splib-dl").forEach(function(s){s.onchange=function(){setSportU(s.getAttribute("data-sp"),{deadline:(s.value||"").trim()});renderSettings();};});
+    var objAdd=host.querySelector(".objc-add");if(objAdd)objAdd.onclick=function(){objCreating=true;renderSettings();};
+    var objCancel=host.querySelector(".objc-cancel");if(objCancel)objCancel.onclick=function(){objCreating=false;renderSettings();};
+    host.querySelectorAll(".objc-type").forEach(function(b){b.onclick=function(){
+      host.querySelectorAll(".objc-type").forEach(function(x){x.classList.remove("on");});b.classList.add("on");
+      var other=b.getAttribute("data-type")==="other";
+      var sb=host.querySelector(".objc-sportsblk"),ib=host.querySelector(".objc-iconblk");
+      if(sb)sb.hidden=other;if(ib)ib.hidden=!other;
+    };});
+    host.querySelectorAll(".objc-icon").forEach(function(b){b.onclick=function(){host.querySelectorAll(".objc-icon").forEach(function(x){x.classList.remove("on");});b.classList.add("on");};});
+    var objCreate=host.querySelector(".objc-create");if(objCreate)objCreate.onclick=function(){
+      var nm=((host.querySelector(".objc-name")||{}).value||"").trim();
+      var tb=host.querySelector(".objc-type.on"),kind=tb?tb.getAttribute("data-type"):"sport";
+      var dl=((host.querySelector(".objc-dl")||{}).value||"").trim();
+      if(!nm){fqToast("Donne un nom à l'objectif");return;}
+      var sps=[],icon="🎯";
+      if(kind==="sport"){host.querySelectorAll(".objc-sp:checked").forEach(function(c){sps.push(c.value);});if(!sps.length){fqToast("Choisis au moins un sport");return;}}
+      else{var ib=host.querySelector(".objc-icon.on");icon=ib?ib.textContent:"📚";}
+      addObj({id:"obj-"+Date.now(),name:nm,icon:icon,sports:sps,deadline:dl,kind:kind});objCreating=false;renderSettings();
+    };
+    host.querySelectorAll(".objc-del").forEach(function(b){b.onclick=function(){delObj(b.getAttribute("data-obj"));renderSettings();};});
     var be=document.getElementById("bkpExport");if(be)be.onclick=function(){exportBackup();renderSettings();};
     var bi=document.getElementById("bkpImport");if(bi)bi.onclick=pickImport;
     var brs=document.getElementById("bkpReset");if(brs)brs.onclick=function(){
