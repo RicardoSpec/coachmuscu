@@ -143,3 +143,15 @@ var SPORTS_LIB = {
   }
 
 };
+
+/* Gabarits de séance par sport (échauffement / retour au calme) — le bloc
+   principal est fondé sur les axes de focus du palier. */
+var SPORT_TPL = {
+  _default:{warm:"10 min d'échauffement progressif (mobilité + montée en intensité).", cool:"5 min de retour au calme + étirements des muscles sollicités."},
+  nage:{warm:"300 m souple + 4×50 m éducatifs (battements, rattrapé).", cool:"200 m dos / récupération, respiration ample."},
+  course:{warm:"10 min de footing lent + gammes (talons-fesses, montées de genoux).", cool:"5 min de marche + étirements mollets / ischios."},
+  velo:{warm:"15 min en montée de cadence progressive.", cool:"10 min en moulinette souple."},
+  escalade:{warm:"Mobilité épaules / poignets + 2-3 voies faciles pour chauffer les doigts.", cool:"Descente en moulinette + étirements avant-bras et dos."},
+  tennis:{warm:"Mini-tennis + déplacements progressifs (5-10 min).", cool:"Quelques échanges tranquilles + étirements épaule / poignet."}
+};
+if(typeof window!=="undefined")window.SPORT_TPL=SPORT_TPL;
