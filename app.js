@@ -519,7 +519,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(actEnabled("muscu")){out.push({id:"muscu",icon:"💪",name:actName("muscu"),sports:["muscu"],deadline:(cfgActs().muscu.deadline||null)});covered.muscu=1;}
     cfgObjs().forEach(function(o){var sps=(o.sports||[]).slice();out.push({id:o.id,icon:o.icon||"🎯",name:o.name,sports:sps,deadline:o.deadline||null,custom:true,kind:o.kind||"sport"});sps.forEach(function(sp){covered[sp]=1;});});
     if(typeof SPORTS_LIB!=="undefined")(SPORTS_LIB.order||[]).forEach(function(sid){
-      if(covered[sid])return;var uc=sportUCfg(sid);
+      if({muscu:1,nage:1,velo:1,course:1}[sid]||covered[sid])return;var uc=sportUCfg(sid);
       if(uc.on!==false&&num(uc.target)>num(uc.cur))out.push({id:"sport-"+sid,icon:(SPORTS_LIB[sid]||{}).icon||"•",name:(SPORTS_LIB[sid]||{}).name||sid,sports:[sid],deadline:(uc.deadline||null)});
     });
     return out;
@@ -534,7 +534,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(o.deadline){var dn=daysUntil(o.deadline);dl='<span class="obj-dl'+(dn<=14?" soon":"")+'">'+(dn>=0?("J-"+dn):("J+"+(-dn)))+' · '+esc(frDateShort(o.deadline))+'</span>';}
       var sportsLine=o.sports.length?o.sports.map(function(sid){
         var nm=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[sid])?SPORTS_LIB[sid].name:sid;
-        var lvl=(sid!=="muscu"||o.id!=="muscu")?(' <span class="obj-lv">'+esc(sportLevelStr(sid))+'</span>'):"";
+        var lvl=(o.id==="tri"||o.id==="muscu")?"":(' <span class="obj-lv">'+esc(sportLevelStr(sid))+'</span>');
         return '<span class="obj-sp">'+esc(nm)+lvl+'</span>';
       }).join(""):(o.kind==="other"?'<span class="obj-sp">Objectif personnel</span>':"");
       return '<div class="obj-card"><div class="obj-h"><span class="obj-ic">'+esc(o.icon)+'</span><span class="obj-name">'+esc(o.name)+'</span>'+dl+'</div><div class="obj-sports">'+sportsLine+'</div></div>';
@@ -3096,13 +3096,13 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
           '<label class="act-flabel">Type</label><div class="objc-types"><button type="button" class="objc-type on" data-type="sport">🏅 Sport</button><button type="button" class="objc-type" data-type="intellectuel">🧠 Intellectuel</button><button type="button" class="objc-type" data-type="artistique">🎨 Artistique</button><button type="button" class="objc-type" data-type="autre">📌 Autre</button></div>'+
           '<div class="objc-sportsblk"><label class="act-flabel">Sports couverts &amp; niveaux</label><div class="objc-sports">'+(_sl.order||[]).map(function(sid){var sp=_sl[sid],uc=sportUCfg(sid),maxN=(sp.levels||[]).length-1,c=Math.max(0,Math.min(maxN,num(uc.cur)||0)),t=Math.max(0,Math.min(maxN,num(uc.target)||0));
             function opts(sel){return (sp.levels||[]).map(function(lv){return '<option value="'+lv.n+'"'+(lv.n===sel?" selected":"")+'>'+lv.n+'</option>';}).join("");}
-            return '<div class="objc-sprow"><label class="objc-cb"><input type="checkbox" class="objc-sp" value="'+esc(sid)+'"> '+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</label><span class="objc-lv" hidden>niv <select class="objc-cur" data-sp="'+esc(sid)+'">'+opts(c)+'</select> → <select class="objc-tgt" data-sp="'+esc(sid)+'">'+opts(t)+'</select></span></div>';
+            return '<div class="objc-sprow"><label class="objc-cb"><input type="checkbox" class="objc-sp" value="'+esc(sid)+'"> '+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</label></div>';
           }).join("")+'</div></div>'+
           '<div class="objc-iconblk" hidden><div class="objc-wip">🚧 Pour l\'instant, seuls les objectifs <b>sport</b> génèrent un programme. Les autres types sont enregistrés (nom + échéance) — leur suivi arrivera dans les autres onglets.</div><label class="act-flabel">Icône</label><div class="objc-icons">'+["🧠","🎨","📌","🎯","🎓","💼"].map(function(e,i){return '<button type="button" class="objc-icon'+(i===0?" on":"")+'">'+e+'</button>';}).join("")+'</div></div>'+
           '<label class="act-flabel">Échéance (optionnel)</label><input type="date" class="objc-dl">'+
           '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
         '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
-        return '<div class="objc-box"><div class="objc-h">🎯 Mes objectifs</div>'+actCard("muscu")+actCard("tri")+list+form+'</div>';
+        return '<div class="objc-box"><div class="objc-h">🎯 Autres objectifs</div><p class="set-note" style="margin:0 0 10px">Escalade, séjour, DSCG… un objectif regroupe un ou plusieurs sports (réglés ci-dessus) + une échéance.</p>'+list+form+'</div>';
       
   }
   function renderSettings(){
@@ -3192,8 +3192,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       return '<div class="set-row"><span class="set-ic">'+esc(d.icon||"🎯")+'</span><span class="set-main"><span class="set-lbl">'+esc(d.label)+'</span><span class="set-sub">'+esc(frDateShort(d.date))+' '+dlYear(d.date)+' · J-'+Math.max(0,diffDays(d.date,todayStr()))+'</span></span><button class="set-edit" data-edit="'+d.id+'" aria-label="Modifier">✎</button><button class="set-del" data-del="'+d.id+'" aria-label="Supprimer">🗑</button></div>';
     }).join("");
     var addBlock=settingsEdit==="new"?deadlineForm(null):'<button class="btn ghost set-add" id="setAdd">+ Ajouter une échéance</button>';
-    var objInner='<p class="set-note">Tes objectifs et leurs échéances, au même endroit.</p>'+
-      objBlkHTML()+
+    var objInner=objBlkHTML()+
       '<div class="obj-subhead">Échéances (repères calendrier)</div>'+
       '<p class="set-note" style="margin-top:0">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
       (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock;
@@ -3210,10 +3209,8 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       planBlkHTML();
     var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;
     var sportsLibInner=!_sl?'<p class="set-note">Bibliothèque indisponible.</p>':
-      '<p class="set-note">Active un sport, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (les paliers à franchir et leurs axes de travail). Ces sports servent de suivi de progression personnel — le rattachement au calendrier viendra ensuite.</p>'+
-
-
-      (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp)return "";
+      '<p class="set-note">Les sports <b>hors triathlon et musculation</b> (ceux-là ont leurs programmes ci-dessus). Active-en un, estime ton <b>niveau actuel</b> et choisis ton <b>niveau visé</b> : tu obtiens le parcours dédié (paliers à franchir + axes de travail), et ses séances arrivent au calendrier sur tes jours choisis.</p>'+
+      (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp||{muscu:1,nage:1,velo:1,course:1}[id])return "";
         var uc=sportUCfg(id),open=!!settingsSecOpen["splib_"+id],on=uc.on!==false,maxN=(sp.levels||[]).length-1;
         var cur=Math.max(0,Math.min(maxN,num(uc.cur)||0)),tgt=Math.max(0,Math.min(maxN,num(uc.target)||0));
         function optsFor(selV){return (sp.levels||[]).map(function(lv){return '<option value="'+lv.n+'"'+(lv.n===selV?" selected":"")+'>'+lv.n+' · '+esc(lv.t)+'</option>';}).join("");}
@@ -3336,10 +3333,9 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       settingsGroup("g_train","🏋️ Entraînement",
         settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
         settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
-        settingsSec("obj","Objectifs &amp; échéances",objInner,!!settingsSecOpen.obj||!!settingsEdit||!!settingsActEdit)+
-        settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal)+
-        settingsSec("splib","🏅 Sports & niveaux (bibliothèque)",sportsLibInner,!!settingsSecOpen.splib),
-        !!settingsGrpOpen.g_train||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.obj||!!settingsEdit||!!settingsActEdit||!!settingsSecOpen.splib)+
+        settingsSec("objsport","🎯 Objectifs &amp; sports",'<p class="set-note">Tes programmes, tes sports et leurs échéances — au même endroit.</p><div class="objc-box"><div class="objc-h">Programmes suivis</div>'+actCard("muscu")+actCard("tri")+'</div>'+sportsLibInner+objInner,!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
+        settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal),
+        !!settingsGrpOpen.g_train||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
       settingsGroup("g_track","📊 Suivi & aliments",
         settingsSec("anchors","Ancrages de routines",anchorsInner,!!settingsSecOpen.anchors)+
         fixSec+
@@ -3352,7 +3348,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       var k=inp.getAttribute("data-g"),v=inp.value.replace(",",".");
       var p={};p[k]=(v===""?null:num(v));goalsSetToday(p);renderSettings();};});
     host.querySelectorAll(".set-grptog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-grp");settingsGrpOpen[id]=!settingsGrpOpen[id];renderSettings();};});  
-    host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="obj"&&!settingsSecOpen.obj)settingsEdit=null;if(id==="acts"&&!settingsSecOpen.acts)settingsActEdit=null;renderSettings();};});
+    host.querySelectorAll(".set-sectog").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sec");settingsSecOpen[id]=!settingsSecOpen[id];if(id==="objsport"&&!settingsSecOpen.objsport){settingsEdit=null;settingsActEdit=null;}renderSettings();};});
     host.querySelectorAll(".splib-head").forEach(function(b){b.onclick=function(){var id="splib_"+b.getAttribute("data-splib");settingsSecOpen[id]=!settingsSecOpen[id];renderSettings();};});
     host.querySelectorAll(".splib-on").forEach(function(cb){cb.onchange=function(){setSportU(cb.getAttribute("data-sp"),{on:cb.checked});renderSettings();};});
     host.querySelectorAll(".splib-cur").forEach(function(s){s.onchange=function(){var id=s.getAttribute("data-sp");setSportU(id,{cur:num(s.value),lvlBase:sportDoneCount(id)});renderSettings();};});
@@ -3380,7 +3376,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       if(!nm){fqToast("Donne un nom à l'objectif");return;}
       var sps=[],icon="🎯";
       if(kind==="sport"){var checked=[].slice.call(host.querySelectorAll(".objc-sp:checked"));if(!checked.length){fqToast("Choisis au moins un sport");return;}
-        checked.forEach(function(c){var sid=c.value,row=c.closest(".objc-sprow"),cu=num((row.querySelector(".objc-cur")||{}).value)||0,tg=num((row.querySelector(".objc-tgt")||{}).value)||0;setSportU(sid,{on:true,cur:cu,target:tg,deadline:dl});sps.push(sid);});}
+        checked.forEach(function(c){var sid=c.value;setSportU(sid,{on:true,deadline:dl});sps.push(sid);});}
       else{var ib=host.querySelector(".objc-icon.on");icon=ib?ib.textContent:"📌";}
       addObj({id:"obj-"+Date.now(),name:nm,icon:icon,sports:sps,deadline:dl,kind:kind});objCreating=false;renderSettings();
     };
