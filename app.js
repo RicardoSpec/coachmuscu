@@ -585,12 +585,32 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     });
     sessBuf=out;
   }
+  var selSports={}; /* sélection tactile de cartes-sport (onglet Entraînement) */
+  function renderSportActionBar(){
+    var bar=document.getElementById("sportActBar"),keys=Object.keys(selSports);
+    if(!keys.length){if(bar)bar.hidden=true;return;}
+    if(!bar){bar=document.createElement("div");bar.id="sportActBar";document.body.appendChild(bar);}
+    bar.hidden=false;
+    bar.innerHTML='<span class="sab-n">'+keys.length+' sélectionné'+(keys.length>1?'s':'')+'</span>'+
+      (keys.length>=2?'<button type="button" class="sab-merge">🔗 Fusionner</button>':'')+
+      '<button type="button" class="sab-clear">Annuler</button>';
+    var mg=bar.querySelector(".sab-merge");if(mg)mg.onclick=mergeSelected;
+    var cl=bar.querySelector(".sab-clear");if(cl)cl.onclick=function(){selSports={};renderSportObjectives();};
+  }
+  function mergeSelected(){
+    var sps=Object.keys(selSports);if(sps.length<2)return;
+    var isTri=sps.indexOf("nage")>=0&&sps.indexOf("velo")>=0&&sps.indexOf("course")>=0&&sps.every(function(k){return k==="nage"||k==="velo"||k==="course";});
+    if(!isTri){alert("Pour l’instant, seule la fusion des 3 disciplines (nage + vélo + course → triathlon) est disponible. La fusion libre arrive à l’étape suivante.");return;}
+    var order=["nage","velo","course"];
+    addObj({id:"obj-"+Date.now(),name:"Triathlon",icon:"🏊",sports:order,deadline:triRaceDate(),kind:"sport",tri:true});
+    selSports={};syncTri();renderSportTabs();renderSportObjectives();renderCalendars();
+  }
   function renderSportObjectives(){
     var host=document.getElementById("sportLib");if(!host)return;
-    if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";return;}
+    if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";renderSportActionBar();return;}
     var cov=coveredSports();
     var list=(SPORTS_LIB.order||[]).filter(function(id){if(id==="muscu"||cov[id])return false;var uc=sportUCfg(id);return uc.on!==false&&num(uc.target)>num(uc.cur);});
-    if(!list.length){host.innerHTML="";return;}
+    if(!list.length){host.innerHTML="";renderSportActionBar();return;}
     var ORDER=[1,2,3,4,5,6,0],DN={1:"Lun",2:"Mar",3:"Mer",4:"Jeu",5:"Ven",6:"Sam",0:"Dim"};
     host.innerHTML=list.map(function(id){
       var sp=SPORTS_LIB[id],uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0;
@@ -605,7 +625,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var week=upcoming.length?('<div class="so-next-h">Prochaines séances</div><div class="so-week">'+upcoming.map(function(iso2,i){var ti=(sess[i%Math.max(1,sess.length)]||{}).title||"Séance";return '<button type="button" class="so-check" data-sp="'+esc(id)+'" data-iso="'+iso2+'"><span class="so-d">'+esc(frDateShort(iso2))+'</span><span class="so-t">'+esc(ti)+'</span><span class="so-ck">à faire</span></button>';}).join("")+'</div>'):(days.length?'<div class="so-empty">Séances projetées toutes faites 🎉</div>':'<div class="so-empty">Choisis des jours d\'entraînement (Réglages) pour planifier tes séances.</div>');
       var editing=(sessEdit&&sessEdit.id===id&&sessEdit.lvN===lvN);
       var prog=editing?sessEditorHTML(id,lvN):('<div class="so-prog"><div class="so-prog-h">Programme du palier'+(isCustom?' <span class="sess-badge">personnalisé</span>':'')+'</div>'+sess.map(function(ss){return '<details class="so-sess2"><summary>'+esc(ss.title)+'</summary>'+ss.blocks.map(function(b){return '<div class="so-blk"><b>'+esc(b[0])+'</b> — '+esc(b[1])+'</div>';}).join("")+'</details>';}).join("")+'<button type="button" class="sess-edit" data-sp="'+esc(id)+'" data-lv="'+lvN+'">✎ Personnaliser les séances</button></div>');
-      return '<div class="card pad so-card"><h2 class="page pane-title">'+esc(sp.icon||"")+' '+esc(sp.name||id)+' <span class="so-lv">niv. '+cur+' → '+tgt+dl+'</span></h2>'+
+      return '<div class="card pad so-card'+(selSports[id]?' sel':'')+'" data-sport="'+esc(id)+'"><h2 class="page pane-title">'+esc(sp.icon||"")+' '+esc(sp.name||id)+' <span class="so-lv">niv. '+cur+' → '+tgt+dl+'</span></h2>'+
         '<div class="lvl-nav"><button type="button" class="lvl-arrow so-prev" data-sp="'+esc(id)+'"'+(idx<=0?" disabled":"")+'>‹</button>'+
           '<div class="lvl-mid"><div class="lvl-title">Palier '+lvN+' · '+esc(L.t||"")+'</div><div class="lvl-sub">'+(idx+1)+'/'+paliers.length+'</div></div>'+
           '<button type="button" class="lvl-arrow so-next" data-sp="'+esc(id)+'"'+(idx>=paliers.length-1?" disabled":"")+'>›</button></div>'+
@@ -622,6 +642,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var _ss=host.querySelector(".sess-save");if(_ss)_ss.onclick=function(){readSessBuf();if(sessEdit){var clean=(sessBuf||[]).filter(function(s){return (s.title||"").trim()||(s.blocks||[]).some(function(b){return (b[0]||"").trim()||(b[1]||"").trim();});});if(clean.length)setSportSessCustom(sessEdit.id,sessEdit.lvN,clean);else clearSportSessCustom(sessEdit.id,sessEdit.lvN);}sessEdit=null;sessBuf=null;renderSportObjectives();renderCalendars();};
     var _sc=host.querySelector(".sess-cancel");if(_sc)_sc.onclick=function(){sessEdit=null;sessBuf=null;renderSportObjectives();};
     var _sr=host.querySelector(".sess-reset");if(_sr)_sr.onclick=function(){if(sessEdit)clearSportSessCustom(sessEdit.id,sessEdit.lvN);sessEdit=null;sessBuf=null;renderSportObjectives();renderCalendars();};
+    host.querySelectorAll(".so-card[data-sport]").forEach(function(card){
+      var id=card.getAttribute("data-sport"),tmr=null;
+      function arm(e){var t=e.target;if(t&&t.closest&&t.closest("button,input,select,textarea,a,summary,.lvl-nav,.so-week"))return;tmr=setTimeout(function(){tmr=null;selSports[id]=!selSports[id];if(!selSports[id])delete selSports[id];if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}renderSportObjectives();},600);}
+      function cancel(){if(tmr){clearTimeout(tmr);tmr=null;}}
+      card.addEventListener("touchstart",arm,{passive:true});card.addEventListener("touchend",cancel);card.addEventListener("touchmove",cancel,{passive:true});
+      card.addEventListener("mousedown",arm);card.addEventListener("mouseup",cancel);card.addEventListener("mouseleave",cancel);
+    });
+    renderSportActionBar();
   }
   function renderSportTabs(){
     var host=document.getElementById("sportSub");
