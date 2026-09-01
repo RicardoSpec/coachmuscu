@@ -1561,3 +1561,13 @@ nav.tabs .tab.on{color:var(--primary)}
 .sess-ed-actions button{border:1px solid var(--line,#d0d0d5);border-radius:9px;padding:6px 12px;cursor:pointer;background:#fff;font-size:13px}
 .sess-save{background:#2b6cff!important;color:#fff!important;border-color:#2b6cff!important;font-weight:600}
 .sess-add-s{font-weight:600}
+
+/* Sélection tactile de sports + fusion (onglet Entraînement) */
+.so-card{position:relative}
+.so-card.sel{box-shadow:0 0 0 3px #2b6cff inset}
+#sportActBar{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;z-index:60;display:flex;gap:10px;align-items:center;background:#1c1c1e;color:#fff;padding:8px 14px;border-radius:26px;box-shadow:0 10px 34px rgba(0,0,0,.3);font-size:14px;max-width:92vw}
+#sportActBar[hidden]{display:none}
+.sab-n{opacity:.82;white-space:nowrap}
+.sab-merge,.sab-clear{border:0;border-radius:18px;padding:7px 14px;font-weight:600;cursor:pointer}
+.sab-merge{background:#2b6cff;color:#fff}
+.sab-clear{background:rgba(255,255,255,.16);color:#fff}
