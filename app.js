@@ -476,6 +476,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;break;}save();}
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var muscuLvl=null;   /* palier muscu affiché (index dans BLOCK_ORDER) ; null = auto (palier en cours) */
+  var muscuSessMode=false; /* rubrique muscu en mode "personnaliser les séances" */
   var bkpNudgeHidden=false;  /* rappel sauvegarde masqué pour la session */
   function activateTab(id){
     var t;
@@ -1553,9 +1554,24 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     h+="</table>";
     return h;
   }
+  function muscuSessListHTML(){
+    return '<p class="set-note">Modifie durablement tes séances : renomme, ajoute, retire ou ajuste les exercices et les séries.</p>'+
+      BLOCK_ORDER.map(function(b){return '<div class="sess-blk">'+esc(PROGRAM_BLOCKS[b].name)+'</div>'+
+        CODES.map(function(c){var p=progOf(b,c);var cust=progIsCustom(b,c);
+          return '<div class="set-row sess-pick" data-sess="'+b+'_'+c+'"><span class="set-ic">💪</span><span class="set-main"><span class="set-lbl">Séance '+c+(cust?' <span class="sess-badge">modifiée</span>':'')+'</span><span class="set-sub">'+esc(p.title.replace(/^S[eé]ance [A-D]\s*—\s*/,""))+' · '+(p.exos?p.exos.length:0)+' exos</span></span><span class="sess-arrow">›</span></div>';
+        }).join("");
+      }).join("");
+  }
+  function renderMuscuSessInto(host){
+    if(settingsSessSel){renderSessEditor(host);return;}
+    host.innerHTML='<button type="button" class="btn ghost msess-back" style="margin-bottom:10px">‹ Retour au programme</button><div class="set-sec"><div class="set-sec-h">Personnaliser les séances</div>'+muscuSessListHTML()+'</div>';
+    var bk=host.querySelector(".msess-back");if(bk)bk.onclick=function(){muscuSessMode=false;settingsSessSel=null;renderProgram();};
+    host.querySelectorAll(".sess-pick").forEach(function(b){b.onclick=function(){settingsSessSel=b.getAttribute("data-sess");renderProgram();};});
+  }
   function renderProgram(){
     renderChip();
     var host=document.getElementById("progBlocks");if(!host)return;
+    if(muscuSessMode){renderMuscuSessInto(host);return;}
     var N=BLOCK_ORDER.length;
     if(muscuLvl===null){var ns=nextSession();muscuLvl=ns?Math.max(0,BLOCK_ORDER.indexOf(ns.block)):Math.max(0,N-1);}
     muscuLvl=Math.max(0,Math.min(N-1,muscuLvl));
@@ -1563,7 +1579,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var nav='<div class="lvl-nav"><button type="button" class="lvl-arrow lvl-prev" aria-label="Palier précédent"'+(muscuLvl<=0?" disabled":"")+'>‹</button>'+
       '<div class="lvl-mid"><div class="lvl-title">Palier '+(muscuLvl+1)+'/'+N+' · '+esc(blk.name)+'</div><div class="lvl-sub">'+doneN+'/'+totN+' séances'+(done?' · terminé ✓':'')+'</div></div>'+
       '<button type="button" class="lvl-arrow lvl-next" aria-label="Palier suivant"'+(muscuLvl>=N-1?" disabled":"")+'>›</button></div>';
-    host.innerHTML=nav+'<div class="card pad blockcard open">'+gridBody(block)+'</div>';
+    host.innerHTML=nav+'<div class="card pad blockcard open">'+gridBody(block)+'</div><button type="button" class="btn ghost msess-open" style="margin-top:10px;width:100%">✎ Personnaliser les séances</button>';
+    var mo=host.querySelector(".msess-open");if(mo)mo.onclick=function(){muscuSessMode=true;settingsSessSel=null;renderProgram();};
     var pv=host.querySelector(".lvl-prev");if(pv)pv.onclick=function(){if(muscuLvl>0){muscuLvl--;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
     var nx=host.querySelector(".lvl-next");if(nx)nx.onclick=function(){if(muscuLvl<N-1){muscuLvl++;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
     host.querySelectorAll(".cell").forEach(function(cell){
@@ -2978,14 +2995,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<button class="btn ghost sess-add" id="sessAddExo">+ Ajouter un exercice</button>'+
       '<button class="btn ghost sess-reset" id="sessReset">↺ Rétablir le contenu par défaut</button>'+
       '</div>';
-    document.getElementById("sessBack").onclick=function(){settingsSessSel=null;renderSettings();};
+    document.getElementById("sessBack").onclick=function(){settingsSessSel=null;renderProgram();};
     var ti=host.querySelector(".sess-title");if(ti)ti.addEventListener("input",function(){progOverride(b,c).title=ti.value;save();});
     host.querySelectorAll(".sx-name").forEach(function(inp){inp.addEventListener("input",function(){progOverride(b,c).exos[+inp.getAttribute("data-i")].name=inp.value;save();});});
     host.querySelectorAll(".sx-target").forEach(function(inp){inp.addEventListener("input",function(){progOverride(b,c).exos[+inp.getAttribute("data-i")].target=inp.value;save();});});
     host.querySelectorAll(".sx-sets").forEach(function(inp){inp.addEventListener("input",function(){var n=parseInt(inp.value,10);if(isNaN(n)||n<1)n=1;if(n>12)n=12;progOverride(b,c).exos[+inp.getAttribute("data-i")].sets=n;save();});});
-    host.querySelectorAll(".sx-del").forEach(function(bt){bt.addEventListener("click",function(){progOverride(b,c).exos.splice(+bt.getAttribute("data-i"),1);save();renderSettings();});});
-    document.getElementById("sessAddExo").onclick=function(){progOverride(b,c).exos.push({id:"u"+Date.now().toString(36),name:"",target:"3 × 10",sets:3,unit:"reps",help:""});save();renderSettings();var ni=host.querySelector(".sx-row:last-of-type .sx-name");if(ni)ni.focus();};
-    var sr=document.getElementById("sessReset");if(sr)sr.onclick=function(){if(confirm("Rétablir la séance par défaut ? Les modifications de cette séance seront perdues.")){progReset(b,c);renderSettings();}};
+    host.querySelectorAll(".sx-del").forEach(function(bt){bt.addEventListener("click",function(){progOverride(b,c).exos.splice(+bt.getAttribute("data-i"),1);save();renderProgram();});});
+    document.getElementById("sessAddExo").onclick=function(){progOverride(b,c).exos.push({id:"u"+Date.now().toString(36),name:"",target:"3 × 10",sets:3,unit:"reps",help:""});save();renderProgram();var ni=host.querySelector(".sx-row:last-of-type .sx-name");if(ni)ni.focus();};
+    var sr=document.getElementById("sessReset");if(sr)sr.onclick=function(){if(confirm("Rétablir la séance par défaut ? Les modifications de cette séance seront perdues.")){progReset(b,c);renderProgram();}};
   }
   function thresholdsGet(){if(!state.thresholds)state.thresholds={};return state.thresholds;}
   function fmtPace(mpk){if(!isFinite(mpk)||mpk<=0)return "\u2014";var m=Math.floor(mpk),s=Math.round((mpk-m)*60);if(s===60){m++;s=0;}return m+":"+(s<10?"0":"")+s;}
@@ -3208,7 +3225,6 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
   }
   function renderSettings(){
     var host=document.getElementById("settingsBody");if(!host)return;
-    if(settingsSessSel){renderSessEditor(host);return;}
     var _cat=foodCatalog(),_lf=loggedFoods();
     var ffOpen=settingsFoodOpen||!!settingsFoodSel||settingsFoodNew;
     var _lfk={};_lf.forEach(function(nm){_lfk[nm.toLowerCase()]=1;});
@@ -3432,7 +3448,6 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
         settingsSec("fuel","Carburant de séance",fuelInner,!!settingsSecOpen.fuel),
         !!settingsGrpOpen.g_profil||!!settingsSecOpen.profil||!!settingsSecOpen.seuils||!!settingsSecOpen.fuel)+
       settingsGroup("g_train","🏋️ Entraînement",
-        settingsSec("sess","Séances (personnalisation)",sessInner,!!settingsSecOpen.sess)+
         settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
         settingsSec("objsport","🎯 Objectifs &amp; sports",sportsLibInner+objInner,!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
         settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal),
