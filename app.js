@@ -477,6 +477,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;if(a[i].dlId)pUpdateDeadline(a[i].dlId,{label:nm});break;}save();}
   function objAddSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);break;}setSportU(sid,{on:true});save();}
   function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}save();}
+  function migrateObjLinks(){var objs=cfgObjs(),dls=(pLoad().deadlines||[]),changed=false;objs.forEach(function(o){if(o.dlId||!o.deadline)return;var ex=dls.filter(function(d){return d.label===o.name;})[0];if(ex){o.dlId=ex.id;if(ex.date!==o.deadline)pUpdateDeadline(ex.id,{date:o.deadline});}else{o.dlId=pAddDeadline({date:o.deadline,label:o.name,icon:o.icon||"🏅"});}changed=true;});if(changed)save();}
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var muscuLvl=null;   /* palier muscu affiché (index dans BLOCK_ORDER) ; null = auto (palier en cours) */
   var muscuSessMode=false; /* rubrique muscu en mode "personnaliser les séances" */
@@ -3774,7 +3775,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();syncTri();
+    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();syncTri();migrateObjLinks();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-day");
     maybeShowA2HS();
