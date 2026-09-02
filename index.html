@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=204">
+  <link rel="stylesheet" href="style.css?v=208">
 </head>
 <body>
 
@@ -63,14 +63,13 @@
 
     <!-- ====================== SPORT (muscu + triathlon) ====================== -->
     <section class="view" id="v-sport">
-      <h2 class="page">Sport</h2>
+      <h2 class="page">Définir les objectifs</h2>
       <div id="objectivesTop"></div>
       <div id="gesteMoment"></div>
       <div class="subtabs" id="sportSub"></div>
 
       <div class="sport-pane" id="sportMuscu">
         <h2 class="page pane-title" id="muscuTitle"></h2>
-        <p class="hint">Deux paliers (Construction puis Développement). Navigue entre les paliers avec ‹ ›. Touche une case pour ouvrir la séance — charges de la dernière fois pré-affichées, minuteur de repos intégré.</p>
         <div id="progBlocks"></div>
         <div class="spacer"></div>
         <div id="sessionDetail"></div>
@@ -78,7 +77,6 @@
 
       <div class="sport-pane" id="sportTri" hidden>
         <h2 class="page pane-title" id="triTitle"></h2>
-        <p class="hint">Plan de reprise — 4 semaines (Reprise · Charge · Affinage · Affûtage), 3 séances/sem. Touche une case pour voir la séance et la cocher. (* = affûtage)</p>
         <div id="triProgress"></div>
         <div class="card pad blockcard" id="triPlanCard">
           <button type="button" class="bnd blk-toggle" id="triPlanToggle"><span class="blk-ttl">Plan 4 semaines</span><span class="blk-meta" id="triPlanMeta">0/12</span><span class="bnd-chev">▾</span></button>
@@ -167,7 +165,7 @@
     <button class="tab on" data-view="v-day">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Journal</button>
     <button class="tab" data-view="v-sport">
-      <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Objectif</button>
+      <svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Objectifs</button>
     <button class="tab" data-view="v-prog2">
       <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>Progrès</button>
   </nav>
@@ -188,8 +186,8 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=204"></script>
-  <script src="sports.js?v=204"></script>
-  <script src="app.js?v=204"></script>
+  <script src="data.js?v=208"></script>
+  <script src="sports.js?v=208"></script>
+  <script src="app.js?v=208"></script>
 </body>
 </html>
