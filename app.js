@@ -478,6 +478,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function objAddSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);break;}setSportU(sid,{on:true});save();}
   function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}save();}
   function migrateObjLinks(){var objs=cfgObjs(),dls=(pLoad().deadlines||[]),changed=false;objs.forEach(function(o){if(o.dlId||!o.deadline)return;var ex=dls.filter(function(d){return d.label===o.name;})[0];if(ex){o.dlId=ex.id;if(ex.date!==o.deadline)pUpdateDeadline(ex.id,{date:o.deadline});}else{o.dlId=pAddDeadline({date:o.deadline,label:o.name,icon:o.icon||"🏅"});}changed=true;});if(changed)save();}
+  function curSportForDl(dlId){var o=cfgObjs().filter(function(x){return x.dlId===dlId;})[0];return (o&&(o.sports||[])[0])||"";}
   var blockOpen=null;  /* blocs de séance repliables (Sport) : bloc en cours ouvert par défaut */
   var muscuLvl=null;   /* palier muscu affiché (index dans BLOCK_ORDER) ; null = auto (palier en cours) */
   var muscuSessMode=false; /* rubrique muscu en mode "personnaliser les séances" */
@@ -2921,6 +2922,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return '<div class="set-form" data-form="'+(isNew?"new":d.id)+'">'+
       '<div class="set-form-row"><input class="set-f-icon" maxlength="3" value="'+(d?esc(d.icon||"🎯"):"🎯")+'" aria-label="Emoji"><input class="set-f-label" placeholder="Nom de l\'échéance" value="'+(d?esc(d.label):"")+'"></div>'+
       '<input type="date" class="set-f-date" value="'+(d?esc(d.date):"")+'">'+
+      '<label class="set-f-sportlbl">Concerne un sport ? <span class="muted">(optionnel)</span><select class="set-f-sport"><option value="">— Non, juste un repère</option>'+(typeof SPORTS_LIB!=="undefined"?(SPORTS_LIB.order||[]).map(function(sid){var sp=SPORTS_LIB[sid];if(!sp)return "";return '<option value="'+esc(sid)+'"'+((d&&curSportForDl(d.id)===sid)?" selected":"")+'>'+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</option>';}).join(""):"")+'</select></label>'+
       '<div class="set-form-btns"><button class="btn set-f-save">Enregistrer</button><button class="btn ghost set-f-cancel">Annuler</button></div>'+
     '</div>';
   }
@@ -2933,7 +2935,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var date=(f.querySelector(".set-f-date").value||"").trim();
       var icon=(f.querySelector(".set-f-icon").value||"").trim()||"🎯";
       if(!label||!date){alert("Indique un nom et une date.");return;}
-      if(id==="new")pAddDeadline({label:label,date:date,icon:icon});else pUpdateDeadline(id,{label:label,date:date,icon:icon});
+      var sport=((f.querySelector(".set-f-sport")||{}).value||"").trim();
+      if(id==="new"){var newId=pAddDeadline({label:label,date:date,icon:icon});if(sport){setSportU(sport,{on:true});addObj({id:"obj-"+Date.now(),name:label,icon:icon,sports:[sport],deadline:date,dlId:newId,kind:"sport"});syncTri();}}
+      else{pUpdateDeadline(id,{label:label,date:date,icon:icon});if(sport){setSportU(sport,{on:true});var ex=cfgObjs().filter(function(x){return x.dlId===id;})[0];if(ex){ex.sports=[sport];ex.name=label;ex.deadline=date;ex.kind="sport";save();}else{addObj({id:"obj-"+Date.now(),name:label,icon:icon,sports:[sport],deadline:date,dlId:id,kind:"sport"});}syncTri();}}
       settingsEdit=null;renderSettings();renderCalendars();
     };
   }
