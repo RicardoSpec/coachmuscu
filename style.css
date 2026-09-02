@@ -1531,11 +1531,13 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Édition inline épreuve triathlon sur un objectif de liage */
 .objc-item{margin-bottom:6px}
-.objc-triedit{margin:4px 0 2px 34px;font-size:13px;opacity:.95}
+.objc-triedit{margin:4px 0 2px 0;font-size:13px;opacity:.95;max-width:100%;overflow:hidden}
 .objc-te-h{font-weight:600;opacity:.6;margin:2px 0 6px}
 .objc-te-f{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
-.objc-te-dist{display:flex;gap:8px}
-.objc-te-dist label{display:flex;flex-direction:column;gap:3px;flex:1}
+.objc-te-dist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.objc-te-dist label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.objc-te-dist input{width:100%;min-width:0;box-sizing:border-box}
+.objc-te-f input{width:100%;box-sizing:border-box}
 
 /* Renommage d'objectif inline */
 .objc-ren,.objc-rsave{background:none;border:0;cursor:pointer;font-size:15px;opacity:.5;padding:2px 6px;line-height:1}
