@@ -1626,3 +1626,9 @@ nav.tabs .tab.on{color:var(--primary)}
 .grp-card.collapsed > .grp-body{display:none}
 .grp-body{display:flex;flex-direction:column;gap:10px}
 .grp-body .so-card{margin:0}
+
+/* Section Objectifs : bulle d'info + flux unifié */
+.obj-help{margin:2px 0 14px}
+.obj-help-btn{background:none;border:1px solid var(--line,#d7d7de);border-radius:16px;cursor:pointer;font-size:13px;padding:7px 13px;color:var(--muted,#555)}
+.obj-help-tx{font-size:13px;line-height:1.55;color:var(--muted,#555);margin-top:9px;padding:11px 13px;background:var(--bg2,#f4f4f7);border-radius:11px}
+.objc-box{margin-top:4px}
