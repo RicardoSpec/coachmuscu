@@ -469,6 +469,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var mealSuppOpen={}; /* panneau compléments par repas (💊) — session */
   var teRenaming=false; /* renommage inline de l'aliment dans l'étiquette ouverte */
   var objCreating=false; /* formulaire "nouvel objectif multi-sports" (Réglages) */
+  var objHelpOpen=false; /* bulle d'info de la section Objectifs */
   var editObjId=null; /* objectif en cours de renommage */
   var objExpand={}; /* objectif Multisport déplié (id -> bool) */
   function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
@@ -3216,11 +3217,11 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
             function opts(sel){return (sp.levels||[]).map(function(lv){return '<option value="'+lv.n+'"'+(lv.n===sel?" selected":"")+'>'+lv.n+'</option>';}).join("");}
             return '<div class="objc-sprow"><label class="objc-cb"><input type="checkbox" class="objc-sp" value="'+esc(sid)+'"> '+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</label><span class="objc-nlv" hidden>niv <select class="objc-ncur" data-sp="'+esc(sid)+'">'+opts(c)+'</select> → <select class="objc-ntgt" data-sp="'+esc(sid)+'">'+opts(t)+'</select></span></div>';
           }).join("")+'</div></div>'+
-          '<div class="objc-iconblk" hidden><div class="objc-wip">🚧 Pour l\'instant, seuls les objectifs <b>sport</b> génèrent un programme. Les autres types sont enregistrés (nom + échéance) — leur suivi arrivera dans les autres onglets.</div><label class="act-flabel">Icône</label><div class="objc-icons">'+["🧠","🎨","📌","🎯","🎓","💼"].map(function(e,i){return '<button type="button" class="objc-icon'+(i===0?" on":"")+'">'+e+'</button>';}).join("")+'</div></div>'+
-          '<label class="act-flabel">Échéance (optionnel)</label><input type="date" class="objc-dl">'+
+          '<div class="objc-iconblk" hidden><div class="objc-wip">🚧 Pour l\'instant, seuls les objectifs <b>sport</b> génèrent un programme. Les autres types sont enregistrés (nom + date) — leur suivi arrivera dans les autres onglets.</div><label class="act-flabel">Icône</label><div class="objc-icons">'+["🧠","🎨","📌","🎯","🎓","💼"].map(function(e,i){return '<button type="button" class="objc-icon'+(i===0?" on":"")+'">'+e+'</button>';}).join("")+'</div></div>'+
+          '<label class="act-flabel">Date (optionnel)</label><input type="date" class="objc-dl">'+
           '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
         '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
-        return '<div class="objc-box"><div class="objc-h">🏅 Multisport</div>'+list+form+'</div>';
+        return '<div class="objc-box">'+list+form+'</div>';
       
   }
   function progSportEntryHTML(k){
@@ -3335,9 +3336,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       return '<div class="set-row"><span class="set-ic">'+esc(d.icon||"🎯")+'</span><span class="set-main"><span class="set-lbl">'+esc(d.label)+'</span><span class="set-sub">'+esc(frDateShort(d.date))+' '+dlYear(d.date)+' · J-'+Math.max(0,diffDays(d.date,todayStr()))+'</span></span><button class="set-edit" data-edit="'+d.id+'" aria-label="Modifier">✎</button><button class="set-del" data-del="'+d.id+'" aria-label="Supprimer">🗑</button></div>';
     }).join("");
     var addBlock=settingsEdit==="new"?deadlineForm(null):'<button class="btn ghost set-add" id="setAdd">+ Ajouter une échéance</button>';
-    var objInner='<div class="obj-subhead">Échéances (repères calendrier)</div>'+
-      '<p class="set-note" style="margin-top:0">Ajoute, modifie ou supprime tes échéances. Le compte à rebours et les repères du calendrier se mettent à jour partout (et dans tes autres apps).</p>'+
-      (rows||'<p class="muted" style="font-size:13px">Aucune échéance pour le moment.</p>')+addBlock;
+    var objInner=(rows||'')+(settingsEdit?addBlock:"");
     var sessInner='<p class="set-note">Modifie durablement tes séances : renomme, ajoute, retire ou ajuste les exercices et les séries. (Différent de l\'ajout à la volée dans une séance, qui reste ponctuel.)</p>'+
       BLOCK_ORDER.map(function(b){return '<div class="sess-blk">'+esc(PROGRAM_BLOCKS[b].name)+'</div>'+
         CODES.map(function(c){var p=progOf(b,c);var cust=progIsCustom(b,c);
@@ -3351,7 +3350,6 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       planBlkHTML();
     var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;
     var sportsLibInner=!_sl?'<p class="set-note">Bibliothèque indisponible.</p>':
-      '<p class="set-note">Chaque sport que tu actives devient un objectif dans l\'onglet Objectif : estime ton <b>niveau actuel</b> et ton <b>niveau visé</b> + une <b>échéance</b>, et tu obtiens le programme et ses séances. Pour un triathlon, active nage / vélo / course puis <b>relie-les</b> en un objectif commun dans « Autres objectifs » ci-dessous.</p>'+
       (_sl.order||[]).map(function(id){var sp=_sl[id];if(!sp)return "";
         var uc=sportUCfg(id),open=!!settingsSecOpen["splib_"+id],on=uc.on!==false,maxN=(sp.levels||[]).length-1;
         var cur=Math.max(0,Math.min(maxN,num(uc.cur)||0)),tgt=Math.max(0,Math.min(maxN,num(uc.target)||0));
@@ -3366,7 +3364,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
             var sel='<div class="splib-sel">'+
               '<label>Niveau actuel<select class="splib-cur" data-sp="'+esc(id)+'">'+optsFor(cur)+'</select></label>'+
               '<label>Niveau visé<select class="splib-tgt" data-sp="'+esc(id)+'">'+optsFor(tgt)+'</select></label></div>'+
-              '<div class="splib-obj"><label>Objectif — échéance (optionnel)<input type="date" class="splib-dl" data-sp="'+esc(id)+'" value="'+esc(uc.deadline||"")+'"></label></div>';
+              '<div class="splib-obj"><label>Date (optionnel)<input type="date" class="splib-dl" data-sp="'+esc(id)+'" value="'+esc(uc.deadline||"")+'"></label></div>';
             var prog;
             if(tgt<=cur){prog='<div class="splib-hint">Choisis un niveau visé plus haut que ton niveau actuel pour afficher ton parcours.</div>';}
             else{prog='<div class="splib-prog"><div class="splib-prog-h">Ton parcours — niveau '+cur+' → '+tgt+' ('+(tgt-cur)+' palier'+((tgt-cur)>1?'s':'')+')</div>'+
@@ -3474,7 +3472,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
         !!settingsGrpOpen.g_profil||!!settingsSecOpen.profil||!!settingsSecOpen.seuils||!!settingsSecOpen.fuel)+
       settingsGroup("g_train","🏋️ Entraînement",
         settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
-        settingsSec("objsport","🎯 Définir un objectif",objInner+sportsLibInner+objBlkHTML(),!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
+        settingsSec("objsport","🎯 Objectifs",'<div class="obj-help"><button type="button" class="obj-help-btn">ℹ️ Comment ça marche&nbsp;?</button>'+(objHelpOpen?'<div class="obj-help-tx">Crée un objectif&nbsp;: un nom, une date, et une catégorie (sport, intellectuel, artistique, autre). Si c\'est un <b>sport</b>, choisis lequel et tu obtiens un programme avec des séances. Relie nage&nbsp;+&nbsp;vélo&nbsp;+&nbsp;course en un seul objectif triathlon. Tout se synchronise avec ton app de révisions.</div>':"")+'</div>'+sportsLibInner+objInner+objBlkHTML(),!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
         settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal),
         !!settingsGrpOpen.g_train||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
       settingsGroup("g_track","📊 Suivi & aliments",
@@ -3507,6 +3505,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       if(dn)dn.onchange=saveDist;if(dv)dv.onchange=saveDist;if(dc)dc.onchange=saveDist;})();
     var spd=host.querySelector(".splan-pd");if(spd)spd.onchange=function(){setSportPlan({perDay:num(spd.value)});renderSettings();};
     var smc=host.querySelector(".splan-mc");if(smc)smc.onchange=function(){setSportPlan({maxConsec:num(smc.value)});renderSettings();};
+    var objHelpB=host.querySelector(".obj-help-btn");if(objHelpB)objHelpB.onclick=function(){objHelpOpen=!objHelpOpen;renderSettings();};
     var objAdd=host.querySelector(".objc-add");if(objAdd)objAdd.onclick=function(){objCreating=true;renderSettings();};
     var objCancel=host.querySelector(".objc-cancel");if(objCancel)objCancel.onclick=function(){objCreating=false;renderSettings();};
     host.querySelectorAll(".objc-type").forEach(function(b){b.onclick=function(){
