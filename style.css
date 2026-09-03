@@ -1616,3 +1616,13 @@ nav.tabs .tab.on{color:var(--primary)}
 /* Form échéance : référencer comme sport */
 .set-f-sportlbl{display:flex;flex-direction:column;gap:4px;font-size:13px;margin:8px 0 2px}
 .set-f-sportlbl select{padding:7px 8px}
+
+/* Carte de groupe générique (fusion libre) */
+.grp-card{padding:12px 14px}
+.grp-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.grp-title{margin:0!important;flex:1;min-width:0}
+.grp-split{flex-shrink:0;background:none;border:1px solid var(--line,#d0d0d5);border-radius:14px;cursor:pointer;font-size:12px;padding:5px 10px;white-space:nowrap}
+.grp-split:hover{border-style:solid;opacity:1}
+.grp-card.collapsed > .grp-body{display:none}
+.grp-body{display:flex;flex-direction:column;gap:10px}
+.grp-body .so-card{margin:0}
