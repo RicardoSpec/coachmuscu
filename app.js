@@ -3196,7 +3196,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
           '<div class="splan-note">Le programme des sports se projette sur le calendrier selon ces limites, et se décale si une séance n\'est pas faite.</div></div>';
       
   }
-  function objBlkHTML(){var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;if(!_sl)return "";
+  function objBlkHTML(part){var _sl=(typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)?SPORTS_LIB:null;if(!_sl)return "";
 
         var objs=cfgObjs();
         var list=objs.map(function(o){var spTags=(o.sports||[]).length?(o.sports||[]).map(function(sid){return '<span class="objc-sptag">'+esc((_sl[sid]||{}).icon||"")+' '+esc((_sl[sid]||{}).name||sid)+'</span>';}).join(""):('<span class="objc-sptag">'+esc({intellectuel:"🧠 Intellectuel",artistique:"🎨 Artistique",autre:"📌 Autre"}[o.kind]||"")+'</span>');var dlTag=o.deadline?('<span class="objc-dltag">📅 '+esc(frDateShort(o.deadline))+'</span>'):"";
@@ -3221,6 +3221,8 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
           '<label class="act-flabel">Date (optionnel)</label><input type="date" class="objc-dl">'+
           '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
         '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
+        if(part==="list")return '<div class="objc-box">'+list+'</div>';
+        if(part==="form")return form;
         return '<div class="objc-box">'+list+form+'</div>';
       
   }
@@ -3472,7 +3474,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
         !!settingsGrpOpen.g_profil||!!settingsSecOpen.profil||!!settingsSecOpen.seuils||!!settingsSecOpen.fuel)+
       settingsGroup("g_train","🏋️ Entraînement",
         settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
-        settingsSec("objsport","🎯 Objectifs",'<div class="obj-help"><button type="button" class="obj-help-btn">ℹ️ Comment ça marche&nbsp;?</button>'+(objHelpOpen?'<div class="obj-help-tx">Crée un objectif&nbsp;: un nom, une date, et une catégorie (sport, intellectuel, artistique, autre). Si c\'est un <b>sport</b>, choisis lequel et tu obtiens un programme avec des séances. Relie nage&nbsp;+&nbsp;vélo&nbsp;+&nbsp;course en un seul objectif triathlon. Tout se synchronise avec ton app de révisions.</div>':"")+'</div>'+sportsLibInner+objInner+objBlkHTML(),!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
+        settingsSec("objsport","🎯 Objectifs",'<div class="obj-help"><button type="button" class="obj-help-btn">ℹ️ Comment ça marche&nbsp;?</button>'+(objHelpOpen?'<div class="obj-help-tx">Crée un objectif&nbsp;: un nom, une date, et une catégorie (sport, intellectuel, artistique, autre). Si c\'est un <b>sport</b>, choisis lequel et tu obtiens un programme avec des séances. Relie nage&nbsp;+&nbsp;vélo&nbsp;+&nbsp;course en un seul objectif triathlon. Tout se synchronise avec ton app de révisions.</div>':"")+'</div>'+objBlkHTML("list")+objInner+objBlkHTML("form")+sportsLibInner,!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
         settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal),
         !!settingsGrpOpen.g_train||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
       settingsGroup("g_track","📊 Suivi & aliments",
