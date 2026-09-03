@@ -606,20 +606,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function mergeSelected(){
     var sps=Object.keys(selSports);if(sps.length<2)return;
-    var isTri=sps.indexOf("nage")>=0&&sps.indexOf("velo")>=0&&sps.indexOf("course")>=0&&sps.every(function(k){return k==="nage"||k==="velo"||k==="course";});
-    if(!isTri){alert("Pour l’instant, seule la fusion des 3 disciplines (nage + vélo + course → triathlon) est disponible. La fusion libre arrive à l’étape suivante.");return;}
-    var order=["nage","velo","course"];
-    addObj({id:"obj-"+Date.now(),name:"Triathlon",icon:"🏊",sports:order,deadline:triRaceDate(),kind:"sport",tri:true});
+    var isTri=sps.indexOf("nage")>=0&&sps.indexOf("velo")>=0&&sps.indexOf("course")>=0&&sps.length===3;
+    var name,icon,tri=false;
+    if(isTri){name="Triathlon";icon="🏊";tri=true;sps=["nage","velo","course"];}
+    else{name=((typeof prompt!=="undefined"?prompt("Nom du groupe :",sps.map(function(s){return (SPORTS_LIB[s]||{}).name||s;}).join(" + ")):"")||"").trim();if(!name)return;icon="🏅";}
+    addObj({id:"obj-"+Date.now(),name:name,icon:icon,sports:sps,deadline:(tri?triRaceDate():""),kind:"sport",tri:tri});
     selSports={};syncTri();renderSportTabs();renderSportObjectives();renderCalendars();
   }
-  function renderSportObjectives(){
-    var host=document.getElementById("sportLib");if(!host)return;
-    if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";renderSportActionBar();return;}
-    var cov=coveredSports();
-    var list=(SPORTS_LIB.order||[]).filter(function(id){if(id==="muscu"||cov[id])return false;return sportUCfg(id).on===true;});
-    if(!list.length){host.innerHTML="";renderSportActionBar();return;}
-    var ORDER=[1,2,3,4,5,6,0],DN={1:"Lun",2:"Mar",3:"Mer",4:"Jeu",5:"Ven",6:"Sam",0:"Dim"};
-    host.innerHTML=list.map(function(id){
+  function soCardHTML(id){
       var sp=SPORTS_LIB[id],uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0;
       var paliers=[];for(var lv=cur+1;lv<=tgt;lv++)paliers.push(lv);
       if(!paliers.length){return '<div class="card pad so-card'+(selSports[id]?" sel":"")+(paneCollapse[id]!==false?" collapsed":"")+'" data-sport="'+esc(id)+'"><h2 class="page pane-title">'+esc(sp.icon||"")+' '+esc(sp.name||id)+'</h2><p class="hint" style="margin:8px 0 0">Choisis ton <b>niveau visé</b> dans Réglages → Objectifs &amp; sports : ton programme et tes séances apparaîtront ici.</p></div>';}
@@ -638,7 +632,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '<div class="lvl-mid"><div class="lvl-title">Palier '+lvN+' · '+esc(L.t||"")+'</div><div class="lvl-sub">'+(idx+1)+'/'+paliers.length+'</div></div>'+
           '<button type="button" class="lvl-arrow so-next" data-sp="'+esc(id)+'"'+(idx>=paliers.length-1?" disabled":"")+'>›</button></div>'+
         '<div class="so-dtxt">'+esc(L.d||"")+'</div>'+prog+week+'</div>';
-    }).join("");
+  }
+  function isTriGroup(o){var s=o.sports||[];return s.indexOf("nage")>=0&&s.indexOf("velo")>=0&&s.indexOf("course")>=0;}
+  function groupCardHTML(g){var mem=(g.sports||[]).filter(function(sd){return SPORTS_LIB[sd];});return '<div class="card pad grp-card'+(selSports["grp:"+g.id]?' sel':'')+(paneCollapse["grp:"+g.id]!==false?' collapsed':'')+'" data-group="'+esc(g.id)+'"><div class="grp-hd"><h2 class="page pane-title grp-title" data-group="'+esc(g.id)+'">'+esc(g.icon||"\ud83c\udfc5")+' '+esc(g.name||"Groupe")+'</h2><button type="button" class="grp-split" data-group="'+esc(g.id)+'">\u2934 S\u00e9parer</button></div><div class="grp-body">'+mem.map(soCardHTML).join("")+'</div></div>';}
+  function renderSportObjectives(){
+    var host=document.getElementById("sportLib");if(!host)return;
+    if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";renderSportActionBar();return;}
+    var cov=coveredSports();
+    var groups=cfgObjs().filter(function(o){var s=(o.sports||[]).filter(function(x){return SPORTS_LIB[x];});return s.length>=2&&!isTriGroup(o);});
+    var list=(SPORTS_LIB.order||[]).filter(function(id){if(id==="muscu"||cov[id])return false;return sportUCfg(id).on===true;});
+    if(!groups.length&&!list.length){host.innerHTML="";renderSportActionBar();return;}
+    host.innerHTML=groups.map(groupCardHTML).join("")+list.map(soCardHTML).join("");
     host.querySelectorAll(".so-prev").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp");sportLvlNav[id]=Math.max(0,(sportLvlNav[id]||0)-1);renderSportObjectives();};});
     host.querySelectorAll(".so-next").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),uc=sportUCfg(id),mx=(num(uc.target)-num(uc.cur))-1;sportLvlNav[id]=Math.min(mx,(sportLvlNav[id]||0)+1);renderSportObjectives();};});
     host.querySelectorAll(".so-check").forEach(function(b){b.onclick=function(){var sid=b.getAttribute("data-sp"),iso=b.getAttribute("data-iso");toggleSportSess(sid,iso);renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};});
@@ -651,6 +655,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var _sc=host.querySelector(".sess-cancel");if(_sc)_sc.onclick=function(){sessEdit=null;sessBuf=null;renderSportObjectives();};
     var _sr=host.querySelector(".sess-reset");if(_sr)_sr.onclick=function(){if(sessEdit)clearSportSessCustom(sessEdit.id,sessEdit.lvN);sessEdit=null;sessBuf=null;renderSportObjectives();renderCalendars();};
     host.querySelectorAll(".so-card[data-sport] > .pane-title").forEach(function(t){t.onclick=function(){var c=t.closest(".so-card"),id=c&&c.getAttribute("data-sport");if(id){paneCollapse[id]=(paneCollapse[id]===false);renderSportObjectives();}};});
+    host.querySelectorAll(".grp-title[data-group]").forEach(function(t){t.onclick=function(){var k="grp:"+t.getAttribute("data-group");paneCollapse[k]=(paneCollapse[k]===false);renderSportObjectives();};});
+    host.querySelectorAll(".grp-split").forEach(function(b){b.onclick=function(e){e.stopPropagation();delObj(b.getAttribute("data-group"));syncTri();renderSportObjectives();renderCalendars();};});
     host.querySelectorAll(".so-card[data-sport]").forEach(function(card){
       var id=card.getAttribute("data-sport"),tmr=null;
       function arm(e){var t=e.target;if(t&&t.closest&&t.closest("button,input,select,textarea,a,summary,.lvl-nav,.so-week"))return;tmr=setTimeout(function(){tmr=null;selSports[id]=!selSports[id];if(!selSports[id])delete selSports[id];if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}renderSportObjectives();},600);}
