@@ -1635,3 +1635,23 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Bandeau sport : sport déjà couvert par un objectif (niveau réglé ailleurs) */
 .splib-covered{font-size:12.5px;line-height:1.5;color:var(--muted,#666);background:var(--bg2,#f4f4f7);border-radius:9px;padding:9px 11px;margin:2px 0 4px}
+
+/* Onglet Objectifs : rubriques Sport / Artistique / Autre (symétriques à .learn-h) */
+.sport-h,.misc-h{margin-top:26px}
+/* Cartes lecture seule des objectifs non-sportifs (études, artistique, autre) */
+.objx-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.objx-card{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line,#e6e6ee);background:var(--card,#fff);border-radius:12px;padding:11px 13px}
+.objx-ic{font-size:20px;flex:none}
+.objx-name{flex:1;font-weight:700}
+.objx-dl{flex:none;font-size:11.5px;font-weight:800;color:#0c7a63;background:#d6efe8;border-radius:999px;padding:3px 9px;font-family:var(--mono)}
+.objx-dl.soon{color:#b03636;background:#fbe4e4}
+/* Réglages : repli des bandeaux "réglages par sport" */
+.splib-fold{display:block;width:100%;text-align:left;margin-top:10px;padding:11px 13px;border:1px dashed var(--line,#d7d7e0);border-radius:11px;background:var(--bg2,#f6f6f9);font-weight:700;font-size:14px;cursor:pointer;color:var(--ink,#222)}
+.splib-fold .bnd-chev{display:inline-block;transition:transform .15s;opacity:.55}
+.splib-fold .bnd-chev.open{transform:rotate(180deg)}
+.splib-fold-s{font-weight:500;color:var(--muted,#777);font-size:12.5px}
+.splib-fold-body{margin-top:8px}
+.splib-fold-body.collapsed{display:none}
+
+/* Compte à rebours d'un objectif sportif, en sous-ligne discrète sous le nom */
+.pane-sub{display:block;font-size:12px;font-weight:600;color:var(--muted,#777);margin-top:2px;font-family:var(--mono)}
