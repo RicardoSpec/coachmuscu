@@ -13,7 +13,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Styles externes -->
-  <link rel="stylesheet" href="style.css?v=219">
+  <link rel="stylesheet" href="style.css?v=221">
 </head>
 <body>
 
@@ -63,11 +63,12 @@
 
     <!-- ====================== SPORT (muscu + triathlon) ====================== -->
     <section class="view" id="v-sport">
-      <h2 class="page">Définir les objectifs</h2>
+      <h2 class="page">Objectifs</h2>
       <div id="objectivesTop"></div>
       <div id="gesteMoment"></div>
       <div class="subtabs" id="sportSub"></div>
 
+      <h2 class="page sport-h" id="sportSectionH" hidden>🏅 Sport</h2>
       <div class="sport-pane card pad" id="sportMuscu">
         <h2 class="page pane-title" id="muscuTitle"></h2>
         <div id="progBlocks"></div>
@@ -91,8 +92,9 @@
 
       <div id="sportLib"></div>
 
-      <h2 class="page learn-h">Apprentissage</h2>
+      <h2 class="page learn-h">🎓 Apprentissage</h2>
       <div id="learnPane"></div>
+      <div id="objMiscPane"></div>
     </section>
 
     <!-- ====================== PROGRÈS ====================== -->
@@ -186,8 +188,8 @@
   <!-- ====================== SCRIPTS ======================
        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
        doit être chargé AVANT app.js (logique, rendu, stockage). -->
-  <script src="data.js?v=219"></script>
-  <script src="sports.js?v=219"></script>
-  <script src="app.js?v=219"></script>
+  <script src="data.js?v=221"></script>
+  <script src="sports.js?v=221"></script>
+  <script src="app.js?v=221"></script>
 </body>
 </html>
