@@ -3363,10 +3363,11 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
               return '<div class="splib-lv"><span class="splib-n">'+lv.n+'</span><span class="splib-tx"><b>'+esc(lv.t)+'</b><span class="splib-d">'+esc(lv.d)+'</span></span></div>';
             }).join("")+'</div>';
           }else{
-            var sel='<div class="splib-sel">'+
+            var covered=cfgObjs().some(function(o){return (o.sports||[]).indexOf(id)>=0;});
+            var sel=covered?'<div class="splib-covered">Niveau &amp; date de ce sport se règlent dans l\'objectif qui le contient (déplie-le plus haut).</div>':('<div class="splib-sel">'+
               '<label>Niveau actuel<select class="splib-cur" data-sp="'+esc(id)+'">'+optsFor(cur)+'</select></label>'+
               '<label>Niveau visé<select class="splib-tgt" data-sp="'+esc(id)+'">'+optsFor(tgt)+'</select></label></div>'+
-              '<div class="splib-obj"><label>Date (optionnel)<input type="date" class="splib-dl" data-sp="'+esc(id)+'" value="'+esc(uc.deadline||"")+'"></label></div>';
+              '<div class="splib-obj"><label>Date (optionnel)<input type="date" class="splib-dl" data-sp="'+esc(id)+'" value="'+esc(uc.deadline||"")+'"></label></div>');
             var prog;
             if(tgt<=cur){prog='<div class="splib-hint">Choisis un niveau visé plus haut que ton niveau actuel pour afficher ton parcours.</div>';}
             else{prog='<div class="splib-prog"><div class="splib-prog-h">Ton parcours — niveau '+cur+' → '+tgt+' ('+(tgt-cur)+' palier'+((tgt-cur)>1?'s':'')+')</div>'+
