@@ -470,6 +470,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var teRenaming=false; /* renommage inline de l'aliment dans l'étiquette ouverte */
   var objCreating=false; /* formulaire "nouvel objectif multi-sports" (Réglages) */
   var objHelpOpen=false; /* bulle d'info de la section Objectifs */
+  var splibFoldOpen=false; /* repli des bandeaux "réglages par sport" */
   var editObjId=null; /* objectif en cours de renommage */
   var objExpand={}; /* objectif Multisport déplié (id -> bool) */
   function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
@@ -490,7 +491,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===id);});
     setTimeout(syncStickTop,0);
     if(id==="v-day"){renderDay();renderCalendars();}
-    else if(id==="v-sport"){wbIdx=0;var _o=document.getElementById("objectivesTop");if(_o)_o.innerHTML="";renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderSportObjectives();renderLearn();}
+    else if(id==="v-sport"){wbIdx=0;var _o=document.getElementById("objectivesTop");if(_o)_o.innerHTML="";renderGesteMoment();renderProgram();renderTri();renderSportTabs();renderSportObjectives();renderLearn();renderObjMisc();}
     else if(id==="v-prog2")renderProgress();
     window.scrollTo(0,0);
   }
@@ -639,9 +640,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function renderSportObjectives(){
     var host=document.getElementById("sportLib");if(!host)return;
     if(typeof SPORTS_LIB==="undefined"||!SPORTS_LIB){host.innerHTML="";renderSportActionBar();return;}
-    var cov=coveredSports();
+    var triOn=actEnabled("tri");
     var groups=cfgObjs().filter(function(o){var s=(o.sports||[]).filter(function(x){return SPORTS_LIB[x];});return s.length>=2&&!isTriGroup(o);});
-    var list=(SPORTS_LIB.order||[]).filter(function(id){if(id==="muscu"||cov[id])return false;return sportUCfg(id).on===true;});
+    var inGrp={};groups.forEach(function(g){(g.sports||[]).forEach(function(s){inGrp[s]=1;});});
+    var list=(SPORTS_LIB.order||[]).filter(function(id){
+      if(id==="muscu")return false;
+      if(triOn&&(id==="nage"||id==="velo"||id==="course"))return false;
+      if(inGrp[id])return false;
+      return sportUCfg(id).on===true;
+    });
     if(!groups.length&&!list.length){host.innerHTML="";renderSportActionBar();return;}
     host.innerHTML=groups.map(groupCardHTML).join("")+list.map(soCardHTML).join("");
     host.querySelectorAll(".so-prev").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp");sportLvlNav[id]=Math.max(0,(sportLvlNav[id]||0)-1);renderSportObjectives();};});
@@ -672,8 +679,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
     var mOn=actEnabled("muscu"),tOn=actEnabled("tri");
     if(pm)pm.hidden=!mOn;if(pt)pt.hidden=!tOn;
-    var mt=document.getElementById("muscuTitle");if(mt){var mDl=cfgActs().muscu.deadline;mt.innerHTML='💪 '+esc(actName("muscu"))+(mDl?' · '+esc(frDateShort(mDl)):'')+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>';}
-    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+(tDl?' · J-'+Math.max(0,daysUntil(tDl))+' · '+esc(frDateShort(tDl)):'')+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button>';}
+    var mt=document.getElementById("muscuTitle");if(mt){mt.innerHTML='💪 '+esc(actName("muscu"))+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>';}
+    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button>'+(tDl?'<span class="pane-sub">J-'+Math.max(0,daysUntil(tDl))+' · '+esc(frDateShort(tDl))+'</span>':'');}
+    var _sh=document.getElementById("sportSectionH");if(_sh){var _anySport=mOn||tOn;if(!_anySport&&typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)_anySport=(SPORTS_LIB.order||[]).some(function(id){return id!=="muscu"&&sportUCfg(id).on===true;});_sh.hidden=!_anySport;}
     if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);
     if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);
     if(mt)mt.onclick=function(){paneCollapse.muscu=(paneCollapse.muscu===false);if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);};
@@ -685,9 +693,26 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.innerHTML="";
   }
   function goSport(sel){sportSel=sel;activateTab("v-sport");}
+  /* Cartes (lecture seule) des objectifs personnels d'une catégorie non-sportive, pour l'onglet Objectifs. */
+  function objCustomCardsHTML(kind){
+    var arr=cfgObjs().filter(function(o){return (o.kind||"sport")===kind&&!((o.sports||[]).some(function(x){return typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB[x];}));});
+    if(!arr.length)return "";
+    arr.sort(function(a,b){return (a.deadline||"9999").localeCompare(b.deadline||"9999");});
+    return '<div class="objx-list">'+arr.map(function(o){
+      var dl="";if(o.deadline){var dn=daysUntil(o.deadline);dl='<span class="objx-dl'+(dn<=14?" soon":"")+'">'+(dn>=0?("J-"+dn):("J+"+(-dn)))+' · '+esc(frDateShort(o.deadline))+'</span>';}
+      return '<div class="objx-card"><span class="objx-ic">'+esc(o.icon||"🎯")+'</span><span class="objx-name">'+esc(o.name)+'</span>'+dl+'</div>';
+    }).join("")+'</div>';
+  }
+  function renderObjMisc(){
+    var h=document.getElementById("objMiscPane");if(!h)return;
+    var out="",a=objCustomCardsHTML("artistique"),z=objCustomCardsHTML("autre");
+    if(a)out+='<h2 class="page misc-h">🎨 Artistique</h2>'+a;
+    if(z)out+='<h2 class="page misc-h">🧩 Autre</h2>'+z;
+    h.innerHTML=out;
+  }
   function renderLearn(){var h=document.getElementById("learnPane");if(!h)return;
     var b=dscgBlockHTML(todayStr());
-    h.innerHTML=b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>';}
+    h.innerHTML=(b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>')+objCustomCardsHTML("intellectuel");}
 
    /* ---- Navigation par glissement horizontal entre onglets (aujourd'hui / sport / journal / progrès) ---- */
   function swipeOverlayOpen(){
@@ -3475,7 +3500,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
         !!settingsGrpOpen.g_profil||!!settingsSecOpen.profil||!!settingsSecOpen.seuils||!!settingsSecOpen.fuel)+
       settingsGroup("g_train","🏋️ Entraînement",
         settingsSec("daytypes","Types de jour",dtInner,!!settingsSecOpen.daytypes)+
-        settingsSec("objsport","🎯 Objectifs",'<div class="obj-help"><button type="button" class="obj-help-btn">ℹ️ Comment ça marche&nbsp;?</button>'+(objHelpOpen?'<div class="obj-help-tx">Crée un objectif&nbsp;: un nom, une date, et une catégorie (sport, intellectuel, artistique, autre). Si c\'est un <b>sport</b>, choisis lequel et tu obtiens un programme avec des séances. Relie nage&nbsp;+&nbsp;vélo&nbsp;+&nbsp;course en un seul objectif triathlon. Tout se synchronise avec ton app de révisions.</div>':"")+'</div>'+objBlkHTML("list")+objInner+objBlkHTML("form")+sportsLibInner,!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
+        settingsSec("objsport","🎯 Objectifs",'<div class="obj-help"><button type="button" class="obj-help-btn">ℹ️ Comment ça marche&nbsp;?</button>'+(objHelpOpen?'<div class="obj-help-tx">Crée un objectif&nbsp;: un nom, une date, et une catégorie (sport, intellectuel, artistique, autre). Si c\'est un <b>sport</b>, choisis lequel et tu obtiens un programme avec des séances. Relie nage&nbsp;+&nbsp;vélo&nbsp;+&nbsp;course en un seul objectif triathlon. Tout se synchronise avec ton app de révisions.</div>':"")+'</div>'+objBlkHTML("list")+objInner+objBlkHTML("form")+'<button type="button" class="splib-fold" id="splibFoldBtn"><span class="bnd-chev'+(splibFoldOpen?" open":"")+'">▾</span> Réglages par sport <span class="splib-fold-s">jours · séances · niveaux</span></button><div class="splib-fold-body'+(splibFoldOpen?"":" collapsed")+'">'+sportsLibInner+'</div>',!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
         settingsSec("rgoal","🕸️ Ce qui vaut 100 % sur le radar",rgoalInner,!!settingsSecOpen.rgoal),
         !!settingsGrpOpen.g_train||!!settingsSecOpen.sess||!!settingsSecOpen.daytypes||!!settingsSecOpen.objsport||!!settingsEdit||!!settingsActEdit)+
       settingsGroup("g_track","📊 Suivi & aliments",
@@ -3509,6 +3534,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
     var spd=host.querySelector(".splan-pd");if(spd)spd.onchange=function(){setSportPlan({perDay:num(spd.value)});renderSettings();};
     var smc=host.querySelector(".splan-mc");if(smc)smc.onchange=function(){setSportPlan({maxConsec:num(smc.value)});renderSettings();};
     var objHelpB=host.querySelector(".obj-help-btn");if(objHelpB)objHelpB.onclick=function(){objHelpOpen=!objHelpOpen;renderSettings();};
+    var splibFoldB=host.querySelector("#splibFoldBtn");if(splibFoldB)splibFoldB.onclick=function(){splibFoldOpen=!splibFoldOpen;renderSettings();};
     var objAdd=host.querySelector(".objc-add");if(objAdd)objAdd.onclick=function(){objCreating=true;renderSettings();};
     var objCancel=host.querySelector(".objc-cancel");if(objCancel)objCancel.onclick=function(){objCreating=false;renderSettings();};
     host.querySelectorAll(".objc-type").forEach(function(b){b.onclick=function(){
