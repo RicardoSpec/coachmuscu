@@ -475,10 +475,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   var objExpand={}; /* objectif Multisport déplié (id -> bool) */
   function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
   function addObj(o){cfgObjs().push(o);save();}
-  function delObj(id){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a.splice(i,1);break;}save();}
+  function delObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a[i];a.splice(i,1);break;}if(rm)(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});save();}
   function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;if(a[i].dlId)pUpdateDeadline(a[i].dlId,{label:nm});break;}save();}
   function objAddSport(id,sid){var a=cfgObjs(),dl="";for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);dl=a[i].deadline||"";break;}setSportU(sid,{on:true,deadline:dl});save();}
-  function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}save();}
+  function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});save();}
   /* Modifie l'échéance d'un objectif : propage à o.deadline, à chaque sport, et à l'échéance partagée (dlId). */
   function objSetDeadline(id,date){var a=cfgObjs();date=(date||"").trim();for(var i=0;i<a.length;i++){if(a[i].id===id){var o=a[i];o.deadline=date;(o.sports||[]).forEach(function(s){setSportU(s,{deadline:date});});if(date){if(o.dlId)pUpdateDeadline(o.dlId,{date:date});else o.dlId=pAddDeadline({date:date,label:o.name,icon:((o.kind||"sport")==="sport"?"🏅":(o.icon||"🎯"))});}else if(o.dlId){pRemoveDeadline(o.dlId);o.dlId=null;}break;}}save();}
   /* Rafraîchit les vues de l'onglet Objectif (sous le tiroir Réglages) après une édition d'objectif. */
@@ -508,11 +508,29 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function triLink(){return cfgObjs().filter(function(o){var s=o.sports||[];return s.indexOf("nage")>=0&&s.indexOf("velo")>=0&&s.indexOf("course")>=0;})[0]||null;}
   function syncTri(){var a=cfgActs().tri,has=!!triLink();if(!!a.enabled!==has){a.enabled=has;save();}}
   function migrateTriLink(){var a=cfgActs().tri;if(a&&a.enabled&&!triLink()){addObj({id:"obj-tri-"+Date.now(),name:actName("tri")||"Triathlon",icon:"🏊",sports:["nage","velo","course"],deadline:triRaceDate(),kind:"sport",tri:true});["nage","velo","course"].forEach(function(s){setSportU(s,{on:true});});}}
+  /* Muscu = objectif à part entière (miroir de triLink). Un objectif « muscu » = un objectif solo sur le sport muscu.
+     C'est LUI qui porte le nom + l'échéance du pane Musculation : renommer l'un renomme l'autre. */
+  function muscuLink(){return cfgObjs().filter(function(o){var s=o.sports||[];return s.length===1&&s[0]==="muscu";})[0]||null;}
+  function migrateMuscuLink(){var a=cfgActs().muscu;if(a&&a.enabled&&!muscuLink()){addObj({id:"obj-muscu-"+Date.now(),name:actName("muscu"),icon:"💪",sports:["muscu"],deadline:(a.deadline||""),kind:"sport",musc:true});setSportU("muscu",{on:true});}}
+  /* Nettoyage unique : un sport activé (on:true) rattaché à aucun objectif est un orphelin (son objectif a été
+     supprimé mais le flag on est resté) — on le désactive pour qu'il cesse d'apparaître dans l'onglet Objectif. */
+  function migrateOrphanSportsOnce(){
+    if(!state.config)state.config={};
+    if(state.config._orphanSportsMigV1)return;
+    var objs=cfgObjs(),u=sportsUser(),changed=false;
+    Object.keys(u).forEach(function(id){
+      if(u[id]&&u[id].on===true){
+        var inObj=objs.some(function(o){return (o.sports||[]).indexOf(id)>=0;});
+        if(!inObj){u[id].on=false;changed=true;}
+      }
+    });
+    state.config._orphanSportsMigV1=true;save();
+  }
   function objectives(){
     var out=[],covered={};
     if(actEnabled("tri")){out.push({id:"tri",icon:"🏊",name:actName("tri"),sports:["nage","velo","course"],deadline:triRaceDate()});covered.nage=covered.velo=covered.course=1;}
-    if(actEnabled("muscu")){out.push({id:"muscu",icon:"💪",name:actName("muscu"),sports:["muscu"],deadline:(cfgActs().muscu.deadline||null)});covered.muscu=1;}
-    cfgObjs().forEach(function(o){var sps=(o.sports||[]).slice();var isTL=sps.indexOf("nage")>=0&&sps.indexOf("velo")>=0&&sps.indexOf("course")>=0;if(isTL){sps.forEach(function(sp){covered[sp]=1;});return;}out.push({id:o.id,icon:o.icon||"🎯",name:o.name,sports:sps,deadline:o.deadline||null,custom:true,kind:o.kind||"sport"});sps.forEach(function(sp){covered[sp]=1;});});
+    if(actEnabled("muscu")){out.push({id:"muscu",icon:"💪",name:actName("muscu"),sports:["muscu"],deadline:((muscuLink()||{}).deadline||null)});covered.muscu=1;}
+    cfgObjs().forEach(function(o){var sps=(o.sports||[]).slice();var isTL=sps.indexOf("nage")>=0&&sps.indexOf("velo")>=0&&sps.indexOf("course")>=0,isML=sps.length===1&&sps[0]==="muscu";if(isTL||isML){sps.forEach(function(sp){covered[sp]=1;});return;}out.push({id:o.id,icon:o.icon||"🎯",name:o.name,sports:sps,deadline:o.deadline||null,custom:true,kind:o.kind||"sport"});sps.forEach(function(sp){covered[sp]=1;});});
     if(typeof SPORTS_LIB!=="undefined")(SPORTS_LIB.order||[]).forEach(function(sid){
       if(covered[sid])return;var uc=sportUCfg(sid);
       if(uc.on!==false&&num(uc.target)>num(uc.cur))out.push({id:"sport-"+sid,icon:(SPORTS_LIB[sid]||{}).icon||"•",name:(SPORTS_LIB[sid]||{}).name||sid,sports:[sid],deadline:(uc.deadline||null)});
@@ -605,7 +623,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     if(!actEnabled("muscu"))return "";
     var done=doneCount(),tot=totalSessions(),pct=tot>0?Math.round(done/tot*100):0;
     var N=BLOCK_ORDER.length,ns=nextSession(),curP=ns?(BLOCK_ORDER.indexOf(ns.block)+1):N,blk=ns?PROGRAM_BLOCKS[ns.block]:null;
-    var dl=cfgActs().muscu.deadline||"",dlNote=dl?'<div class="tp-note">Échéance '+esc(frDateShort(dl))+' · J-'+Math.max(0,daysUntil(dl))+'.</div>':"";
+    var ml_=muscuLink(),dl=(ml_&&ml_.deadline)||"",dlNote=dl?'<div class="tp-note">Échéance '+esc(frDateShort(dl))+' · J-'+Math.max(0,daysUntil(dl))+'.</div>':"";
     return '<details class="card pad tp-card tp-fold"><summary class="tp-head">Vers ton objectif force 💪</summary>'+
       '<div class="tp-row"><span class="tp-ic">🏋️</span><span class="tp-lbl">Séances</span><div class="tp-bar"><i style="width:'+pct+'%"></i></div><span class="tp-val">'+done+' / '+tot+'</span></div>'+
       '<div class="tp-note">Palier '+curP+'/'+N+(blk?' · '+esc(blk.name):'')+'.</div>'+dlNote+'</details>';
@@ -675,14 +693,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var pm=document.getElementById("sportMuscu"),pt=document.getElementById("sportTri");
     var mOn=actEnabled("muscu"),tOn=actEnabled("tri");
     if(pm)pm.hidden=!mOn;if(pt)pt.hidden=!tOn;
-    var mt=document.getElementById("muscuTitle");if(mt){var mDl=cfgActs().muscu.deadline||"";mt.innerHTML='💪 '+esc(actName("muscu"))+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>'+(mDl?'<span class="pane-sub">J-'+Math.max(0,daysUntil(mDl))+' · '+esc(frDateShort(mDl))+'</span>':'');}
+    var mt=document.getElementById("muscuTitle");if(mt){var mDl=(muscuLink()||{}).deadline||"";mt.innerHTML='💪 '+esc(actName("muscu"))+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>'+(mDl?'<span class="pane-sub">J-'+Math.max(0,daysUntil(mDl))+' · '+esc(frDateShort(mDl))+'</span>':'');}
     var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button>'+(tDl?'<span class="pane-sub">J-'+Math.max(0,daysUntil(tDl))+' · '+esc(frDateShort(tDl))+'</span>':'');}
     var _sh=document.getElementById("sportSectionH");if(_sh){var _anySport=mOn||tOn;if(!_anySport&&typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)_anySport=(SPORTS_LIB.order||[]).some(function(id){return id!=="muscu"&&sportUCfg(id).on===true;});_sh.hidden=!_anySport;}
     if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);
     if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);
     if(mt)mt.onclick=function(){paneCollapse.muscu=(paneCollapse.muscu===false);if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);};
     if(tt)tt.onclick=function(){paneCollapse.tri=(paneCollapse.tri===false);if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);};
-    if(mt){var mr=mt.querySelector(".pane-ren");if(mr)mr.onclick=function(e){e.stopPropagation();var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",actName("muscu")):"")||"").trim();if(nm){setAct("muscu",{name:nm});renderSportTabs();}};}
+    if(mt){var mr=mt.querySelector(".pane-ren");if(mr)mr.onclick=function(e){e.stopPropagation();var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",actName("muscu")):"")||"").trim();if(nm){setAct("muscu",{name:nm});var _mlr=muscuLink();if(_mlr)renameObj(_mlr.id,nm);renderSportTabs();}};}
     if(tt){var trn=tt.querySelector(".pane-ren");if(trn)trn.onclick=function(e){e.stopPropagation();var _l=triLink(),cur=(_l&&_l.name)||actName("tri");var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",cur):"")||"").trim();if(nm){setAct("tri",{name:nm});var l2=triLink();if(l2)renameObj(l2.id,nm);renderSportTabs();}};}
     if(!host)return;
     if(!mOn&&!tOn){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';return;}
@@ -2745,7 +2763,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function actEnabled(k){return cfgActs()[k].enabled!==false;}
   function actStart(k){return cfgActs()[k].start||(k==="muscu"?MUSCU_START:TRI_START);}
-  function actName(k){return cfgActs()[k].name||(k==="muscu"?"Musculation":"Triathlon");}
+  function actName(k){if(k==="tri"){var _tl=triLink();if(_tl&&_tl.name)return _tl.name;}if(k==="muscu"){var _ml=muscuLink();if(_ml&&_ml.name)return _ml.name;}return cfgActs()[k].name||(k==="muscu"?"Musculation":"Triathlon");}
   function setAct(k,patch){var a=cfgActs()[k];for(var p in patch)if(patch.hasOwnProperty(p))a[p]=patch[p];save();}
   function triRaceDate(){var a=cfgActs().tri;return (a&&a.raceDate)||RACE_DATE;}
   function triTargets(){var a=cfgActs().tri,d=(a&&a.dist)||{},out={};for(var k in TRI_TARGETS){var v=(d[k]!=null&&d[k]!=="")?num(d[k]):TRI_TARGETS[k].v;out[k]={v:(isNaN(v)?TRI_TARGETS[k].v:v),u:TRI_TARGETS[k].u,icon:TRI_TARGETS[k].icon};}return out;}
@@ -3524,7 +3542,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
     host.querySelectorAll(".pact-on").forEach(function(cb){cb.onchange=function(){setAct(cb.getAttribute("data-act"),{enabled:cb.checked});renderSettings();renderCalendars();};});
     var pcur=host.querySelector(".pact-cur");if(pcur)pcur.onchange=function(){setSportU("muscu",{cur:num(pcur.value),lvlBase:sportDoneCount("muscu")});renderSettings();};
     var ptgt=host.querySelector(".pact-tgt");if(ptgt)ptgt.onchange=function(){setSportU("muscu",{target:num(ptgt.value)});renderSettings();};
-    host.querySelectorAll(".pact-dl").forEach(function(s){s.onchange=function(){var k=s.getAttribute("data-act"),v=(s.value||"").trim();if(k==="tri")setAct("tri",{raceDate:v});else setAct("muscu",{deadline:v});renderSettings();renderCalendars();};});
+    host.querySelectorAll(".pact-dl").forEach(function(s){s.onchange=function(){var k=s.getAttribute("data-act"),v=(s.value||"").trim();if(k==="tri")setAct("tri",{raceDate:v});else{var _mld=muscuLink();if(_mld)objSetDeadline(_mld.id,v);else setAct("muscu",{deadline:v});}renderSettings();renderCalendars();};});
     (function(){var dn=host.querySelector(".pact-dnat"),dv=host.querySelector(".pact-dvelo"),dc=host.querySelector(".pact-dcourse");
       function saveDist(){setAct("tri",{dist:{nat:(dn?dn.value:""),velo:(dv?dv.value:""),course:(dc?dc.value:"")}});}
       if(dn)dn.onchange=saveDist;if(dv)dv.onchange=saveDist;if(dc)dc.onchange=saveDist;})();
@@ -3810,7 +3828,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
     });
-    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();syncTri();migrateObjLinks();
+    pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();migrateMuscuLink();syncTri();migrateOrphanSportsOnce();migrateObjLinks();
     if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
     activateTab("v-day");
     maybeShowA2HS();
