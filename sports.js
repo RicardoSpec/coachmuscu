@@ -43,7 +43,7 @@ var SPORTS_LIB = {
 
   /* -------------------------------------------------------------- NATATION */
   nage: {
-    name: "Natation", icon: "🏊", defaultOn: true, metric: "distance en crawl continu (m)",
+    name: "Natation", icon: "🏊", defaultOn: false, metric: "distance en crawl continu (m)",
     levels: [
       { n:0,  t:"Non-nageur",            d:"tu n'es pas à l'aise la tête dans l'eau ou tu ne flottes pas encore.",
               focus:["Immersion et expiration dans l'eau (bulles)", "Flotter en étoile, ventre et dos", "Glisser après poussée au mur"] },
@@ -72,7 +72,7 @@ var SPORTS_LIB = {
 
   /* ---------------------------------------------------------------- COURSE */
   course: {
-    name: "Course à pied", icon: "🏃", defaultOn: true, metric: "distance courue en continu (km)",
+    name: "Course à pied", icon: "🏃", defaultOn: false, metric: "distance courue en continu (km)",
     levels: [
       { n:0,  t:"Sédentaire",       d:"courir quelques minutes t'essouffle.", focus:["Marche rapide régulière", "Alternance marche / trot"] },
       { n:1,  t:"5 min continu",    d:"tu trottines 5 min sans marcher.", focus:["Allonger les blocs de trot", "Respiration régulière"] },
@@ -90,7 +90,7 @@ var SPORTS_LIB = {
 
   /* ------------------------------------------------------------------ VÉLO */
   velo: {
-    name: "Vélo", icon: "🚴", defaultOn: true, metric: "distance en continu (km)",
+    name: "Vélo", icon: "🚴", defaultOn: false, metric: "distance en continu (km)",
     levels: [
       { n:0,  t:"Débutant",        d:"tu roules peu et sans repères.", focus:["Prendre l'habitude de sorties régulières", "Position de base sur le vélo"] },
       { n:1,  t:"10 km",           d:"tu roules 10 km tranquillement.", focus:["Pédalage fluide (cadence 80-90)", "Utiliser les vitesses"] },
