@@ -659,9 +659,12 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var inGrp={};groups.forEach(function(g){(g.sports||[]).forEach(function(s){inGrp[s]=1;});});
     var list=(SPORTS_LIB.order||[]).filter(function(id){
       if(id==="muscu")return false;
-      if(triOn&&(id==="nage"||id==="velo"||id==="course"))return false;
       if(inGrp[id])return false;
-      return sportUCfg(id).on===true;
+      // un objectif SOLO non-tri portant ce sport (ex : un objectif « Vélo » ajouté à part du triathlon)
+      var inSoloObj=cfgObjs().some(function(o){var s=(o.sports||[]).filter(function(x){return SPORTS_LIB[x];});return !isTriGroup(o)&&s.length===1&&s[0]===id;});
+      if(inSoloObj)return true;                                          // objectif dédié -> toujours une carte
+      if(triOn&&(id==="nage"||id==="velo"||id==="course"))return false;  // discipline tri sans objectif dédié -> vit dans le pane Triathlon
+      return sportUCfg(id).on===true;                                    // sinon : activation via la bibliothèque
     });
     if(!groups.length&&!list.length){host.innerHTML="";renderSportActionBar();return;}
     host.innerHTML=groups.map(groupCardHTML).join("")+list.map(soCardHTML).join("");
