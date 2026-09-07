@@ -538,6 +538,9 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     return out;
   }
   var sportLvlNav={};
+  var sportSessOpen=null;   /* "id|iso" de la séance sport ouverte en détail, ou null */
+  var sportSessOpenIdx=0;   /* index de la séance dans le palier (titre + blocs) */
+  var sportSdChrono=false;  /* minuteur affiché dans le détail (état éphémère, non persisté) */
   var sessEdit=null,sessBuf=null; /* édition de séances : {id,lvN} + buffer [{title,blocks:[[label,text]]}] */
   function sessKey(id,lvN){return id+"|"+lvN;}
   function sportSessCustom(id,lvN){var m=state.sportSessCustom||{},v=m[sessKey(id,lvN)];return (v&&v.length)?v:null;}
@@ -641,16 +644,65 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(sportPlanCache===null)rebuildSportPlan();
       var upcoming=[],scan=todayStr(),g=0;
       while(upcoming.length<3&&g<160){var pl=sportPlanCache[scan]||[];if(pl.indexOf(id)>=0&&!sportSessDone(id,scan))upcoming.push(scan);scan=isoOf(addDays(scan,1));g++;}
-      var week=upcoming.length?('<div class="so-next-h">Prochaines séances</div><div class="so-week">'+upcoming.map(function(iso2,i){var ti=(sess[i%Math.max(1,sess.length)]||{}).title||"Séance";return '<button type="button" class="so-check" data-sp="'+esc(id)+'" data-iso="'+iso2+'"><span class="so-d">'+esc(frDateShort(iso2))+'</span><span class="so-t">'+esc(ti)+'</span><span class="so-ck">à faire</span></button>';}).join("")+'</div>'):(days.length?'<div class="so-empty">Séances projetées toutes faites 🎉</div>':'<div class="so-empty">Choisis des jours d\'entraînement (Réglages) pour planifier tes séances.</div>');
+      var week=upcoming.length?('<div class="so-next-h">Prochaines séances</div><div class="so-week">'+upcoming.map(function(iso2,i){var ti=(sess[i%Math.max(1,sess.length)]||{}).title||"Séance";return '<button type="button" class="so-check" data-sp="'+esc(id)+'" data-iso="'+iso2+'" data-sidx="'+(i%Math.max(1,sess.length))+'"><span class="so-d">'+esc(frDateShort(iso2))+'</span><span class="so-t">'+esc(ti)+'</span><span class="so-ck">à faire ›</span></button>';}).join("")+'</div>'):(days.length?'<div class="so-empty">Séances projetées toutes faites 🎉</div>':'<div class="so-empty">Choisis des jours d\'entraînement (Réglages) pour planifier tes séances.</div>');
       var prog='<div class="so-prog"><div class="so-prog-h">Programme du palier'+(isCustom?' <span class="sess-badge">personnalisé</span>':'')+'</div>'+sess.map(function(ss){return '<details class="so-sess2"><summary>'+esc(ss.title)+'</summary>'+ss.blocks.map(function(b){return '<div class="so-blk"><b>'+esc(b[0])+'</b> — '+esc(b[1])+'</div>';}).join("")+'</details>';}).join("")+'</div>';
       return '<div class="card pad so-card'+(selSports[id]?' sel':'')+(paneCollapse[id]!==false?' collapsed':'')+'" data-sport="'+esc(id)+'"><h2 class="page pane-title">'+esc(ic)+' '+esc(nm)+' <span class="so-lv">niv. '+cur+' → '+tgt+'</span>'+dlSub+'</h2>'+
         sportApercuHTML(id)+
         '<div class="lvl-nav"><button type="button" class="lvl-arrow so-prev" data-sp="'+esc(id)+'"'+(idx<=0?" disabled":"")+'>‹</button>'+
           '<div class="lvl-mid"><div class="lvl-title">Palier '+lvN+' · '+esc(L.t||"")+'</div><div class="lvl-sub">'+(idx+1)+'/'+paliers.length+'</div></div>'+
           '<button type="button" class="lvl-arrow so-next" data-sp="'+esc(id)+'"'+(idx>=paliers.length-1?" disabled":"")+'>›</button></div>'+
-        '<div class="so-dtxt">'+esc(L.d||"")+'</div>'+prog+week+'</div>';
+        '<div class="so-dtxt">'+esc(L.d||"")+'</div>'+prog+week+'<button type="button" class="btn ghost so-log-add" data-sp="'+esc(id)+'">＋ Enregistrer une séance</button>'+(function(){if(sportSessOpen){var _o=sportSessOpen.split("|");if(_o[0]===id)return sportSessDetailHTML(id,_o.slice(1).join("|"),sportSessOpenIdx);}return "";})()+'</div>';
   }
   function isTriGroup(o){var s=o.sports||[];return s.indexOf("nage")>=0&&s.indexOf("velo")>=0&&s.indexOf("course")>=0;}
+
+  /* ---- Journal des séances de sport : métriques par sport + détail + historique (parité muscu) ---- */
+  var SPORT_METRICS={
+    nage:    [{k:"dist",l:"Distance",u:"m",ph:"1500"},{k:"dur",l:"Durée",u:"min",ph:"30"},{k:"rpe",l:"Ressenti",u:"/10",ph:"6"}],
+    course:  [{k:"dist",l:"Distance",u:"km",ph:"10"},{k:"dur",l:"Durée",u:"min",ph:"55"},{k:"rpe",l:"Ressenti",u:"/10",ph:"6"}],
+    velo:    [{k:"dist",l:"Distance",u:"km",ph:"40"},{k:"dur",l:"Durée",u:"min",ph:"90"},{k:"rpe",l:"Ressenti",u:"/10",ph:"6"}],
+    escalade:[{k:"voies",l:"Voies / blocs",u:"",ph:"8"},{k:"cota",l:"Cotation max",u:"",ph:"6b",text:true},{k:"dur",l:"Durée",u:"min",ph:"90"}],
+    tennis:  [{k:"dur",l:"Durée",u:"min",ph:"60"},{k:"rpe",l:"Ressenti",u:"/10",ph:"6"}]
+  };
+  function sportMetrics(id){return SPORT_METRICS[id]||[{k:"dur",l:"Durée",u:"min",ph:"45"},{k:"rpe",l:"Ressenti",u:"/10",ph:"6"}];}
+  function sportLogAll(){return state.sportLog||(state.sportLog={});}
+  function sportLogGet(id,iso){return sportLogAll()[id+"|"+iso]||null;}
+  function sportLogSet(id,iso,rec){
+    var k=id+"|"+iso;
+    if(rec)sportLogAll()[k]=rec;else delete sportLogAll()[k];
+    if(!state.sportSess)state.sportSess={};
+    if(rec&&rec.done)state.sportSess[k]=true;else delete state.sportSess[k];
+    sportPlanCache=null;save();
+  }
+  function sportLogHist(id){var m=sportLogAll(),out=[];Object.keys(m).forEach(function(k){var i=k.indexOf("|");if(i>0&&k.slice(0,i)===id){var r=m[k];if(r&&r.done)out.push({iso:k.slice(i+1),rec:r});}});out.sort(function(a,b){return a.iso<b.iso?-1:1;});return out;}
+  function sportHistHTML(id){
+    var met=sportMetrics(id),pm=met[0],hist=sportLogHist(id);
+    if(!hist.length)return '<details class="base-hint"><summary>📊 Historique</summary><div class="exo-hist-empty">Pas encore d\'historique — enregistre une séance, elle s\'affichera ici.</div></details>';
+    var vals=hist.map(function(h){return num(h.rec[pm.k])||0;}),mx=Math.max.apply(null,vals.concat([1]))||1;
+    var rows=hist.slice(-8).map(function(h){var raw=h.rec[pm.k],v=num(raw)||0,pct=mx>0?Math.max(6,Math.round(v/mx*100)):6;var lbl=(raw!=null&&raw!=="")?(raw+(pm.u?(" "+pm.u):"")):"–";return '<div class="hist-row"><span class="hist-wk">'+esc(frDateShort(h.iso))+'</span><span class="hist-bar-wrap"><span class="hist-bar" style="width:'+pct+'%"></span></span><span class="hist-val">'+esc(lbl)+'</span></div>';}).join("");
+    var lr=hist[hist.length-1].rec,parts=met.map(function(f){var v=lr[f.k];return (v!=null&&v!=="")?(f.l+" "+v+(f.u?(" "+f.u):"")):null;}).filter(Boolean);
+    if(lr.note)parts.push("« "+lr.note+" »");
+    var last=parts.length?'<div class="hist-last">Dernière fois : '+esc(parts.join(" · "))+'</div>':"";
+    return '<details class="base-hint" open><summary>📊 Historique</summary><div class="exo-hist">'+rows+'<div class="hist-cap">Barres = '+esc(pm.l.toLowerCase())+' par séance.</div>'+last+'</div></details>';
+  }
+  function sportSessDetailHTML(id,iso,sidx){
+    var sp=SPORTS_LIB[id],uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0;
+    var paliers=[];for(var lv=cur+1;lv<=tgt;lv++)paliers.push(lv);
+    var idx=Math.max(0,Math.min(paliers.length-1,sportLvlNav[id]||0)),lvN=paliers[idx]||tgt;
+    var sess=sportSessions(id,lvN),S=sess[sidx]||sess[0]||{title:"Séance",blocks:[]};
+    var rec=sportLogGet(id,iso)||{},done=!!rec.done,met=sportMetrics(id);
+    var blocksH=(S.blocks&&S.blocks.length)?('<div class="so-prog" style="margin-top:0">'+S.blocks.map(function(b){return '<div class="so-blk"><b>'+esc(b[0])+'</b> — '+esc(b[1])+'</div>';}).join("")+'</div>'):"";
+    var fields=met.map(function(f){var v=(rec[f.k]!=null?rec[f.k]:"");return '<div class="set"><span class="sn">'+esc(f.l)+'</span><span class="setf"><input type="'+(f.text?"text":"number")+'"'+(f.text?"":' inputmode="decimal" step="any"')+' class="so-sd-f" data-k="'+esc(f.k)+'" value="'+esc(String(v))+'" placeholder="'+esc(f.ph||"")+'">'+(f.u?'<b>'+esc(f.u)+'</b>':'')+'</span></div>';}).join("");
+    var chronoBox=sportSdChrono?('<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns"><button data-sec="30">30 s</button><button data-sec="45">45 s</button><button data-sec="60">1:00</button><button class="stop" id="restStop">Stop</button></div></div>'):"";
+    return '<div class="card pad so-sd" data-sp="'+esc(id)+'" data-iso="'+esc(iso)+'">'+
+      '<div class="sd-head"><div><div class="lbl">'+esc(sp.name||id)+' · '+esc(frDateShort(iso))+'</div><h3>'+esc(S.title||"Séance")+'</h3></div>'+
+      '<button type="button" class="so-sd-x" aria-label="Fermer">✕</button></div>'+
+      blocksH+
+      '<label class="so-sd-chrono-t"><input type="checkbox" class="so-sd-chrono"'+(sportSdChrono?" checked":"")+'> ⏱ Minuteur de repos</label>'+chronoBox+
+      '<div class="so-sd-log">'+fields+'<textarea class="so-sd-note" rows="2" placeholder="Note (ressenti, météo, technique…)">'+esc(rec.note||"")+'</textarea></div>'+
+      '<div class="so-sd-acts"><button type="button" class="btn '+(done?"ghost":"accent")+' so-sd-save">'+(done?"✓ Enregistrer les modifs":"Enregistrer &amp; marquer faite")+'</button>'+(done?'<button type="button" class="btn ghost so-sd-undo">Annuler la séance</button>':'')+'</div>'+
+      sportHistHTML(id)+
+      '</div>';
+  }
   function groupCardHTML(g){var mem=(g.sports||[]).filter(function(sd){return SPORTS_LIB[sd];});return '<div class="card pad grp-card'+(selSports["grp:"+g.id]?' sel':'')+(paneCollapse["grp:"+g.id]!==false?' collapsed':'')+'" data-group="'+esc(g.id)+'"><div class="grp-hd"><h2 class="page pane-title grp-title" data-group="'+esc(g.id)+'">'+esc(g.icon||"\ud83c\udfc5")+' '+esc(g.name||"Groupe")+'</h2><button type="button" class="grp-split" data-group="'+esc(g.id)+'">\u2934 S\u00e9parer</button></div><div class="grp-body">'+mem.map(function(sd){return soCardHTML(sd,null);}).join("")+'</div></div>';}
   function renderSportObjectives(){
     var host=document.getElementById("sportLib");if(!host)return;
@@ -671,7 +723,16 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.innerHTML=groups.map(groupCardHTML).join("")+list.map(function(id){return soCardHTML(id,soloObjOf(id));}).join("");
     host.querySelectorAll(".so-prev").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp");sportLvlNav[id]=Math.max(0,(sportLvlNav[id]||0)-1);renderSportObjectives();};});
     host.querySelectorAll(".so-next").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),uc=sportUCfg(id),mx=(num(uc.target)-num(uc.cur))-1;sportLvlNav[id]=Math.min(mx,(sportLvlNav[id]||0)+1);renderSportObjectives();};});
-    host.querySelectorAll(".so-check").forEach(function(b){b.onclick=function(){var sid=b.getAttribute("data-sp"),iso=b.getAttribute("data-iso");toggleSportSess(sid,iso);renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};});
+    host.querySelectorAll(".so-log-add").forEach(function(b){b.onclick=function(){var sid=b.getAttribute("data-sp"),iso=todayStr(),key=sid+"|"+iso;if(sportSessOpen===key){sportSessOpen=null;}else{sportSessOpen=key;sportSessOpenIdx=0;sportSdChrono=false;}stopRest();renderSportObjectives();var el=host.querySelector(".so-sd");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"nearest"});};});
+    host.querySelectorAll(".so-check").forEach(function(b){b.onclick=function(){var sid=b.getAttribute("data-sp"),iso=b.getAttribute("data-iso"),sx=num(b.getAttribute("data-sidx"))||0,key=sid+"|"+iso;if(sportSessOpen===key){sportSessOpen=null;}else{sportSessOpen=key;sportSessOpenIdx=sx;sportSdChrono=false;}stopRest();renderSportObjectives();var el=host.querySelector(".so-sd");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"nearest"});};});
+    function readSdInto(rec){document.querySelectorAll(".so-sd .so-sd-f").forEach(function(inp){var k=inp.getAttribute("data-k"),v=(inp.value||"").trim();if(v!=="")rec[k]=v;else delete rec[k];});var nt=document.querySelector(".so-sd .so-sd-note");if(nt){var nv=(nt.value||"").trim();if(nv)rec.note=nv;else delete rec.note;}return rec;}
+    function sdKey(){if(!sportSessOpen)return null;var o=sportSessOpen.split("|");return {sid:o[0],iso:o.slice(1).join("|")};}
+    var _sdx=host.querySelector(".so-sd-x");if(_sdx)_sdx.onclick=function(){var k=sdKey();if(k){var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);if(Object.keys(rec).length)sportLogSet(k.sid,k.iso,rec);}sportSessOpen=null;stopRest();renderSportObjectives();};
+    var _sdc=host.querySelector(".so-sd-chrono");if(_sdc)_sdc.onchange=function(){var k=sdKey();if(k){var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);if(Object.keys(rec).length)sportLogSet(k.sid,k.iso,rec);}sportSdChrono=_sdc.checked;if(!sportSdChrono)stopRest();renderSportObjectives();};
+    host.querySelectorAll(".so-sd .rest-btns button[data-sec]").forEach(function(x){x.onclick=function(){startRest(parseInt(x.getAttribute("data-sec"),10));};});
+    var _sdstop=host.querySelector(".so-sd #restStop");if(_sdstop)_sdstop.onclick=function(){stopRest();};
+    var _sdsave=host.querySelector(".so-sd-save");if(_sdsave)_sdsave.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);rec.done=true;rec.date=k.iso;sportLogSet(k.sid,k.iso,rec);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
+    var _sdu=host.querySelector(".so-sd-undo");if(_sdu)_sdu.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);rec.done=false;sportLogSet(k.sid,k.iso,rec);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
     host.querySelectorAll(".sess-edit").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-sp"),lv=num(b.getAttribute("data-lv"));sessEdit={id:id,lvN:lv};sessBuf=cloneSess(sportSessions(id,lv));renderSportObjectives();};});
     host.querySelectorAll(".sess-add-s").forEach(function(b){b.onclick=function(){readSessBuf();(sessBuf=sessBuf||[]).push({title:"Nouvelle séance",blocks:[["Échauffement",""],["Bloc principal",""],["Retour au calme",""]]});renderSportObjectives();};});
     host.querySelectorAll(".sess-del-s").forEach(function(b){b.onclick=function(){readSessBuf();var si=num(b.getAttribute("data-si"));if(sessBuf)sessBuf.splice(si,1);renderSportObjectives();};});
