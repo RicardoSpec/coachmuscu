@@ -1666,3 +1666,36 @@ nav.tabs .tab.on{color:var(--primary)}
 
 /* Compte à rebours d'un objectif sportif, en sous-ligne discrète sous le nom */
 .pane-sub{display:block;font-size:12px;font-weight:600;color:var(--muted,#777);margin-top:2px;font-family:var(--mono)}
+
+/* ---- Objectif échu : échéance dépassée (J+n) ---- */
+.pane-sub.past{color:var(--muted,#777);opacity:.75}
+.race-over{border-left:3px solid var(--primary,#2b6cb0);margin-bottom:10px}
+.race-over .ro-h{font-weight:700;font-size:14px}
+.race-over .ro-p{margin:6px 0 0;font-size:13px;color:var(--muted,#777);line-height:1.5}
+
+/* ---- Zones FC par séance (Z1→Z5) : minutes saisies + part du temps ---- */
+.hrz{margin:10px 0 0;border:1px solid var(--line,#e4e4e4);border-radius:10px;padding:8px 10px;background:var(--bg2,#fafafa)}
+.hrz>summary{cursor:pointer;font-weight:700;font-size:13px;list-style:none}
+.hrz>summary::-webkit-details-marker{display:none}
+.hrz-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.hrz-f{display:flex;flex-direction:column;align-items:center;gap:3px}
+.hrz-f input{width:100%;min-width:0;text-align:center;padding:6px 2px;border:1px solid var(--line,#e4e4e4);border-radius:8px;font-size:15px;background:#fff}
+.hrz-f input:focus{outline:2px solid var(--focus,#2b6cb0);outline-offset:1px}
+.hrz-k{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;border-radius:6px;padding:1px 6px}
+.hrz-n{font-size:10px;color:var(--muted,#777)}
+.hrz-k.z1,.hrz-seg.z1{background:#9ec5e8}
+.hrz-k.z2,.hrz-seg.z2{background:#3f9d5a}
+.hrz-k.z3,.hrz-seg.z3{background:#e0a52b}
+.hrz-k.z4,.hrz-seg.z4{background:#e2703a}
+.hrz-k.z5,.hrz-seg.z5{background:#c0392b}
+.hrz-live,.hrz-agg{margin-top:10px}
+.hrz-bar{display:flex;height:20px;border-radius:6px;overflow:hidden;background:var(--line,#e4e4e4)}
+.hrz-seg{display:flex;align-items:center;justify-content:center;min-width:0}
+.hrz-seg b{font-size:10px;font-weight:700;color:#fff;font-family:var(--mono);white-space:nowrap}
+.hrz-verdict{margin-top:6px;font-size:12px;font-weight:700}
+.hrz-verdict.ok{color:#2f7d4f}
+.hrz-verdict.warn{color:#b45309}
+.hrz-empty,.hrz-cap{font-size:12px;color:var(--muted,#777)}
+.hrz-cap{margin-top:4px}
+.hrz-help{margin:8px 0 0;font-size:12px;color:var(--muted,#777);line-height:1.5}
+.hrz-agg-t{font-size:12px;font-weight:700;margin-bottom:6px}
