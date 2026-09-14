@@ -133,12 +133,112 @@ var PROGRAM2 = {
   ]}
 };
 
-/* ---------- Blocs & codes ---------- */
-var PROGRAM_BLOCKS = {
-  b1:{name:"Construction", short:"B1", weeks:5, prog:PROGRAM},
-  b2:{name:"Développement", short:"B2", weeks:4, prog:PROGRAM2}
+
+/* ---------- Cycle endurance sans date de course (b3 → b4 → b5) ----------
+   Séquence : Technique (8 sem) → Foncier (12 sem) → Spécifique (10 sem).
+   Tout est exprimé en MINUTES (unit:"min") : l'intensité se lit dans les zones FC
+   de la séance, pas dans une charge. Z2 = allure conversation, c'est le socle. */
+var PROGRAM3 = {
+  A:{title:"Séance A — Natation · technique", sub:"Technique", exos:[
+    {id:"t3a1",name:"Échauffement souple",target:"1 × 10 min",sets:1,unit:"min",help:"Brasse ou crawl très facile, en Z1. <b>But :</b> réveiller les épaules, pas s'entraîner."},
+    {id:"t3a2",name:"Éducatifs (rattrapé, superman)",target:"4 × 3 min",sets:4,unit:"min",help:"Une main attend l'autre devant avant de tirer. <b>But :</b> installer le temps de glisse."},
+    {id:"t3a3",name:"Crawl continu contrôlé",target:"3 × 5 min",sets:3,unit:"min",help:"Respiration tous les 3 temps, tu ralentis plutôt que de t'arrêter. <b>But :</b> tenir la technique sur la durée."},
+    {id:"t3a4",name:"Retour au calme",target:"1 × 5 min",sets:1,unit:"min",help:"Brasse tranquille, souffle long."}
+  ]},
+  B:{title:"Séance B — Vélo · cadence & position", sub:"Cadence", exos:[
+    {id:"t3b1",name:"Montée en régime",target:"1 × 15 min",sets:1,unit:"min",help:"Petit braquet, on laisse le corps se mettre en route."},
+    {id:"t3b2",name:"Cadence 95-100 tr/min",target:"5 × 5 min",sets:5,unit:"min",help:"Braquet léger, jambes rapides et rondes, buste calme. <b>But :</b> économiser les jambes pour la course qui suit."},
+    {id:"t3b3",name:"Endurance Z2",target:"1 × 25 min",sets:1,unit:"min",help:"Allure conversation. C'est ici que se construit le moteur."},
+    {id:"t3b4",name:"Retour au calme",target:"1 × 10 min",sets:1,unit:"min",help:"Z1, cadence libre."}
+  ]},
+  C:{title:"Séance C — Course · foulée", sub:"Foulée", exos:[
+    {id:"t3c1",name:"Footing Z2",target:"1 × 20 min",sets:1,unit:"min",help:"Tu dois pouvoir parler en phrases complètes. Si non : ralentis."},
+    {id:"t3c2",name:"Éducatifs (genoux, talons-fesses)",target:"4 × 2 min",sets:4,unit:"min",help:"Alterne 30 s d'éducatif / 90 s de footing. <b>But :</b> foulée plus haute, appuis plus vifs."},
+    {id:"t3c3",name:"Lignes droites",target:"6 × 20 s",sets:6,unit:"sec",help:"Accélérations progressives, jamais en sprint. Récup en marchant."},
+    {id:"t3c4",name:"Retour au calme",target:"1 × 8 min",sets:1,unit:"min",help:"Très facile, Z1."}
+  ]},
+  D:{title:"Séance D — Renfo & mobilité", sub:"Renfo", exos:[
+    {id:"t3d1",name:"Gainage ventral",target:"3 × 45 s",sets:3,unit:"sec",help:"Bassin en rétroversion, pas de creux lombaire. <b>Cible :</b> transverse."},
+    {id:"t3d2",name:"Gainage latéral",target:"3 × 40 s/côté",sets:3,unit:"sec",help:"Hanches hautes. <b>Cible :</b> obliques — c'est ce qui tient la foulée en fin de course."},
+    {id:"t3d3",name:"Fentes marchées",target:"3 × 12",sets:3,unit:"reps",base:"total",help:"Genou arrière vers le sol, buste droit. <b>Cible :</b> fessiers, quadriceps."},
+    {id:"t3d4",name:"Mobilité hanches & chevilles",target:"1 × 8 min",sets:1,unit:"min",help:"Chevilles souples = moins de perte d'énergie à chaque appui."}
+  ]}
 };
-var BLOCK_ORDER = ["b1","b2"];
+var PROGRAM4 = {
+  A:{title:"Séance A — Natation · volume", sub:"Volume", exos:[
+    {id:"t4a1",name:"Échauffement",target:"1 × 10 min",sets:1,unit:"min",help:"Crawl souple, respiration bilatérale."},
+    {id:"t4a2",name:"Crawl continu",target:"4 × 8 min",sets:4,unit:"min",help:"Allure régulière, r 45 s. <b>But :</b> accumuler du volume propre, pas du chrono."},
+    {id:"t4a3",name:"Éducatif de rappel",target:"2 × 3 min",sets:2,unit:"min",help:"Rattrapé ou rotation, pour recadrer la technique quand la fatigue arrive."},
+    {id:"t4a4",name:"Retour au calme",target:"1 × 5 min",sets:1,unit:"min",help:"Brasse."}
+  ]},
+  B:{title:"Séance B — Vélo long Z2", sub:"Sortie longue", exos:[
+    {id:"t4b1",name:"Montée en régime",target:"1 × 15 min",sets:1,unit:"min",help:"Z1 puis Z2, cadence ~90."},
+    {id:"t4b2",name:"Endurance Z2 continue",target:"1 × 90 min",sets:1,unit:"min",help:"La séance clé du bloc. Reste en Z2 même en côte : change de braquet plutôt que de forcer."},
+    {id:"t4b3",name:"Retour au calme",target:"1 × 10 min",sets:1,unit:"min",help:"Z1, et on mange dans l'heure qui suit."}
+  ]},
+  C:{title:"Séance C — Course longue Z2", sub:"Sortie longue", exos:[
+    {id:"t4c1",name:"Footing Z2",target:"1 × 60 min",sets:1,unit:"min",help:"Une seule consigne : tenir la conversation du début à la fin."},
+    {id:"t4c2",name:"Lignes droites",target:"4 × 20 s",sets:4,unit:"sec",help:"En fin de séance, pour rappeler de la vitesse aux jambes."},
+    {id:"t4c3",name:"Étirements légers",target:"1 × 5 min",sets:1,unit:"min",help:"Doux, jamais en force sur muscle fatigué."}
+  ]},
+  D:{title:"Séance D — Course · côtes", sub:"Force", exos:[
+    {id:"t4d1",name:"Footing d'échauffement",target:"1 × 20 min",sets:1,unit:"min",help:"Z1-Z2."},
+    {id:"t4d2",name:"Côtes courtes",target:"8 × 45 s",sets:8,unit:"sec",help:"Pente modérée, foulée courte et active. Récup en redescendant en marchant. <b>But :</b> force sans impact, moins traumatisant qu'une séance de vitesse."},
+    {id:"t4d3",name:"Footing retour",target:"1 × 15 min",sets:1,unit:"min",help:"Z1."}
+  ]},
+  E:{title:"Séance E — Renfo tronc & jambes", sub:"Renfo", exos:[
+    {id:"t4e1",name:"Gainage ventral",target:"3 × 60 s",sets:3,unit:"sec",help:"Progression du bloc 1 : même posture, plus long."},
+    {id:"t4e2",name:"Pont fessier",target:"3 × 15",sets:3,unit:"reps",base:"total",help:"Pousse dans les talons, serre les fessiers en haut. <b>Cible :</b> chaîne postérieure."},
+    {id:"t4e3",name:"Squat",target:"4 × 12",sets:4,unit:"reps",base:"total",help:"Amplitude complète, dos neutre. <b>Cible :</b> quadriceps, fessiers."},
+    {id:"t4e4",name:"Tirage élastique",target:"3 × 15",sets:3,unit:"reps",base:"total",help:"Coudes le long du corps, omoplates serrées. <b>Cible :</b> dos — équilibre les épaules sollicitées en crawl."}
+  ]}
+};
+var PROGRAM5 = {
+  A:{title:"Séance A — Natation · allure course", sub:"Allure", exos:[
+    {id:"t5a1",name:"Échauffement",target:"1 × 10 min",sets:1,unit:"min",help:"Crawl progressif."},
+    {id:"t5a2",name:"Blocs à l'allure visée",target:"3 × 8 min",sets:3,unit:"min",help:"L'allure que tu veux tenir sur 1500 m, r 1 min. <b>But :</b> que cette allure devienne confortable."},
+    {id:"t5a3",name:"Départs & sighting",target:"4 × 2 min",sets:4,unit:"min",help:"Relève les yeux ½ seconde tous les ~6 mouvements, comme en mer."},
+    {id:"t5a4",name:"Retour au calme",target:"1 × 5 min",sets:1,unit:"min",help:"Brasse."}
+  ]},
+  B:{title:"Séance B — Vélo · seuil", sub:"Seuil", exos:[
+    {id:"t5b1",name:"Échauffement",target:"1 × 20 min",sets:1,unit:"min",help:"Z1 → Z2, plus 3 accélérations de 30 s."},
+    {id:"t5b2",name:"Blocs Z4",target:"4 × 8 min",sets:4,unit:"min",help:"Dur mais régulier, r 4 min en Z1. <b>But :</b> repousser le seuil. Deux séances dures par semaine maximum, le reste en Z2."},
+    {id:"t5b3",name:"Retour au calme",target:"1 × 15 min",sets:1,unit:"min",help:"Z1, jambes qui tournent."}
+  ]},
+  C:{title:"Séance C — Brick vélo → course", sub:"Enchaînement", exos:[
+    {id:"t5c1",name:"Vélo Z2/Z3",target:"1 × 60 min",sets:1,unit:"min",help:"Dernières 10 min à l'allure visée sur le M."},
+    {id:"t5c2",name:"Course enchaînée",target:"1 × 20 min",sets:1,unit:"min",help:"Départ dans les 3 min après le vélo. Jambes en coton les 5 premières minutes : c'est normal, c'est exactement ce qu'on entraîne."},
+    {id:"t5c3",name:"Retour au calme",target:"1 × 5 min",sets:1,unit:"min",help:"Marche ou footing Z1."}
+  ]},
+  D:{title:"Séance D — Course · seuil", sub:"Seuil", exos:[
+    {id:"t5d1",name:"Échauffement",target:"1 × 15 min",sets:1,unit:"min",help:"Z2 + 4 lignes droites."},
+    {id:"t5d2",name:"Blocs Z4",target:"5 × 4 min",sets:5,unit:"min",help:"Allure que tu tiendrais ~1 h en course, r 2 min footing. <b>But :</b> gagner du temps sur le 10 km final."},
+    {id:"t5d3",name:"Retour au calme",target:"1 × 10 min",sets:1,unit:"min",help:"Z1."}
+  ]},
+  E:{title:"Séance E — Course longue à finish", sub:"Sortie longue", exos:[
+    {id:"t5e1",name:"Footing Z2",target:"1 × 50 min",sets:1,unit:"min",help:"Vraiment facile — c'est la partie qui construit."},
+    {id:"t5e2",name:"Fin à l'allure course",target:"1 × 15 min",sets:1,unit:"min",help:"Sur jambes déjà fatiguées. <b>But :</b> apprendre à tenir l'allure quand ça coûte."},
+    {id:"t5e3",name:"Retour au calme",target:"1 × 5 min",sets:1,unit:"min",help:"Z1."}
+  ]},
+  F:{title:"Séance F — Renfo court", sub:"Renfo", exos:[
+    {id:"t5f1",name:"Gainage ventral",target:"3 × 45 s",sets:3,unit:"sec",help:"Court et propre : en bloc spécifique, le renfo entretient, il ne fatigue pas."},
+    {id:"t5f2",name:"Fentes sautées",target:"3 × 10",sets:3,unit:"reps",base:"total",help:"Réception souple, genou dans l'axe. <b>Cible :</b> puissance des appuis."},
+    {id:"t5f3",name:"Mollets debout",target:"3 × 20",sets:3,unit:"reps",base:"total",help:"Amplitude complète, lent à la descente. <b>Cible :</b> mollets, tendon d'Achille."}
+  ]}
+};
+
+/* ---------- Blocs & codes ----------
+   codes = séances de la semaine POUR CE BLOC (4, 5 ou 6). CODES reste le défaut
+   historique pour tout bloc qui n'en déclare pas. Enchaînement séquentiel : pas de
+   date d'arrivée figée, le bloc suivant démarre quand le précédent est terminé. */
+var PROGRAM_BLOCKS = {
+  b1:{name:"Construction", short:"B1", weeks:5,  codes:["A","B","C","D"],                 prog:PROGRAM},
+  b2:{name:"Développement", short:"B2", weeks:4,  codes:["A","B","C","D"],                 prog:PROGRAM2},
+  b3:{name:"Technique",    short:"B3", weeks:8,  codes:["A","B","C","D"],                 prog:PROGRAM3},
+  b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
+  b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5}
+};
+var BLOCK_ORDER = ["b1","b2","b3","b4","b5"];
 var CODES = ["A","B","C","D"];
 
 /* ---------- Dates d'ancrage ---------- */
@@ -150,13 +250,13 @@ var TRI_START   = "2026-08-17";  /* Triathlon — REPRISE : semaine 1 (semaine 4
    ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
    Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
 var TRAIN_TEMPLATE = {
-  lun:{type:"muscu", code:"A"},
-  mar:{type:"tri",   disc:"nat"},
-  mer:{type:"muscu", code:"B"},
-  jeu:{type:"tri",   disc:"velo"},
-  ven:{type:"muscu", code:"C"},
-  sam:{type:"tri",   disc:"course"},
-  dim:{type:"muscu", code:"D"}
+  lun:{type:"muscu"},
+  mar:{type:"muscu"},
+  mer:{type:"muscu"},
+  jeu:{type:"muscu"},
+  ven:{type:"muscu"},
+  sam:{type:"muscu"},
+  dim:null
 };
 
 /* ---------- États possibles d'un jour (couleurs gérées dans le CSS) ---------- */
