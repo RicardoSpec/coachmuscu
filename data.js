@@ -12,7 +12,7 @@ var APPS = [
   {name:"L'Atelier — orthographe",    icon:"✏️", ready:true, url:"https://ricardospec.github.io/Lateliergram/"},
   {name:"The Workbook — anglais",     icon:"🇬🇧", ready:true, url:"https://ricardospec.github.io/English-Fly/"},
   {name:"Mémoire & révisions — DSCG", icon:"📚", ready:true, url:"https://ricardospec.github.io/Mouche-Universit-/"},
-  {name:"Grand livre — budget",       icon:"💶", ready:true, url:"https://ricardospec.github.io/Budgetisation/"},
+  {name:"Grand livre — budget",       icon:"💶", ready:true, url:"https://ricardospec.github.io/Budgetisation/"},   {name:"DailyR",                     icon:"📆", ready:true, url:"https://ricardospec.github.io/DailyR/"},
   {name:"Espagnol",                   icon:"🇪🇸", ready:false}
 ];
 
