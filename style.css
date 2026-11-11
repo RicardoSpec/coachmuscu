@@ -1699,3 +1699,11 @@ nav.tabs .tab.on{color:var(--primary)}
 .hrz-cap{margin-top:4px}
 .hrz-help{margin:8px 0 0;font-size:12px;color:var(--muted,#777);line-height:1.5}
 .hrz-agg-t{font-size:12px;font-weight:700;margin-bottom:6px}
+
+/* Tickets d'entrée (piscine / escalade) */
+.tix-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.tix-row+.tix-row{border-top:1px solid var(--line)}
+.tix-nm{flex:1;font-weight:600}
+.tix-b{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg2,#fff);font-size:20px;line-height:1;cursor:pointer}
+.tix-n{width:64px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg2,#fff)}
+.tix-row.low .tix-n{border-color:#d9822b;color:#b45f06;font-weight:700}
