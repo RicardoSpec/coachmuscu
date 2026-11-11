@@ -265,9 +265,11 @@ var PROGRAM_BLOCKS = {
   b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
   b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
   b6:{name:"Développement haut du corps", short:"B6", weeks:2, codes:["A","C"], prog:PROGRAM6,
-       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille)."}
+       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille)."},
+  b7:{name:"Entretien haut du corps", short:"B7", weeks:8, codes:["A","C"], prog:PROGRAM6,
+       focus:"Même programme que B6, étalé sur la durée : surcharge progressive (+1-2 reps, puis +2 kg quand toutes les séries sont réussies). C'est la régularité, pas 2 semaines, qui construit le haut du corps. À décaler ou arrêter quand tu veux."}
 };
-var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6"];
+var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6","b7"];
 var CODES = ["A","B","C","D"];
 
 /* ---------- Dates d'ancrage ---------- */
