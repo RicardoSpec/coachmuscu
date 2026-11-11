@@ -501,6 +501,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
   function addObj(o){cfgObjs().push(o);save();}
   function delObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a[i];a.splice(i,1);break;}if(rm)(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});save();}
+  /* ---- Archivage d'un objectif (ex : triathlon passé) : sorti de l'onglet Objectif, historique conservé, restaurable (Réglages). ---- */
+  function cfgArc(){if(!state.config)state.config={};if(!state.config.objectivesArchive)state.config.objectivesArchive=[];return state.config.objectivesArchive;}
+  function archiveObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a.splice(i,1)[0];break;}if(!rm)return;rm.archivedOn=todayStr();cfgArc().push(rm);(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});syncTri();save();}
+  function restoreObj(id){var r=cfgArc(),rm=null;for(var i=0;i<r.length;i++)if(r[i].id===id){rm=r.splice(i,1)[0];break;}if(!rm)return;delete rm.archivedOn;cfgObjs().push(rm);(rm.sports||[]).forEach(function(sid){setSportU(sid,{on:true,deadline:rm.deadline||""});});syncTri();save();}
+  function arcBlkHTML(){var a=cfgArc();if(!a.length)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
   function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;if(a[i].dlId)pUpdateDeadline(a[i].dlId,{label:nm});break;}save();}
   function objAddSport(id,sid){var a=cfgObjs(),dl="";for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);dl=a[i].deadline||"";break;}setSportU(sid,{on:true,deadline:dl});save();}
   function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});save();}
@@ -821,13 +826,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var mOn=actEnabled("muscu"),tOn=actEnabled("tri");
     if(pm)pm.hidden=!mOn;if(pt)pt.hidden=!tOn;
     var mt=document.getElementById("muscuTitle");if(mt){var mDl=(muscuLink()||{}).deadline||"";mt.innerHTML='💪 '+esc(actName("muscu"))+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>'+(mDl?'<span class="pane-sub'+(dlPast(mDl)?' past':'')+'">'+dlTxt(mDl)+' · '+esc(frDateShort(mDl))+'</span>':'');}
-    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button>'+(tDl?'<span class="pane-sub'+(dlPast(tDl)?' past':'')+'">'+dlTxt(tDl)+' · '+esc(frDateShort(tDl))+'</span>':'');}
+    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button><button type="button" class="pane-arc" data-arc="tri" aria-label="Archiver" title="Archiver">🗄️</button>'+(tDl?'<span class="pane-sub'+(dlPast(tDl)?' past':'')+'">'+dlTxt(tDl)+' · '+esc(frDateShort(tDl))+'</span>':'');}
     var _sh=document.getElementById("sportSectionH");if(_sh){var _anySport=mOn||tOn;if(!_anySport&&typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)_anySport=(SPORTS_LIB.order||[]).some(function(id){return id!=="muscu"&&sportUCfg(id).on===true;});_sh.hidden=!_anySport;}
     if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);
     if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);
     if(mt)mt.onclick=function(){paneCollapse.muscu=(paneCollapse.muscu===false);if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);};
     if(tt)tt.onclick=function(){paneCollapse.tri=(paneCollapse.tri===false);if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);};
     if(mt){var mr=mt.querySelector(".pane-ren");if(mr)mr.onclick=function(e){e.stopPropagation();var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",actName("muscu")):"")||"").trim();if(nm){setAct("muscu",{name:nm});var _mlr=muscuLink();if(_mlr)renameObj(_mlr.id,nm);renderSportTabs();}};}
+    if(tt){var tar=tt.querySelector(".pane-arc");if(tar)tar.onclick=function(e){e.stopPropagation();var _al=triLink();if(!_al)return;if(typeof confirm!=="undefined"&&!confirm("Archiver « "+_al.name+" » ? Ton historique est conservé, tu pourras le restaurer dans Réglages > Objectifs."))return;archiveObj(_al.id);refreshSportViews();renderCalendars();};}
     if(tt){var trn=tt.querySelector(".pane-ren");if(trn)trn.onclick=function(e){e.stopPropagation();var _l=triLink(),cur=(_l&&_l.name)||actName("tri");var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",cur):"")||"").trim();if(nm){setAct("tri",{name:nm});var l2=triLink();if(l2)renameObj(l2.id,nm);renderSportTabs();}};}
     if(!host)return;
     if(!mOn&&!tOn){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';return;}
@@ -3413,7 +3419,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
           '<label class="act-flabel">Date (optionnel)</label><input type="date" class="objc-dl">'+
           '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
         '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
-        if(part==="list")return '<div class="objc-box">'+list+'</div>';
+        if(part==="list")return '<div class="objc-box">'+list+'</div>'+arcBlkHTML();
         if(part==="form")return form;
         return '<div class="objc-box">'+list+form+'</div>';
       
@@ -3701,6 +3707,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
     var _sss=host.querySelector(".sess-save");if(_sss)_sss.onclick=function(){readSessBuf();if(sessEdit){var clean=(sessBuf||[]).filter(function(s){return (s.title||"").trim()||(s.blocks||[]).some(function(b){return (b[0]||"").trim()||(b[1]||"").trim();});});if(clean.length)setSportSessCustom(sessEdit.id,sessEdit.lvN,clean);else clearSportSessCustom(sessEdit.id,sessEdit.lvN);}sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
     var _ssc=host.querySelector(".sess-cancel");if(_ssc)_ssc.onclick=function(){sessEdit=null;sessBuf=null;renderSettings();};
     var _ssr=host.querySelector(".sess-reset");if(_ssr)_ssr.onclick=function(){if(sessEdit)clearSportSessCustom(sessEdit.id,sessEdit.lvN);sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
+    host.querySelectorAll(".objc-rest").forEach(function(b){b.onclick=function(){restoreObj(b.getAttribute("data-obj"));renderSettings();renderCalendars();refreshSportViews();};});
     host.querySelectorAll(".objc-del").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-obj"),o=cfgObjs().filter(function(x){return x.id===id;})[0];if(o&&o.dlId)pRemoveDeadline(o.dlId);delObj(id);syncTri();renderSettings();renderCalendars();refreshSportViews();};});
     host.querySelectorAll(".objc-ren").forEach(function(b){b.onclick=function(){var oid=b.getAttribute("data-obj");editObjId=oid;objExpand[oid]=true;renderSettings();var inp=host.querySelector(".objc-rename");if(inp){inp.focus();inp.select&&inp.select();}};});
     host.querySelectorAll(".objc-rsave").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-obj"),inp=host.querySelector('.objc-rename[data-obj="'+id+'"]'),nm=inp?(""+inp.value).trim():"";if(nm)renameObj(id,nm);editObjId=null;renderSettings();};});
