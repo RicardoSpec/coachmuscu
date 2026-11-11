@@ -228,6 +228,10 @@ var PROGRAM5 = {
   ]}
 };
 
+/* ---------- BLOC 6 — Développement salle (2 sem., 2 séances/sem.) ----------
+   Réutilise A (haut) et B (bas) du bloc 2 : mêmes ids d'exercices => la progression des charges continue. */
+var PROGRAM6 = { A: PROGRAM2.A, B: PROGRAM2.B };
+
 /* ---------- Blocs & codes ----------
    codes = séances de la semaine POUR CE BLOC (4, 5 ou 6). CODES reste le défaut
    historique pour tout bloc qui n'en déclare pas. Enchaînement séquentiel : pas de
@@ -237,9 +241,10 @@ var PROGRAM_BLOCKS = {
   b2:{name:"Développement", short:"B2", weeks:4,  codes:["A","B","C","D"],                 prog:PROGRAM2},
   b3:{name:"Technique",    short:"B3", weeks:8,  codes:["A","B","C","D"],                 prog:PROGRAM3},
   b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
-  b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5}
+  b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
+  b6:{name:"Développement salle", short:"B6", weeks:2, codes:["A","B"],                   prog:PROGRAM6}
 };
-var BLOCK_ORDER = ["b1","b2","b3","b4","b5"];
+var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6"];
 var CODES = ["A","B","C","D"];
 
 /* ---------- Dates d'ancrage ---------- */
@@ -251,12 +256,12 @@ var TRI_START   = "2026-08-17";  /* Triathlon — REPRISE : semaine 1 (semaine 4
    ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
    Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
 var TRAIN_TEMPLATE = {
-  lun:{type:"muscu"},
-  mar:{type:"muscu"},
-  mer:{type:"muscu"},
-  jeu:{type:"muscu"},
-  ven:{type:"muscu"},
-  sam:{type:"muscu"},
+  lun:{type:"muscu"},   /* séance A (haut) */
+  mar:null,
+  mer:null,
+  jeu:{type:"muscu"},   /* séance B (bas) */
+  ven:null,
+  sam:null,
   dim:null
 };
 
