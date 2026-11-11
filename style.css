@@ -1707,3 +1707,13 @@ nav.tabs .tab.on{color:var(--primary)}
 .tix-b{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg2,#fff);font-size:20px;line-height:1;cursor:pointer}
 .tix-n{width:64px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg2,#fff)}
 .tix-row.low .tix-n{border-color:#d9822b;color:#b45f06;font-weight:700}
+
+/* Archivage d'objectifs */
+.pane-arc{background:none;border:0;cursor:pointer;opacity:.4;font-size:.62em;padding:2px 6px;vertical-align:middle}
+.pane-arc:hover{opacity:1}
+.objc-arc{margin:2px 0 14px}
+.objc-arc-h{font-weight:700;font-size:13px;color:var(--muted);margin:4px 2px 6px}
+.objc-arc-row{display:flex;align-items:center;gap:8px;padding:6px 2px;border-top:1px solid var(--line)}
+.objc-arc-nm{flex:1;min-width:0;color:var(--muted)}
+.objc-arc-d{font-size:12px}
+.objc-rest{flex:none;border:1px solid var(--line);border-radius:10px;background:var(--bg2,#fff);padding:6px 10px;font-size:13px;cursor:pointer}
