@@ -228,9 +228,31 @@ var PROGRAM5 = {
   ]}
 };
 
-/* ---------- BLOC 6 — Développement salle (2 sem., 2 séances/sem.) ----------
-   Réutilise A (haut) et B (bas) du bloc 2 : mêmes ids d'exercices => la progression des charges continue. */
-var PROGRAM6 = { A: PROGRAM2.A, B: PROGRAM2.B };
+/* ---------- BLOC 6 — Développement haut du corps (2 sem., 2 séances/sem.) ----------
+   Objectif : pecs, bras, dos sculpté + taille en V (épaules/dos larges, taille fine).
+   Codes A (pousser) et C (tirer) : mêmes codes/ids d'exercices que le bloc 2 quand c'est le même exo
+   => « dernière fois » retrouvée. a7, c7, c8 sont nouveaux. */
+var PROGRAM6 = (function(){
+  function ex(p,c,id){var a=p[c].exos;for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];throw new Error("PROGRAM6 : "+c+"/"+id+" introuvable");}
+  return {
+    A:{title:"Séance A — Pecs, épaules & triceps", sub:"Pousser · pecs + largeur d'épaules", exos:[
+      ex(PROGRAM2,"A","a1"),
+      ex(PROGRAM2,"A","a3"),
+      ex(PROGRAM2,"A","a2"),
+      ex(PROGRAM2,"A","a4"),
+      {id:"a7",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas. <b>Cible :</b> triceps (2/3 du volume du bras)."},
+      ex(PROGRAM2,"A","a6")
+    ]},
+    C:{title:"Séance C — Dos en V, biceps & abdos", sub:"Tirer · largeur du dos + bras", exos:[
+      ex(PROGRAM2,"C","c1"),
+      ex(PROGRAM2,"C","c2"),
+      {id:"c7",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, haut du dos sculpté, posture."},
+      ex(PROGRAM2,"C","c4"),
+      {id:"c8",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+      ex(PROGRAM2,"C","c6")
+    ]}
+  };
+})();
 
 /* ---------- Blocs & codes ----------
    codes = séances de la semaine POUR CE BLOC (4, 5 ou 6). CODES reste le défaut
@@ -242,7 +264,8 @@ var PROGRAM_BLOCKS = {
   b3:{name:"Technique",    short:"B3", weeks:8,  codes:["A","B","C","D"],                 prog:PROGRAM3},
   b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
   b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
-  b6:{name:"Développement salle", short:"B6", weeks:2, codes:["A","B"],                   prog:PROGRAM6}
+  b6:{name:"Développement haut du corps", short:"B6", weeks:2, codes:["A","C"], prog:PROGRAM6,
+       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille)."}
 };
 var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6"];
 var CODES = ["A","B","C","D"];
@@ -256,10 +279,10 @@ var TRI_START   = "2026-08-17";  /* Triathlon — REPRISE : semaine 1 (semaine 4
    ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
    Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
 var TRAIN_TEMPLATE = {
-  lun:{type:"muscu"},   /* séance A (haut) */
+  lun:{type:"muscu"},   /* séance A (pousser) */
   mar:null,
   mer:null,
-  jeu:{type:"muscu"},   /* séance B (bas) */
+  jeu:{type:"muscu"},   /* séance C (tirer) */
   ven:null,
   sam:null,
   dim:null
