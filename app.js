@@ -112,7 +112,8 @@
   function ddmm(d){return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");}
   function frDateFull(iso){var d=new Date(iso+"T00:00:00");var s=JOURS[d.getDay()]+" "+d.getDate()+" "+MOIS[d.getMonth()];return s.charAt(0).toUpperCase()+s.slice(1);}
   function cumWeeks(block){var n=0;for(var i=0;i<BLOCK_ORDER.length;i++){if(BLOCK_ORDER[i]===block)break;n+=PROGRAM_BLOCKS[BLOCK_ORDER[i]].weeks;}return n;}
-  function muscuWeekDate(block,w){return ddmm(addDays(MUSCU_START,(cumWeeks(block)+w-1)*7));}
+  function b6Monday(){var best=null;codesOf("b6").forEach(function(c){for(var w=1;w<=PROGRAM_BLOCKS.b6.weeks;w++){var s=state.sessions[sessKey("b6",w,c)];if(s&&s.date&&(!best||s.date<best))best=s.date;}});var d=new Date((best||todayStr())+"T00:00:00");d.setDate(d.getDate()-((d.getDay()+6)%7));return isoOf(d);}
+  function muscuWeekDate(block,w){if(block==="b6")return ddmm(addDays(b6Monday(),(w-1)*7));return ddmm(addDays(MUSCU_START,(cumWeeks(block)+w-1)*7));}
   function triWeekDate(w){return ddmm(addDays(TRI_START,(w-1)*7));}
   function num(v){return parseFloat((v===undefined||v===null?"":v).toString().replace(",","."));}
   function fr1(n){return n.toFixed(1).replace(".",",");}
@@ -800,8 +801,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var _sdc=host.querySelector(".so-sd-chrono");if(_sdc)_sdc.onchange=function(){var k=sdKey();if(k){var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);if(Object.keys(rec).length)sportLogSet(k.sid,k.iso,rec);}sportSdChrono=_sdc.checked;if(!sportSdChrono)stopRest();renderSportObjectives();};
     host.querySelectorAll(".so-sd .rest-btns button[data-sec]").forEach(function(x){x.onclick=function(){startRest(parseInt(x.getAttribute("data-sec"),10));};});
     var _sdstop=host.querySelector(".so-sd #restStop");if(_sdstop)_sdstop.onclick=function(){stopRest();};
-    var _sdsave=host.querySelector(".so-sd-save");if(_sdsave)_sdsave.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);rec.done=true;rec.date=k.iso;sportLogSet(k.sid,k.iso,rec);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
-    var _sdu=host.querySelector(".so-sd-undo");if(_sdu)_sdu.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);rec.done=false;sportLogSet(k.sid,k.iso,rec);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
+    var _sdsave=host.querySelector(".so-sd-save");if(_sdsave)_sdsave.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);var _wd=!!rec.done;rec.done=true;rec.date=k.iso;sportLogSet(k.sid,k.iso,rec);if(!_wd)tixAdj(k.sid,-1);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
+    var _sdu=host.querySelector(".so-sd-undo");if(_sdu)_sdu.onclick=function(){var k=sdKey();if(!k)return;var rec=sportLogGet(k.sid,k.iso)||{};readSdInto(rec);var _wu=!!rec.done;rec.done=false;sportLogSet(k.sid,k.iso,rec);if(_wu)tixAdj(k.sid,1);sportSessOpen=null;stopRest();renderSportObjectives();if(document.getElementById("homeCal"))renderCalendars();if(typeof renderDayRadar==="function")renderDayRadar();};
     host.querySelectorAll(".so-card[data-sport] > .pane-title").forEach(function(t){t.onclick=function(){var c=t.closest(".so-card"),id=c&&c.getAttribute("data-sport");if(id){paneCollapse[id]=(paneCollapse[id]===false);renderSportObjectives();}};});
     host.querySelectorAll(".grp-title[data-group]").forEach(function(t){t.onclick=function(){var k="grp:"+t.getAttribute("data-group");paneCollapse[k]=(paneCollapse[k]===false);renderSportObjectives();};});
     host.querySelectorAll(".grp-split").forEach(function(b){b.onclick=function(e){e.stopPropagation();delObj(b.getAttribute("data-group"));syncTri();renderSportObjectives();renderCalendars();};});
@@ -845,10 +846,25 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function renderObjMisc(){
     var h=document.getElementById("objMiscPane");if(!h)return;
-    var out="",a=objCustomCardsHTML("artistique"),z=objCustomCardsHTML("autre");
+    var out=tixHTML(),a=objCustomCardsHTML("artistique"),z=objCustomCardsHTML("autre");
     if(a)out+='<h2 class="page misc-h">🎨 Artistique</h2>'+a;
     if(z)out+='<h2 class="page misc-h">🧩 Autre</h2>'+z;
     h.innerHTML=out;
+    h.querySelectorAll(".tix-row").forEach(function(r){
+      var sid=r.getAttribute("data-sp"),inp=r.querySelector(".tix-n");
+      r.querySelectorAll(".tix-b").forEach(function(b){b.onclick=function(){var n=num(inp.value);tixSet(sid,Math.max(0,(isNaN(n)?0:n)+num(b.getAttribute("data-d"))));};});
+      inp.onchange=function(){var v=(inp.value||"").trim();if(v===""){tixSet(sid,null);return;}var n=num(v);tixSet(sid,isNaN(n)?null:Math.max(0,Math.round(n)));};
+    });
+  }
+  /* ---- Tickets d'entrée (piscine / escalade) : saisis à la main, décomptés à la validation d'une séance. ---- */
+  var TIX=[{id:"nage",ic:"🏊",nm:"Piscine"},{id:"escalade",ic:"🧗",nm:"Escalade"}];
+  function tixGet(sid){var u=sportsUser()[sid],v=u&&u.tickets;return (v===undefined||v===null||v==="")?null:num(v);}
+  function tixSet(sid,n){setSportU(sid,{tickets:(n===null||isNaN(n))?null:n});renderObjMisc();}
+  function tixAdj(sid,d){var n=tixGet(sid);if(n===null||isNaN(n))return;setSportU(sid,{tickets:Math.max(0,n+d)});renderObjMisc();}
+  function tixHTML(){
+    return '<h2 class="page misc-h">🎟️ Tickets d\'entrée</h2><div class="card pad tix">'+TIX.map(function(t){var n=tixGet(t.id);
+      return '<div class="tix-row'+(n!==null&&n<=2?' low':'')+'" data-sp="'+t.id+'"><span class="tix-nm">'+t.ic+' '+t.nm+'</span><button type="button" class="tix-b" data-d="-1" aria-label="Moins un ticket">−</button><input class="tix-n" type="number" inputmode="numeric" min="0" step="1" placeholder="?" value="'+(n===null?"":n)+'" aria-label="Tickets '+t.nm+'"><button type="button" class="tix-b" data-d="1" aria-label="Plus un ticket">+</button></div>';
+    }).join("")+'<div class="hint" style="margin-top:6px">Laisse vide si tu ne sais pas encore. Le compteur baisse de 1 à chaque séance validée (annuler la séance le remonte).</div></div>';
   }
   function renderLearn(){var h=document.getElementById("learnPane");if(!h)return;
     var b=dscgBlockHTML(todayStr());
@@ -1989,7 +2005,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '<div class="sd-head"><div><div class="lbl">Semaine '+currentTri.w+(wk.phase?' · '+wk.phase:(wk.nat.taper?' · affûtage':''))+'</div><h3>'+names[dz]+'</h3></div><span class="tg">'+info.t+'</span></div>'+        '<p class="muted" style="margin-top:10px">'+info.d+'</p>'+
         (dz==="nat"&&info.drills?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🥽 Drills technique — tuba + palmes</div><p style="color:var(--muted)">'+info.drills+'</p></div>':'')+
         (dz==="nat"&&info.sec?'<div class="tip" style="margin-top:10px;background:#f3f0ff;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏠 À sec — hors piscine</div><p style="color:var(--muted)">'+info.sec+'</p></div>':'')+
-        (currentTri.w===TRI.length?'<div class="tip" style="margin-top:10px;background:#eef4f8;border:1px solid var(--line)"><div class="t" style="color:var(--primary)">🏁 Semaine de course</div><p style="color:var(--muted)">Triathlon Dinard Côte d\'Émeraude — dimanche 13 septembre, départ 9h (Grande Plage, Saint-Lunaire). Affûtage, sommeil, et on profite !</p></div>':'')+
+        
         '<div class="field" style="margin-top:12px"><button class="btn '+(rec.done?'ghost':'accent')+'" id="triDone">'+(rec.done?'Annuler':'Marquer comme faite')+'</button></div>'+
         (rec.done?'<div class="donedate"><label>Faite le <input type="date" id="triDoneDate" value="'+esc(rec.date||todayStr())+'"></label></div>':'')+
         '<div class="field"><label>Réalisé</label><div class="tri-io"><input type="number" inputmode="decimal" step="0.1" min="0" class="t-dist" placeholder="'+(dz==="nat"?"ex : 1300":"ex : "+(dz==="velo"?"32":"7,5"))+'"><span class="tri-u">'+triTargets()[dz].u+'</span><input type="number" inputmode="decimal" step="1" min="0" class="t-dur" placeholder="min"><span class="tri-u">min</span></div><div class="tri-pace" hidden></div>'+(rec.val?'<div class="tri-legacy">Ancien réalisé : '+esc(rec.val)+'</div>':'')+'</div>'+
@@ -2748,7 +2764,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             sub("rgS","Sport",cnt(anyOn(sportRows)),regGridHTML(sportRows,days))+
       sub("rgR","Routines &amp; ancrages",cnt(anyOn(routRows)),routRows.length?regGridHTML(routRows,days):'<div class="reg-empty">Aucune routine ni ancrage pour l\'instant : ajoute-les depuis Bien-\u00eatre &amp; suivi.</div>')+
       sub("rgP","Petits exercices",cnt(anyOn(pxRows)),regGridHTML(pxRows,days)+
-        (px.tot?('<div class="reg-note"><b>'+px.tot+'</b> coch\u00e9'+(px.tot>1?"s":"")+' sur <b>'+px.days+'</b> jour'+(px.days>1?"s":"")+' en 30 jours \u00b7 '+px.rows.length+'/'+px.total+' exercices pratiqu\u00e9s. Ces gestes de mobilit\u00e9 ne se lisent pas sur la balance, mais ce sont eux qui prot\u00e8gent \u00e9paules et hanches : c\'est ce qui te garde entra\u00eenable jusqu\'\u00e0 Dinard.</div>')
+        (px.tot?('<div class="reg-note"><b>'+px.tot+'</b> coch\u00e9'+(px.tot>1?"s":"")+' sur <b>'+px.days+'</b> jour'+(px.days>1?"s":"")+' en 30 jours \u00b7 '+px.rows.length+'/'+px.total+' exercices pratiqu\u00e9s. Ces gestes de mobilit\u00e9 ne se lisent pas sur la balance, mais ce sont eux qui prot\u00e8gent \u00e9paules et hanches : c\'est ce qui te garde entra\u00eenable sur la dur\u00e9e.</div>')
           :'<div class="reg-note">Aucun petit exercice coch\u00e9 sur 30 jours. Deux minutes de mobilit\u00e9 par jour suffisent \u00e0 lancer le compteur.</div>'))+
     '</div>';
     host.querySelectorAll(".act-label[data-jump]").forEach(function(b){b.onclick=function(){jumpDay(b.getAttribute("data-jump"));};});
