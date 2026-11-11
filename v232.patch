@@ -1,62 +1,132 @@
 diff --git a/app.js b/app.js
-index 70d353d..4e208a1 100644
+index 4e208a1..dbe2f67 100644
 --- a/app.js
 +++ b/app.js
-@@ -501,6 +501,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
-   function cfgObjs(){if(!state.config)state.config={};if(!state.config.objectivesCustom)state.config.objectivesCustom=[];return state.config.objectivesCustom;}
-   function addObj(o){cfgObjs().push(o);save();}
-   function delObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a[i];a.splice(i,1);break;}if(rm)(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});save();}
-+  /* ---- Archivage d'un objectif (ex : triathlon passé) : sorti de l'onglet Objectif, historique conservé, restaurable (Réglages). ---- */
-+  function cfgArc(){if(!state.config)state.config={};if(!state.config.objectivesArchive)state.config.objectivesArchive=[];return state.config.objectivesArchive;}
-+  function archiveObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a.splice(i,1)[0];break;}if(!rm)return;rm.archivedOn=todayStr();cfgArc().push(rm);(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});syncTri();save();}
-+  function restoreObj(id){var r=cfgArc(),rm=null;for(var i=0;i<r.length;i++)if(r[i].id===id){rm=r.splice(i,1)[0];break;}if(!rm)return;delete rm.archivedOn;cfgObjs().push(rm);(rm.sports||[]).forEach(function(sid){setSportU(sid,{on:true,deadline:rm.deadline||""});});syncTri();save();}
-+  function arcBlkHTML(){var a=cfgArc();if(!a.length)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
+@@ -505,7 +505,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+   function cfgArc(){if(!state.config)state.config={};if(!state.config.objectivesArchive)state.config.objectivesArchive=[];return state.config.objectivesArchive;}
+   function archiveObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a.splice(i,1)[0];break;}if(!rm)return;rm.archivedOn=todayStr();cfgArc().push(rm);(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});syncTri();save();}
+   function restoreObj(id){var r=cfgArc(),rm=null;for(var i=0;i<r.length;i++)if(r[i].id===id){rm=r.splice(i,1)[0];break;}if(!rm)return;delete rm.archivedOn;cfgObjs().push(rm);(rm.sports||[]).forEach(function(sid){setSportU(sid,{on:true,deadline:rm.deadline||""});});syncTri();save();}
+-  function arcBlkHTML(){var a=cfgArc();if(!a.length)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
++  function arcBlkHTML(){var a=cfgArc(),dz=state.config&&state.config.dscgArchived;if(!a.length&&!dz)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+(dz?'<div class="objc-arc-row"><span class="objc-arc-nm">📚 Révisions DSCG <span class="objc-arc-d">· '+esc(frDateShort(dz))+'</span></span><button type="button" class="objc-rest-dscg">Restaurer</button></div>':'')+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
    function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;if(a[i].dlId)pUpdateDeadline(a[i].dlId,{label:nm});break;}save();}
    function objAddSport(id,sid){var a=cfgObjs(),dl="";for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);dl=a[i].deadline||"";break;}setSportU(sid,{on:true,deadline:dl});save();}
    function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});save();}
-@@ -821,13 +826,14 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
-     var mOn=actEnabled("muscu"),tOn=actEnabled("tri");
-     if(pm)pm.hidden=!mOn;if(pt)pt.hidden=!tOn;
-     var mt=document.getElementById("muscuTitle");if(mt){var mDl=(muscuLink()||{}).deadline||"";mt.innerHTML='💪 '+esc(actName("muscu"))+' <button type="button" class="pane-ren" data-ren="muscu" aria-label="Renommer">✎</button>'+(mDl?'<span class="pane-sub'+(dlPast(mDl)?' past':'')+'">'+dlTxt(mDl)+' · '+esc(frDateShort(mDl))+'</span>':'');}
--    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button>'+(tDl?'<span class="pane-sub'+(dlPast(tDl)?' past':'')+'">'+dlTxt(tDl)+' · '+esc(frDateShort(tDl))+'</span>':'');}
-+    var tt=document.getElementById("triTitle");if(tt){var tDl=triRaceDate(),_tl=triLink(),tName=(_tl&&_tl.name)||actName("tri");tt.innerHTML='🏊 '+esc(tName)+' <button type="button" class="pane-ren" data-ren="tri" aria-label="Renommer">✎</button><button type="button" class="pane-arc" data-arc="tri" aria-label="Archiver" title="Archiver">🗄️</button>'+(tDl?'<span class="pane-sub'+(dlPast(tDl)?' past':'')+'">'+dlTxt(tDl)+' · '+esc(frDateShort(tDl))+'</span>':'');}
-     var _sh=document.getElementById("sportSectionH");if(_sh){var _anySport=mOn||tOn;if(!_anySport&&typeof SPORTS_LIB!=="undefined"&&SPORTS_LIB)_anySport=(SPORTS_LIB.order||[]).some(function(id){return id!=="muscu"&&sportUCfg(id).on===true;});_sh.hidden=!_anySport;}
-     if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);
-     if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);
-     if(mt)mt.onclick=function(){paneCollapse.muscu=(paneCollapse.muscu===false);if(pm)pm.classList.toggle("collapsed",paneCollapse.muscu!==false);};
-     if(tt)tt.onclick=function(){paneCollapse.tri=(paneCollapse.tri===false);if(pt)pt.classList.toggle("collapsed",paneCollapse.tri!==false);};
-     if(mt){var mr=mt.querySelector(".pane-ren");if(mr)mr.onclick=function(e){e.stopPropagation();var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",actName("muscu")):"")||"").trim();if(nm){setAct("muscu",{name:nm});var _mlr=muscuLink();if(_mlr)renameObj(_mlr.id,nm);renderSportTabs();}};}
-+    if(tt){var tar=tt.querySelector(".pane-arc");if(tar)tar.onclick=function(e){e.stopPropagation();var _al=triLink();if(!_al)return;if(typeof confirm!=="undefined"&&!confirm("Archiver « "+_al.name+" » ? Ton historique est conservé, tu pourras le restaurer dans Réglages > Objectifs."))return;archiveObj(_al.id);refreshSportViews();renderCalendars();};}
-     if(tt){var trn=tt.querySelector(".pane-ren");if(trn)trn.onclick=function(e){e.stopPropagation();var _l=triLink(),cur=(_l&&_l.name)||actName("tri");var nm=((typeof prompt!=="undefined"?prompt("Nom de l’objectif :",cur):"")||"").trim();if(nm){setAct("tri",{name:nm});var l2=triLink();if(l2)renameObj(l2.id,nm);renderSportTabs();}};}
-     if(!host)return;
-     if(!mOn&&!tOn){host.innerHTML='<p class="hint" style="margin:0">Aucune activité active — active la muscu ou le triathlon dans les Réglages.</p>';return;}
-@@ -3413,7 +3419,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
-           '<label class="act-flabel">Date (optionnel)</label><input type="date" class="objc-dl">'+
-           '<div class="objc-acts"><button type="button" class="btn accent objc-create">Créer l\'objectif</button><button type="button" class="btn ghost objc-cancel">Annuler</button></div>'+
-         '</div>'):'<button type="button" class="objc-add">➕ Nouvel objectif</button>';
--        if(part==="list")return '<div class="objc-box">'+list+'</div>';
-+        if(part==="list")return '<div class="objc-box">'+list+'</div>'+arcBlkHTML();
-         if(part==="form")return form;
-         return '<div class="objc-box">'+list+form+'</div>';
-       
-@@ -3701,6 +3707,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
+@@ -873,8 +873,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+     }).join("")+'<div class="hint" style="margin-top:6px">Laisse vide si tu ne sais pas encore. Le compteur baisse de 1 à chaque séance validée (annuler la séance le remonte).</div></div>';
+   }
+   function renderLearn(){var h=document.getElementById("learnPane");if(!h)return;
+-    var b=dscgBlockHTML(todayStr());
+-    h.innerHTML=(b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>')+objCustomCardsHTML("intellectuel");}
++    var arc=!!(state.config&&state.config.dscgArchived),b=arc?"":dscgBlockHTML(todayStr());
++    var _e=arc?"":(b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>');
++    var _lh=_e+objCustomCardsHTML("intellectuel");h.innerHTML=_lh;
++    var _hd=document.querySelector(".learn-h");if(_hd)_hd.style.display=_lh?"":"none";
++    var _ba=h.querySelector(".dscg-arc");if(_ba)_ba.onclick=function(){if(typeof confirm!=="undefined"&&!confirm("Archiver « Révisions DSCG » ? Tes heures restent dans l'app DSCG ; tu pourras restaurer ce suivi dans Réglages > Objectifs."))return;if(!state.config)state.config={};state.config.dscgArchived=todayStr();save();renderLearn();};}
+ 
+    /* ---- Navigation par glissement horizontal entre onglets (aujourd'hui / sport / journal / progrès) ---- */
+   function swipeOverlayOpen(){
+@@ -932,10 +935,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+   function dscgBlockHTML(iso){
+     var a=dscgApp();if(!a)return "";
+     var r=dscgDone(),done=r.hasOwnProperty(iso)&&r[iso]>0;
+-    return '<div class="field supps-field">'+
++    return '<div class="field supps-field dscg-wrap">'+
+       '<a class="dscg-link'+(done?" done":"")+'" href="'+esc(a.url)+'"><span class="dscg-ic">\ud83d\udcda</span>'+
+       '<span class="dscg-txt"><span class="dscg-ttl">R\u00e9visions DSCG</span><span class="dscg-sub">'+esc(dscgLineTxt(iso))+'</span></span>'+
+-      '<span class="dscg-arrow">\u203a</span></a></div>';
++      '<span class="dscg-arrow">\u203a</span></a><button type="button" class="dscg-arc" aria-label="Archiver" title="Archiver">🗄️</button></div>';
+   }
+   function dscgDone(){
+     try{
+@@ -1744,7 +1747,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+   }
+   function gridBody(block){
+     var blk=PROGRAM_BLOCKS[block],n=nextSession(),_cd=codesOf(block);
+-    var h='<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
++    var h=(blk.focus?'<div class="blk-focus">🎯 '+blk.focus+'</div>':'')+'<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
+       '<table class="grid"><tr><th></th>';
+     _cd.forEach(function(c){h+="<th>"+c+"</th>";});
+     h+="</tr>";
+@@ -3707,6 +3710,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
      var _sss=host.querySelector(".sess-save");if(_sss)_sss.onclick=function(){readSessBuf();if(sessEdit){var clean=(sessBuf||[]).filter(function(s){return (s.title||"").trim()||(s.blocks||[]).some(function(b){return (b[0]||"").trim()||(b[1]||"").trim();});});if(clean.length)setSportSessCustom(sessEdit.id,sessEdit.lvN,clean);else clearSportSessCustom(sessEdit.id,sessEdit.lvN);}sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
      var _ssc=host.querySelector(".sess-cancel");if(_ssc)_ssc.onclick=function(){sessEdit=null;sessBuf=null;renderSettings();};
      var _ssr=host.querySelector(".sess-reset");if(_ssr)_ssr.onclick=function(){if(sessEdit)clearSportSessCustom(sessEdit.id,sessEdit.lvN);sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
-+    host.querySelectorAll(".objc-rest").forEach(function(b){b.onclick=function(){restoreObj(b.getAttribute("data-obj"));renderSettings();renderCalendars();refreshSportViews();};});
++    host.querySelectorAll(".objc-rest-dscg").forEach(function(b){b.onclick=function(){if(state.config)delete state.config.dscgArchived;save();renderSettings();renderLearn();};});
+     host.querySelectorAll(".objc-rest").forEach(function(b){b.onclick=function(){restoreObj(b.getAttribute("data-obj"));renderSettings();renderCalendars();refreshSportViews();};});
      host.querySelectorAll(".objc-del").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-obj"),o=cfgObjs().filter(function(x){return x.id===id;})[0];if(o&&o.dlId)pRemoveDeadline(o.dlId);delObj(id);syncTri();renderSettings();renderCalendars();refreshSportViews();};});
      host.querySelectorAll(".objc-ren").forEach(function(b){b.onclick=function(){var oid=b.getAttribute("data-obj");editObjId=oid;objExpand[oid]=true;renderSettings();var inp=host.querySelector(".objc-rename");if(inp){inp.focus();inp.select&&inp.select();}};});
-     host.querySelectorAll(".objc-rsave").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-obj"),inp=host.querySelector('.objc-rename[data-obj="'+id+'"]'),nm=inp?(""+inp.value).trim():"";if(nm)renameObj(id,nm);editObjId=null;renderSettings();};});
+diff --git a/data.js b/data.js
+index 65ed6b7..daaf96a 100644
+--- a/data.js
++++ b/data.js
+@@ -228,9 +228,31 @@ var PROGRAM5 = {
+   ]}
+ };
+ 
+-/* ---------- BLOC 6 — Développement salle (2 sem., 2 séances/sem.) ----------
+-   Réutilise A (haut) et B (bas) du bloc 2 : mêmes ids d'exercices => la progression des charges continue. */
+-var PROGRAM6 = { A: PROGRAM2.A, B: PROGRAM2.B };
++/* ---------- BLOC 6 — Développement haut du corps (2 sem., 2 séances/sem.) ----------
++   Objectif : pecs, bras, dos sculpté + taille en V (épaules/dos larges, taille fine).
++   Codes A (pousser) et C (tirer) : mêmes codes/ids d'exercices que le bloc 2 quand c'est le même exo
++   => « dernière fois » retrouvée. a7, c7, c8 sont nouveaux. */
++var PROGRAM6 = (function(){
++  function ex(p,c,id){var a=p[c].exos;for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];throw new Error("PROGRAM6 : "+c+"/"+id+" introuvable");}
++  return {
++    A:{title:"Séance A — Pecs, épaules & triceps", sub:"Pousser · pecs + largeur d'épaules", exos:[
++      ex(PROGRAM2,"A","a1"),
++      ex(PROGRAM2,"A","a3"),
++      ex(PROGRAM2,"A","a2"),
++      ex(PROGRAM2,"A","a4"),
++      {id:"a7",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas. <b>Cible :</b> triceps (2/3 du volume du bras)."},
++      ex(PROGRAM2,"A","a6")
++    ]},
++    C:{title:"Séance C — Dos en V, biceps & abdos", sub:"Tirer · largeur du dos + bras", exos:[
++      ex(PROGRAM2,"C","c1"),
++      ex(PROGRAM2,"C","c2"),
++      {id:"c7",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, haut du dos sculpté, posture."},
++      ex(PROGRAM2,"C","c4"),
++      {id:"c8",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
++      ex(PROGRAM2,"C","c6")
++    ]}
++  };
++})();
+ 
+ /* ---------- Blocs & codes ----------
+    codes = séances de la semaine POUR CE BLOC (4, 5 ou 6). CODES reste le défaut
+@@ -242,7 +264,8 @@ var PROGRAM_BLOCKS = {
+   b3:{name:"Technique",    short:"B3", weeks:8,  codes:["A","B","C","D"],                 prog:PROGRAM3},
+   b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
+   b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
+-  b6:{name:"Développement salle", short:"B6", weeks:2, codes:["A","B"],                   prog:PROGRAM6}
++  b6:{name:"Développement haut du corps", short:"B6", weeks:2, codes:["A","C"], prog:PROGRAM6,
++       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille)."}
+ };
+ var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6"];
+ var CODES = ["A","B","C","D"];
+@@ -256,10 +279,10 @@ var TRI_START   = "2026-08-17";  /* Triathlon — REPRISE : semaine 1 (semaine 4
+    ou null pour un jour sans séance prévue. Une séance ne s'affiche que si le bloc/plan est actif à cette date.
+    Réorganise librement : déplace une séance en changeant le jour. -------------------------------------- */
+ var TRAIN_TEMPLATE = {
+-  lun:{type:"muscu"},   /* séance A (haut) */
++  lun:{type:"muscu"},   /* séance A (pousser) */
+   mar:null,
+   mer:null,
+-  jeu:{type:"muscu"},   /* séance B (bas) */
++  jeu:{type:"muscu"},   /* séance C (tirer) */
+   ven:null,
+   sam:null,
+   dim:null
 diff --git a/index.html b/index.html
-index d0a9b6d..b8a236c 100644
+index b8a236c..1c0ac1e 100644
 --- a/index.html
 +++ b/index.html
 @@ -13,7 +13,7 @@
    <link rel="shortcut icon" href="favicon.ico">
    <link rel="apple-touch-icon" href="apple-touch-icon.png">
    <!-- Styles externes -->
--  <link rel="stylesheet" href="style.css?v=232">
-+  <link rel="stylesheet" href="style.css?v=233">
+-  <link rel="stylesheet" href="style.css?v=233">
++  <link rel="stylesheet" href="style.css?v=234">
  </head>
  <body>
  
@@ -64,41 +134,38 @@ index d0a9b6d..b8a236c 100644
    <!-- ====================== SCRIPTS ======================
         Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
         doit être chargé AVANT app.js (logique, rendu, stockage). -->
--  <script src="data.js?v=232"></script>
--  <script src="sports.js?v=232"></script>
--  <script src="app.js?v=232"></script>
-+  <script src="data.js?v=233"></script>
-+  <script src="sports.js?v=233"></script>
-+  <script src="app.js?v=233"></script>
+-  <script src="data.js?v=233"></script>
+-  <script src="sports.js?v=233"></script>
+-  <script src="app.js?v=233"></script>
++  <script src="data.js?v=234"></script>
++  <script src="sports.js?v=234"></script>
++  <script src="app.js?v=234"></script>
  </body>
  </html>
 diff --git a/style.css b/style.css
-index 5e1e3ff..3958ac0 100644
+index 3958ac0..7872e2a 100644
 --- a/style.css
 +++ b/style.css
-@@ -1707,3 +1707,13 @@ nav.tabs .tab.on{color:var(--primary)}
- .tix-b{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg2,#fff);font-size:20px;line-height:1;cursor:pointer}
- .tix-n{width:64px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg2,#fff)}
- .tix-row.low .tix-n{border-color:#d9822b;color:#b45f06;font-weight:700}
+@@ -1717,3 +1717,10 @@ nav.tabs .tab.on{color:var(--primary)}
+ .objc-arc-nm{flex:1;min-width:0;color:var(--muted)}
+ .objc-arc-d{font-size:12px}
+ .objc-rest{flex:none;border:1px solid var(--line);border-radius:10px;background:var(--bg2,#fff);padding:6px 10px;font-size:13px;cursor:pointer}
 +
-+/* Archivage d'objectifs */
-+.pane-arc{background:none;border:0;cursor:pointer;opacity:.4;font-size:.62em;padding:2px 6px;vertical-align:middle}
-+.pane-arc:hover{opacity:1}
-+.objc-arc{margin:2px 0 14px}
-+.objc-arc-h{font-weight:700;font-size:13px;color:var(--muted);margin:4px 2px 6px}
-+.objc-arc-row{display:flex;align-items:center;gap:8px;padding:6px 2px;border-top:1px solid var(--line)}
-+.objc-arc-nm{flex:1;min-width:0;color:var(--muted)}
-+.objc-arc-d{font-size:12px}
-+.objc-rest{flex:none;border:1px solid var(--line);border-radius:10px;background:var(--bg2,#fff);padding:6px 10px;font-size:13px;cursor:pointer}
++/* Révisions DSCG archivable + bandeau d'objectif de bloc */
++.dscg-wrap{display:flex;align-items:center;gap:6px}
++.dscg-wrap .dscg-link{flex:1;min-width:0}
++.dscg-arc{flex:none;background:none;border:0;cursor:pointer;opacity:.4;font-size:16px;padding:8px 6px}
++.dscg-arc:hover{opacity:1}
++.blk-focus{font-size:13px;line-height:1.45;background:#eef4f8;border-radius:10px;padding:9px 11px;margin:0 0 10px}
 diff --git a/sw.js b/sw.js
-index c798128..40892db 100644
+index 40892db..fd9926a 100644
 --- a/sw.js
 +++ b/sw.js
 @@ -1,7 +1,7 @@
  /* Coach Muscu — service worker.
     Stratégie RÉSEAU D'ABORD : en ligne, on sert toujours la version fraîche (et on met le cache à jour) ;
     hors-ligne, on sert la dernière version vue. ignoreSearch permet au cache de matcher malgré les ?v=N. */
--var CACHE = "coachmuscu-runtime-v232";
-+var CACHE = "coachmuscu-runtime-v233";
+-var CACHE = "coachmuscu-runtime-v233";
++var CACHE = "coachmuscu-runtime-v234";
  
  self.addEventListener("install", function () { self.skipWaiting(); });
