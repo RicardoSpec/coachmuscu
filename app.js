@@ -505,7 +505,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function cfgArc(){if(!state.config)state.config={};if(!state.config.objectivesArchive)state.config.objectivesArchive=[];return state.config.objectivesArchive;}
   function archiveObj(id){var a=cfgObjs(),rm=null;for(var i=0;i<a.length;i++)if(a[i].id===id){rm=a.splice(i,1)[0];break;}if(!rm)return;rm.archivedOn=todayStr();cfgArc().push(rm);(rm.sports||[]).forEach(function(sid){if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});});syncTri();save();}
   function restoreObj(id){var r=cfgArc(),rm=null;for(var i=0;i<r.length;i++)if(r[i].id===id){rm=r.splice(i,1)[0];break;}if(!rm)return;delete rm.archivedOn;cfgObjs().push(rm);(rm.sports||[]).forEach(function(sid){setSportU(sid,{on:true,deadline:rm.deadline||""});});syncTri();save();}
-  function arcBlkHTML(){var a=cfgArc();if(!a.length)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
+  function arcBlkHTML(){var a=cfgArc(),dz=state.config&&state.config.dscgArchived;if(!a.length&&!dz)return "";return '<div class="objc-arc"><div class="objc-arc-h">🗄️ Archivés</div>'+(dz?'<div class="objc-arc-row"><span class="objc-arc-nm">📚 Révisions DSCG <span class="objc-arc-d">· '+esc(frDateShort(dz))+'</span></span><button type="button" class="objc-rest-dscg">Restaurer</button></div>':'')+a.map(function(o){return '<div class="objc-arc-row"><span class="objc-arc-nm">'+esc(o.icon||"🎯")+' '+esc(o.name)+(o.archivedOn?' <span class="objc-arc-d">· '+esc(frDateShort(o.archivedOn))+'</span>':'')+'</span><button type="button" class="objc-rest" data-obj="'+esc(o.id)+'">Restaurer</button></div>';}).join("")+'</div>';}
   function renameObj(id,nm){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].name=nm;if(a[i].dlId)pUpdateDeadline(a[i].dlId,{label:nm});break;}save();}
   function objAddSport(id,sid){var a=cfgObjs(),dl="";for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=a[i].sports||[];if(a[i].sports.indexOf(sid)<0)a[i].sports.push(sid);dl=a[i].deadline||"";break;}setSportU(sid,{on:true,deadline:dl});save();}
   function objRemoveSport(id,sid){var a=cfgObjs();for(var i=0;i<a.length;i++)if(a[i].id===id){a[i].sports=(a[i].sports||[]).filter(function(x){return x!==sid;});break;}if(!cfgObjs().some(function(o){return (o.sports||[]).indexOf(sid)>=0;}))setSportU(sid,{on:false});save();}
@@ -873,8 +873,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }).join("")+'<div class="hint" style="margin-top:6px">Laisse vide si tu ne sais pas encore. Le compteur baisse de 1 à chaque séance validée (annuler la séance le remonte).</div></div>';
   }
   function renderLearn(){var h=document.getElementById("learnPane");if(!h)return;
-    var b=dscgBlockHTML(todayStr());
-    h.innerHTML=(b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>')+objCustomCardsHTML("intellectuel");}
+    var arc=!!(state.config&&state.config.dscgArchived),b=arc?"":dscgBlockHTML(todayStr());
+    var _e=arc?"":(b||'<div class="card pad"><div class="reg-empty">Ton app de r\u00e9visions DSCG n\'est pas encore reli\u00e9e. Elle appara\u00eetra ici d\u00e8s qu\'elle sera pr\u00eate.</div></div>');
+    var _lh=_e+objCustomCardsHTML("intellectuel");h.innerHTML=_lh;
+    var _hd=document.querySelector(".learn-h");if(_hd)_hd.style.display=_lh?"":"none";
+    var _ba=h.querySelector(".dscg-arc");if(_ba)_ba.onclick=function(){if(typeof confirm!=="undefined"&&!confirm("Archiver « Révisions DSCG » ? Tes heures restent dans l'app DSCG ; tu pourras restaurer ce suivi dans Réglages > Objectifs."))return;if(!state.config)state.config={};state.config.dscgArchived=todayStr();save();renderLearn();};}
 
    /* ---- Navigation par glissement horizontal entre onglets (aujourd'hui / sport / journal / progrès) ---- */
   function swipeOverlayOpen(){
@@ -932,10 +935,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function dscgBlockHTML(iso){
     var a=dscgApp();if(!a)return "";
     var r=dscgDone(),done=r.hasOwnProperty(iso)&&r[iso]>0;
-    return '<div class="field supps-field">'+
+    return '<div class="field supps-field dscg-wrap">'+
       '<a class="dscg-link'+(done?" done":"")+'" href="'+esc(a.url)+'"><span class="dscg-ic">\ud83d\udcda</span>'+
       '<span class="dscg-txt"><span class="dscg-ttl">R\u00e9visions DSCG</span><span class="dscg-sub">'+esc(dscgLineTxt(iso))+'</span></span>'+
-      '<span class="dscg-arrow">\u203a</span></a></div>';
+      '<span class="dscg-arrow">\u203a</span></a><button type="button" class="dscg-arc" aria-label="Archiver" title="Archiver">🗄️</button></div>';
   }
   function dscgDone(){
     try{
@@ -1744,7 +1747,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function gridBody(block){
     var blk=PROGRAM_BLOCKS[block],n=nextSession(),_cd=codesOf(block);
-    var h='<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
+    var h=(blk.focus?'<div class="blk-focus">🎯 '+blk.focus+'</div>':'')+'<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
       '<table class="grid"><tr><th></th>';
     _cd.forEach(function(c){h+="<th>"+c+"</th>";});
     h+="</tr>";
@@ -3707,6 +3710,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
     var _sss=host.querySelector(".sess-save");if(_sss)_sss.onclick=function(){readSessBuf();if(sessEdit){var clean=(sessBuf||[]).filter(function(s){return (s.title||"").trim()||(s.blocks||[]).some(function(b){return (b[0]||"").trim()||(b[1]||"").trim();});});if(clean.length)setSportSessCustom(sessEdit.id,sessEdit.lvN,clean);else clearSportSessCustom(sessEdit.id,sessEdit.lvN);}sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
     var _ssc=host.querySelector(".sess-cancel");if(_ssc)_ssc.onclick=function(){sessEdit=null;sessBuf=null;renderSettings();};
     var _ssr=host.querySelector(".sess-reset");if(_ssr)_ssr.onclick=function(){if(sessEdit)clearSportSessCustom(sessEdit.id,sessEdit.lvN);sessEdit=null;sessBuf=null;renderSettings();renderCalendars();refreshSportViews();};
+    host.querySelectorAll(".objc-rest-dscg").forEach(function(b){b.onclick=function(){if(state.config)delete state.config.dscgArchived;save();renderSettings();renderLearn();};});
     host.querySelectorAll(".objc-rest").forEach(function(b){b.onclick=function(){restoreObj(b.getAttribute("data-obj"));renderSettings();renderCalendars();refreshSportViews();};});
     host.querySelectorAll(".objc-del").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-obj"),o=cfgObjs().filter(function(x){return x.id===id;})[0];if(o&&o.dlId)pRemoveDeadline(o.dlId);delObj(id);syncTri();renderSettings();renderCalendars();refreshSportViews();};});
     host.querySelectorAll(".objc-ren").forEach(function(b){b.onclick=function(){var oid=b.getAttribute("data-obj");editObjId=oid;objExpand[oid]=true;renderSettings();var inp=host.querySelector(".objc-rename");if(inp){inp.focus();inp.select&&inp.select();}};});
