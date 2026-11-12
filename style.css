@@ -1731,3 +1731,45 @@ nav.tabs .tab.on{color:var(--primary)}
 .dl-exp-b{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
 .dl-push{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--bg2,#fff);color:var(--ink)}
 .dl-clear{border:1px solid var(--line);border-radius:8px;background:var(--bg2,#fff);padding:5px 10px;font-size:12.5px;cursor:pointer;color:var(--muted)}
+
+/* Tickets +10 */
+.tix-b10{width:auto;padding:0 10px;font-size:13px;font-weight:600}
+/* Sorties libres */
+.out-sum{font-size:13.5px;margin-bottom:10px}
+.out-btns{display:flex;gap:8px}
+.out-b{flex:1;height:46px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg2,#fff);font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
+.out-b.on{border-color:var(--focus,#12466B);background:#eef4f8}
+.out-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.out-l{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.out-l input{font:inherit;font-size:16px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg2,#fff);min-width:0}
+.out-l:nth-of-type(3){grid-column:1 / -1}
+.out-fl{grid-column:1 / -1;display:flex;gap:8px}
+.out-f{flex:1;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg2,#fff);font-size:13.5px;cursor:pointer}
+.out-f.on{border-color:var(--focus,#12466B);background:#eef4f8;font-weight:700}
+.out-save{grid-column:1 / -1}
+.out-list{margin-top:12px;border-top:1px solid var(--line)}
+.out-row{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:13px}
+.out-row+.out-row{border-top:1px solid var(--line)}
+.out-row span{flex:1;min-width:0}
+.out-del,.sp-del{flex:none;background:none;border:0;cursor:pointer;opacity:.45;font-size:15px;padding:6px}
+/* Compléments (Réglages) */
+.sp-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.sp-nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-weight:600}
+.sp-nm small{font-weight:400;font-size:12px;color:var(--muted)}
+.sp-add{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.sp-num{display:flex;gap:8px}
+.sp-in{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg2,#fff);color:var(--ink);min-width:0;width:100%;box-sizing:border-box}
+.sp-imp{margin-top:12px;font-size:13px}
+.sp-imp textarea{margin:8px 0;font-size:13px}
+
+/* Sorties libres : calendrier + Progrès */
+.pill.p-out{background:#eef4f8}
+.ov-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px}
+.ov-l{flex:none;width:74px;color:var(--muted)}
+.ov-bar{flex:1;display:flex;height:12px;background:var(--line);border-radius:6px;overflow:hidden;min-width:0}
+.ov-bar i,.ov-leg i{display:block}
+.ov-v{background:var(--focus,#12466B)}
+.ov-c{background:#d9822b}
+.ov-n{flex:none;min-width:92px;text-align:right}
+.ov-leg{margin-top:8px;font-size:12px;color:var(--muted)}
+.ov-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle}
