@@ -20,7 +20,7 @@ var APPS = [
 /* ---------- Compléments : routine quotidienne (groupée par moment) ----------
    when  : créneau de prise (voir SUPP_SLOTS ci-dessous).
    prot  : g de protéines ajoutés au total du jour quand le complément est coché (whey).
-   Retirer un complément : supprime sa ligne. En ajouter : copie une ligne.
+   La liste vit dans l'appareil (Réglages > Compléments), pas dans ce fichier.
    ---------------------------------------------------------------------------- */
 var SUPP_SLOTS = [
   {id:"matin",  label:"Matin, à jeun"},
@@ -28,15 +28,7 @@ var SUPP_SLOTS = [
   {id:"seance", label:"Après la séance (ou en collation)"},
   {id:"soir",   label:"Le soir, après le dîner"}
 ];
-var SUPPS = [
-  {id:"probio",    name:"Pure Bio² (probiotiques)", when:"matin",  dose:"1 à 2 gélules, avant le petit-déj"},
-  {id:"spiruline", name:"Spiruline (Hainan)",       when:"repas",  dose:"selon l'étiquette"},
-  {id:"oyster",    name:"Poudre d'huître",          when:"repas",  dose:"selon l'étiquette"},
-  {id:"omega3",    name:"Oméga 3",                  when:"repas",  dose:"3 capsules pendant le repas"},
-  {id:"whey",      name:"Whey Isolate Native",      when:"seance", dose:"30 g (≈ 2 dosettes)", prot:28, kcal:115},
-  {id:"fenugrec",  name:"Fenugrec",                 when:"soir",   dose:"4 gélules après le repas"},
-  {id:"magnesium", name:"Magnésium bisglycinate",   when:"soir",   dose:"selon l'étiquette"}
-];
+var SUPPS = []; /* rempli au démarrage depuis state.config.suppsList (Réglages > Compléments) : rien de personnel dans le dépôt public */
 
 /* Routines bien-être — cochées dans le journal du jour (même principe que les compléments).
    La zone libre du journal permet d'ajouter une activité ponctuelle. */
@@ -231,7 +223,7 @@ var PROGRAM5 = {
 /* ---------- BLOC 6 — Développement haut du corps (2 sem., 2 séances/sem.) ----------
    Objectif : pecs, bras, dos sculpté + taille en V (épaules/dos larges, taille fine).
    Codes A (pousser) et C (tirer) : mêmes codes/ids d'exercices que le bloc 2 quand c'est le même exo
-   => « dernière fois » retrouvée. a7, c7, c8 sont nouveaux. */
+   => « dernière fois » retrouvée. a7, a8, c7, c8, c9 sont nouveaux (a8/c9 = psoas : étirement en fin de A, renfo en C). */
 var PROGRAM6 = (function(){
   function ex(p,c,id){var a=p[c].exos;for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];throw new Error("PROGRAM6 : "+c+"/"+id+" introuvable");}
   return {
@@ -241,7 +233,8 @@ var PROGRAM6 = (function(){
       ex(PROGRAM2,"A","a2"),
       ex(PROGRAM2,"A","a4"),
       {id:"a7",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas. <b>Cible :</b> triceps (2/3 du volume du bras)."},
-      ex(PROGRAM2,"A","a6")
+      ex(PROGRAM2,"A","a6"),
+      {id:"a8",name:"Étirement psoas (fente basse)",target:"2 × 40 s/côté",sets:2,unit:"sec",help:"Genou arrière au sol, ventre rentré (bassin en rétroversion), avancer doucement le bassin jusqu'à sentir l'étirement à l'avant de la hanche. <b>Cible :</b> psoas et fléchisseurs de hanche, raccourcis par la position assise. Jamais en force."}
     ]},
     C:{title:"Séance C — Dos en V, biceps & abdos", sub:"Tirer · largeur du dos + bras", exos:[
       ex(PROGRAM2,"C","c1"),
@@ -249,6 +242,7 @@ var PROGRAM6 = (function(){
       {id:"c7",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, haut du dos sculpté, posture."},
       ex(PROGRAM2,"C","c4"),
       {id:"c8",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+      {id:"c9",name:"Renfo psoas (montée de genou, élastique)",target:"3 × 12/côté",sets:3,unit:"reps",help:"Debout, élastique autour du pied : monter le genou à hauteur de hanche, dos droit, redescendre lentement. <b>Cible :</b> psoas, fléchisseurs de hanche (montée de genou en course, coup de pédale)."},
       ex(PROGRAM2,"C","c6")
     ]}
   };
@@ -265,7 +259,7 @@ var PROGRAM_BLOCKS = {
   b4:{name:"Foncier",      short:"B4", weeks:12, codes:["A","B","C","D","E"],             prog:PROGRAM4},
   b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
   b6:{name:"Développement haut du corps", short:"B6", weeks:2, codes:["A","C"], prog:PROGRAM6,
-       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille)."},
+       focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille). Psoas : étirement en fin de séance A, renfo en séance C."},
   b7:{name:"Entretien haut du corps", short:"B7", weeks:8, codes:["A","C"], prog:PROGRAM6,
        focus:"Même programme que B6, étalé sur la durée : surcharge progressive (+1-2 reps, puis +2 kg quand toutes les séries sont réussies). C'est la régularité, pas 2 semaines, qui construit le haut du corps. À décaler ou arrêter quand tu veux."}
 };
