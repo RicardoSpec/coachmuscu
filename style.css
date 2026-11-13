@@ -1787,6 +1787,16 @@ nav.tabs .tab.on{color:var(--primary)}
 .undo-t{flex:1;min-width:0}
 .undo-b{flex:none;background:none;border:0;color:#ffb48f;font:inherit;font-weight:800;cursor:pointer;padding:6px 8px}
 
+/* Lieu d'entraînement (salle / maison) */
+.place-row{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+.place-l{font-size:13px;font-weight:700;margin-right:2px}
+.pl-b{border:1px solid var(--line);border-radius:999px;background:var(--card);padding:6px 11px;font-size:13px;cursor:pointer;color:var(--ink)}
+.pl-b.on{border-color:var(--focus,#12466B);background:var(--tint);font-weight:700}
+.place-until{font-size:12.5px;color:var(--muted);margin-top:6px}
+.place-until input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;background:var(--card);color:var(--ink)}
+.place-now{font-weight:700;color:var(--ink)}
+.home-tag{font-size:12.5px;color:var(--muted)}
+
 /* ===== DARK:BEGIN (généré par tools/gen-dark.py — ne pas éditer à la main) ===== */
 @media (prefers-color-scheme: dark){
 :root{color-scheme:dark;
