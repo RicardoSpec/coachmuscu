@@ -539,7 +539,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }
     });
   }
-  var sessExpanded={}; /* exId -> déplié, conservé entre re-rendus d'une même séance */
+  var sessExpanded={};
+  var exDone={}; /* exercice terminé (toutes séries avec reps) : sert au repli automatique */ /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var radarPeriod=30, fuelOpen=false, radarDetail=false;
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
   var mealOpen={}; /* repas repliés par défaut dans le journal (par clé de repas pd/dj/dn/co) */
@@ -1915,15 +1916,21 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       wrap.style.setProperty("--exo-sticky-top",Math.round(topPx+h+6)+"px");
     });
   }
+  /* ---- Lieu d'entraînement : « Auto » bascule en version maison après la fin d'abonnement (state.config.gymUntil) ---- */
+  function placeNow(){var c=state.config||{};if(c.place==="home"||c.place==="gym")return c.place;return(c.gymUntil&&todayStr()>c.gymUntil)?"home":"gym";}
+  function effProg(p){if(placeNow()!=="home"||!p||!p.exos||!p.exos.some(function(e){return e.home;}))return p;var q=Object.assign({},p);q.exos=p.exos.map(function(e){return e.home?Object.assign({},e,e.home,{id:e.id,_home:true}):e;});return q;}
+  function placeRowHTML(){var pc=(state.config&&state.config.place)||"auto",gu=(state.config&&state.config.gymUntil)||"";
+    return '<div class="place-row"><span class="place-l">📍 Lieu</span>'+[["auto","Auto"],["gym","🏋️ Salle"],["home","🏠 Maison"]].map(function(x){return '<button type="button" class="pl-b'+(pc===x[0]?' on':'')+'" data-pl="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>'+
+      '<div class="place-until">Abonnement salle jusqu\'au <input type="date" id="gymUntil" value="'+esc(gu)+'"> <span class="place-now">→ version '+(placeNow()==="home"?"maison":"salle")+'</span></div>';}
   function renderSessionDetail(){
     if(!currentSel)return;
     var b=currentSel.block,w=currentSel.w,c=currentSel.c;
-    var p=progOf(b,c);var s=sess(b,w,c);
+    var p0=progOf(b,c),p=effProg(p0);var s=sess(b,w,c);var hasHome=p0.exos.some(function(e){return e.home;});
     var head=
       '<div class="eyebrow">Séance ouverte</div>'+
       '<div class="card pad">'+
       '<div class="sd-head"><div><div class="lbl">'+PROGRAM_BLOCKS[b].name+' · Semaine '+w+' · '+p.sub+'</div>'+
-      '<h3>'+p.title.replace(/—.*/,"").trim()+' '+c+'</h3></div></div>'+
+      '<h3>'+p.title.replace(/—.*/,"").trim()+' '+c+'</h3></div></div>'+(hasHome?placeRowHTML():'')+
       '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+(s.done?'Annuler':'Marquer la séance comme faite')+'</button></div>'+
       (s.done?'<div class="donedate"><label>Faite le <input type="date" id="doneDate" value="'+esc(s.date||todayStr())+'"></label></div>':'')+
       '<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns">'+
@@ -1931,9 +1938,10 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '</div></div>';
     var exosHTML="";
     p.exos.forEach(function(ex){
-      var curV=(s.variant&&s.variant[ex.id])||"";
+      var curV=(s.variant&&s.variant[ex.id])||(ex._home?"Maison":"");
       var setK=setKey(ex.id,curV);
       if(!s.sets[setK])s.sets[setK]=[];
+      var _ar=s.sets[setK],_cp=true;for(var _q=0;_q<ex.sets;_q++){if(!_ar[_q]||String(_ar[_q].r).trim()===""){_cp=false;break;}}exDone[setK]=_cp;
       var prev=prevSets(b,w,c,setK);
       var isMin=ex.unit==="min";                    /* endurance : une durée par bloc, pas de charge */
       var isSec=(ex.unit==="sec"||isMin);
@@ -1971,7 +1979,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
       var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
       var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
-      var varHTML=isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)</label><select class="exo-var" data-exo="'+ex.id+'"><option value=""'+(curV===""?" selected":"")+'>Version standard</option>'+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>');
+      var varHTML=ex._home?'<div class="exo-var-row"><span class="home-tag">🏠 Version maison : suivie à part de la salle</span></div>':(isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)</label><select class="exo-var" data-exo="'+ex.id+'"><option value=""'+(curV===""?" selected":"")+'>Version standard</option>'+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>'));
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
           '<div class="exo-band'+(sessExpanded[ex.id]?" open":"")+'" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="'+(sessExpanded[ex.id]?"true":"false")+'">'+
@@ -2008,6 +2016,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var wrap=document.getElementById("sessionDetail");
     wrap.innerHTML=head+exosHTML+extraHTML+addBtnHTML+'</div>';
     setExoStickyTop();
+    wrap.querySelectorAll(".pl-b").forEach(function(bt){bt.onclick=function(){if(!state.config)state.config={};var v=bt.getAttribute("data-pl");if(v==="auto")delete state.config.place;else state.config.place=v;save();renderSessionDetail();};});
+    var _gu=wrap.querySelector("#gymUntil");if(_gu)_gu.onchange=function(){if(!state.config)state.config={};if(_gu.value)state.config.gymUntil=_gu.value;else delete state.config.gymUntil;save();renderSessionDetail();};
 
     wrap.querySelectorAll(".set").forEach(function(row){
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
@@ -2018,6 +2028,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};var v=s.sets[exo][idx];if((v.kg&&(""+v.kg).trim())||(v.r&&(""+v.r).trim()))linkSessionSport("Muscu",s.date||todayStr());save();}
       if(kgEl)kgEl.addEventListener("input",upd);
       if(rEl)rEl.addEventListener("input",upd);
+      if(kgEl)kgEl.addEventListener("change",function(){autoFold(exo);});if(rEl)rEl.addEventListener("change",function(){autoFold(exo);});
     });
     wrap.querySelectorAll(".exo-prog[data-prog]").forEach(function(el){
       function tgl(){var id=el.getAttribute("data-prog");progMode[id]=(progMode[id]==="vol")?"1rm":"vol";renderSessionDetail();}
@@ -2026,13 +2037,19 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     });
     wrap.querySelectorAll(".exo-more-btn").forEach(function(btn){btn.addEventListener("click",function(){var m=document.getElementById("more-"+btn.getAttribute("data-more"));if(m){var op=m.style.display==="none";m.style.display=op?"":"none";btn.classList.toggle("open",op);}});});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
+    /* Repli automatique : quand toutes les séries d'un exo ont leurs reps (au moment où on quitte le champ), le bandeau se referme ; on peut le rouvrir. */
+    function exComplete(k){var m=exoMeta(String(k).split("::")[0]);if(!m)return false;var arr=s.sets[k]||[];for(var q=0;q<m.sets;q++){var it=arr[q];if(!it||String(it.r).trim()==="")return false;}return true;}
+    function autoFold(k){var id=String(k).split("::")[0],now=exComplete(k),was=exDone[k];exDone[k]=now;if(!now||was)return;
+      setTimeout(function(){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]'),body=document.getElementById("body-"+id);if(!band||!body)return;
+        body.classList.add("collapsed");band.classList.remove("open");band.setAttribute("aria-expanded","false");sessExpanded[id]=false;
+        try{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}catch(e){}},250);}
     wrap.querySelectorAll(".exo-var").forEach(function(sel){sel.onchange=function(){
       var exId=sel.getAttribute("data-exo"),val=sel.value;
       function applyVar(v){if(!s.variant)s.variant={};if(v)s.variant[exId]=v;else delete s.variant[exId];save();renderSessionDetail();}
       if(val==="__autre"){var back=function(){sel.value=(s.variant&&s.variant[exId])||"";};uiPrompt("Variante (ex. machine convergente, Smith, poulie basse…) :","",function(v){if(!v){back();return;}applyVar(v);},back);return;}
       applyVar(val);
     };});
-    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var v=(s.variant&&s.variant[id])||"";var arr=s.sets[setKey(id,v)]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
+    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var v=(s.variant&&s.variant[id])||(m._home?"Maison":"");var arr=s.sets[setKey(id,v)]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
     wrap.querySelectorAll(".exo-band").forEach(function(band){
       function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");sessExpanded[id]=!col;refreshChip(id);}
       band.addEventListener("click",tog);
