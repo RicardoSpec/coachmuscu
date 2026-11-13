@@ -226,24 +226,29 @@ var PROGRAM5 = {
    => « dernière fois » retrouvée. a7, a8, c7, c8, c9 sont nouveaux (a8/c9 = psoas : étirement en fin de A, renfo en C). */
 var PROGRAM6 = (function(){
   function ex(p,c,id){var a=p[c].exos;for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];throw new Error("PROGRAM6 : "+c+"/"+id+" introuvable");}
+  /* exH : l'exo salle + sa version maison (barre de traction + élastiques, sans haltères ni banc). La version maison est suivie à part (clé « id::Maison »). */
+  function exH(p,c,id,home){var e=ex(p,c,id),o={};for(var k in e)o[k]=e[k];home.unit=home.unit||"reps";home.base=home.base||"ajout";o.home=home;return o;}
   return {
     A:{title:"Séance A — Pecs, épaules & triceps", sub:"Pousser · pecs + largeur d'épaules", exos:[
-      ex(PROGRAM2,"A","a1"),
-      ex(PROGRAM2,"A","a3"),
-      ex(PROGRAM2,"A","a2"),
-      ex(PROGRAM2,"A","a4"),
-      {id:"a7",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas. <b>Cible :</b> triceps (2/3 du volume du bras)."},
-      ex(PROGRAM2,"A","a6"),
+      exH(PROGRAM2,"A","a1",{name:"Pompes lestées (sac à dos)",target:"4 × 8-15",sets:4,help:"Mains un peu plus larges que les épaules, corps gainé, poitrine au sol. Quand 15 reps deviennent faciles, charge un sac à dos (livres, bouteilles). <b>Cible :</b> pecs, triceps, épaules avant (remplace le développé couché)."}),
+      exH(PROGRAM2,"A","a3",{name:"Pompes pieds surélevés",target:"3 × 8-12",sets:3,help:"Pieds sur une chaise stable, mains au sol : plus les pieds sont hauts, plus tu travailles le haut des pecs. <b>Cible :</b> haut des pecs et épaules (remplace le développé incliné)."}),
+      exH(PROGRAM2,"A","a2",{name:"Développé militaire à l'élastique",target:"3 × 10-15",sets:3,help:"Debout sur l'élastique (pieds écartés), pousser les mains au-dessus de la tête sans cambrer. Choisis l'élastique qui te fait échouer entre 10 et 15 reps. <b>Cible :</b> épaules (remplace le développé militaire)."}),
+      exH(PROGRAM2,"A","a4",{name:"Élévations latérales à l'élastique",target:"4 × 15",sets:4,help:"Debout sur l'élastique, monter les bras sur les côtés jusqu'à l'horizontale, coudes légèrement fléchis. <b>Cible :</b> deltoïde latéral, l'exo clé de la largeur d'épaules (taille en V)."}),
+      {id:"a7",name:"Extension triceps à la poulie (corde)",target:"3 × 12-15",sets:3,unit:"reps",base:"total",help:"Coudes fixes le long du corps, tendre les bras vers le bas. <b>Cible :</b> triceps (2/3 du volume du bras).",
+        home:{name:"Extension triceps à l'élastique (porte)",target:"3 × 12-15",sets:3,unit:"reps",base:"ajout",help:"Élastique coincé en haut de la porte fermée, coudes collés au corps, tendre les bras vers le bas. <b>Cible :</b> triceps."}},
+      exH(PROGRAM2,"A","a6",{name:"Relevés de jambes suspendus (barre de porte)",target:"3 × 8-12",sets:3,help:"Suspendu à la barre, monter les genoux (puis les jambes tendues) à hauteur des hanches, sans balancer. <b>Cible :</b> abdos bas et psoas."}),
       {id:"a8",name:"Étirement psoas (fente basse)",target:"2 × 40 s/côté",sets:2,unit:"sec",help:"Genou arrière au sol, ventre rentré (bassin en rétroversion), avancer doucement le bassin jusqu'à sentir l'étirement à l'avant de la hanche. <b>Cible :</b> psoas et fléchisseurs de hanche, raccourcis par la position assise. Jamais en force."}
     ]},
     C:{title:"Séance C — Dos en V, biceps & abdos", sub:"Tirer · largeur du dos + bras", exos:[
-      ex(PROGRAM2,"C","c1"),
-      ex(PROGRAM2,"C","c2"),
-      {id:"c7",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, haut du dos sculpté, posture."},
-      ex(PROGRAM2,"C","c4"),
-      {id:"c8",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras."},
+      exH(PROGRAM2,"C","c1",{name:"Tractions (barre de porte)",target:"4 × 5-10",sets:4,help:"Prise un peu plus large que les épaules, tirer la poitrine vers la barre, descente lente (3 s). Trop dur : élastique en assistance ; trop facile : sac à dos. <b>Cible :</b> grand dorsal, largeur du dos (le V)."}),
+      exH(PROGRAM2,"C","c2",{name:"Rowing à l'élastique (porte)",target:"4 × 12-15",sets:4,help:"Élastique accroché à hauteur de poitrine, tirer les coudes vers l'arrière en serrant les omoplates. <b>Cible :</b> épaisseur du dos."}),
+      {id:"c7",name:"Oiseau (épaules arrière)",target:"3 × 15",sets:3,unit:"reps",base:"bras",help:"Buste penché, écarter les haltères sur les côtés. <b>Cible :</b> épaules arrière, haut du dos sculpté, posture.",
+        home:{name:"Oiseau à l'élastique",target:"3 × 15",sets:3,unit:"reps",base:"ajout",help:"Élastique tenu à deux mains devant toi, bras tendus, écarter les mains vers l'extérieur. <b>Cible :</b> épaules arrière et haut du dos."}},
+      exH(PROGRAM2,"C","c4",{name:"Curl à l'élastique",target:"3 × 12-15",sets:3,help:"Debout sur l'élastique, curl en gardant les coudes fixes. <b>Cible :</b> biceps."}),
+      {id:"c8",name:"Curl marteau",target:"3 × 12",sets:3,unit:"reps",base:"bras",help:"Curl avec les paumes face à face (prise marteau). <b>Cible :</b> biceps, avant-bras.",
+        home:{name:"Tractions en supination (chin-up)",target:"3 × 5-8",sets:3,unit:"reps",base:"ajout",help:"Paumes vers toi, mains à largeur d'épaules : plus de biceps que la traction classique. <b>Cible :</b> biceps et dos."}},
       {id:"c9",name:"Renfo psoas (montée de genou, élastique)",target:"3 × 12/côté",sets:3,unit:"reps",help:"Debout, élastique autour du pied : monter le genou à hauteur de hanche, dos droit, redescendre lentement. <b>Cible :</b> psoas, fléchisseurs de hanche (montée de genou en course, coup de pédale)."},
-      ex(PROGRAM2,"C","c6")
+      exH(PROGRAM2,"C","c6",{name:"Crunch au sol",target:"3 × 15-20",sets:3,help:"Dos plaqué, lombaires collées au sol, enrouler le haut du corps en soufflant. <b>Cible :</b> abdominaux."})
     ]}
   };
 })();
@@ -260,7 +265,7 @@ var PROGRAM_BLOCKS = {
   b5:{name:"Spécifique",   short:"B5", weeks:10, codes:["A","B","C","D","E","F"],         prog:PROGRAM5},
   b6:{name:"Développement haut du corps", short:"B6", weeks:2, codes:["A","C"], prog:PROGRAM6,
        focus:"Pecs, bras, dos sculpté + taille en V : épaules et dos larges (tractions, élévations latérales) au-dessus d'une taille fine. Les abdos se travaillent en gainage et relevés, sans charges lourdes sur les obliques (elles épaississent la taille). Psoas : étirement en fin de séance A, renfo en séance C."},
-  b7:{name:"Entretien haut du corps", short:"B7", weeks:8, codes:["A","C"], prog:PROGRAM6,
+  b7:{name:"Entretien haut du corps", short:"B7", weeks:6, codes:["A","C"], prog:PROGRAM6,
        focus:"Même programme que B6, étalé sur la durée : surcharge progressive (+1-2 reps, puis +2 kg quand toutes les séries sont réussies). C'est la régularité, pas 2 semaines, qui construit le haut du corps. À décaler ou arrêter quand tu veux."}
 };
 var BLOCK_ORDER = ["b1","b2","b3","b4","b5","b6","b7"];
