@@ -8,7 +8,7 @@
 var V = (/[?&]v=(\d+)/.exec(self.location.search) || [])[1] || "0";
 var CACHE = "coachmuscu-runtime-v" + V;
 var NET_TIMEOUT = 3000;
-var SHELL = ["./", "index.html", "style.css?v=" + V, "data.js?v=" + V, "sports.js?v=" + V, "app.js?v=" + V, "manifest.webmanifest"];
+var SHELL = ["./", "index.html", "style.css?v=" + V, "data.js?v=" + V, "sports.js?v=" + V, "app.js?v=" + V, "manifest.webmanifest", "base_aliments.json"];
 
 function put(req, res) {
   if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
@@ -61,7 +61,7 @@ function networkFirst(req) {
 /* Cache d'abord + rafraîchissement silencieux. */
 function staleWhileRevalidate(req) {
   return caches.match(req, { ignoreSearch: true }).then(function (m) {
-    var net = fetch(req).then(function (res) { return put(req, res); }).catch(function () { return m; });
+    var net = fetch(req).then(function (res) { return put(req, res); }).catch(function () { return m || Response.error(); });
     return m || net;
   });
 }
