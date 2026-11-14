@@ -27,7 +27,7 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
   ok(a.errs.length===0,"démarrage sans erreur JS");
   tab(a.d,"v-sport");
   const nx=a.d.querySelector(".cell.next");ok(nx&&nx.getAttribute("data-b")==="b7"&&nx.getAttribute("data-w")==="1","après B6 la prochaine séance est B7 S1");
-  ok([...a.d.querySelectorAll(".cell[data-c]")].filter(c=>c.getAttribute("data-b")==="b7").length===16,"B7 : 16 séances (A,C × 8 sem.)");
+  ok([...a.d.querySelectorAll(".cell[data-c]")].filter(c=>c.getAttribute("data-b")==="b7").length===12,"B7 : 12 séances (A,C × 6 sem.)");
   ok(/taille en V/.test(a.d.body.textContent),"encart d'objectif du bloc affiché");
   const mt=a.d.getElementById("muscuTitle");ok(!!mt.querySelector(".dl-exp"),"échéance dépassée : pastille visible");
   const inp=mt.querySelector(".dl-push");inp.value="2027-02-01";inp.dispatchEvent(new a.w.Event("change",{bubbles:true}));
