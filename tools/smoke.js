@@ -96,5 +96,48 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
   const nxt=h2.d.querySelector(".cell.next");const bb=nxt&&nxt.getAttribute("data-b");
   const cb=h2.d.querySelector(".blk-close");ok(!!cb&&bb==="b1","sans clôture : bloc B1 proposé, bouton « Clôturer » présent");
   if(cb){cb.click();await wait(50);const n2=h2.d.querySelector(".cell.next");ok(n2&&n2.getAttribute("data-b")!=="b1","après « Clôturer » : B1 n'est plus proposé");}
+  // ---- 10. dialogues dans l'app + « Annuler » (plus de confirm/prompt/alert natifs) ----
+  const SRCAPP=rd("app.js");
+  ok(!SRCAPP.split("\n").some(l=>/(^|[^A-Za-z_.])(confirm|prompt|alert)\(/.test(l)&&!/function ui|typeof confirm/.test(l)),"aucun confirm/prompt/alert natif dans app.js");
+  let k=await boot(seed());tab(k.d,"v-sport");
+  // renommer l'objectif muscu via feuille de saisie
+  k.d.getElementById("muscuTitle").querySelector(".pane-ren").click();
+  const ov=k.d.querySelector(".ui-ov");ok(!!ov&&!!ov.querySelector(".ui-in"),"renommer : feuille de saisie affichée");
+  ov.querySelector(".ui-in").value="Haut du corps";ov.querySelector(".ui-yes").click();
+  ok(!k.d.querySelector(".ui-ov")&&k.st().config.objectivesCustom.some(o=>o.name==="Haut du corps"),"renommer : valider applique le nom et ferme la feuille");
+  k.d.getElementById("muscuTitle").querySelector(".pane-ren").click();k.d.querySelector(".ui-no").click();
+  ok(!k.d.querySelector(".ui-ov")&&k.st().config.objectivesCustom.some(o=>o.name==="Haut du corps"),"renommer : Annuler ferme sans rien changer");
+  // sortie : suppression + Annuler
+  k.d.querySelector('.out-b[data-sp="course"]').click();k.d.getElementById("outMin").value="40";k.d.querySelector(".out-save").click();
+  k.d.querySelector(".out-del").click();ok(k.st().outings.length===0&&k.d.getElementById("undoBar").classList.contains("show"),"sortie supprimée : barre « Annuler » affichée");
+  k.d.querySelector("#undoBar .undo-b").click();ok(k.st().outings.length===1,"Annuler : la sortie est restaurée");
+  // archivage tri + Annuler (le tri est actif dans la graine)
+  k.d.querySelector(".pane-arc").click();ok(!k.st().config.objectivesCustom.some(o=>o.tri),"archivage : appliqué sans confirmation bloquante");
+  k.d.querySelector("#undoBar .undo-b").click();ok(k.st().config.objectivesCustom.some(o=>o.tri)&&k.st().config.activities.tri.enabled===true,"Annuler : le triathlon est de retour (objectif + activité)");
+  // tout effacer : double confirmation
+  k.d.getElementById("settingsBtn").click();k.d.querySelectorAll(".set-grptog").forEach(b=>b.click());k.d.querySelectorAll(".set-sectog").forEach(b=>b.click());
+  const rs=k.d.getElementById("bkpReset");ok(!!rs,"bouton « Tout effacer » présent");
+  if(rs){rs.click();ok(!!k.d.querySelector(".ui-ov"),"tout effacer : 1re confirmation");k.d.querySelector(".ui-yes").click();ok(!!k.d.querySelector(".ui-ov"),"tout effacer : 2e confirmation (dernière)");
+    k.d.querySelector(".ui-yes").click();const z=k.st();ok(Object.keys(z.sessions).length===0&&Object.keys(z.days).length<=1&&(z.config.objectivesCustom||[]).length===0&&z.config.activities.muscu.enabled===false,"tout effacer : données effacées après les 2 confirmations (seul le jour affiché est recréé)");}
+  // ---- 11. lisibilité + mode sombre ----
+  const CSS=rd("style.css"),light=CSS.slice(0,CSS.indexOf("DARK:BEGIN"));
+  const fs=[...light.matchAll(/font-size:\s*([\d.]+)px/g)].map(m=>parseFloat(m[1]));
+  ok(Math.min(...fs)>=10&&fs.filter(x=>x<12).length<=45,"polices : minimum 10 px, <12 px limité aux éléments denses ("+fs.filter(x=>x<12).length+" règles)");
+  ok(/@media \(prefers-color-scheme: dark\)/.test(CSS)&&/--primary-ink/.test(CSS)&&/prefers-reduced-motion/.test(CSS),"mode sombre automatique + réduction des animations présents");
+  ok(/theme-color" content="#0e151b" media="\(prefers-color-scheme: dark\)"/.test(rd("index.html")),"barre d'état : theme-color sombre");
+  // ---- 12. Progrès : blocs sans donnée récente masqués ----
+  {const iso=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+   const base=JSON.parse(seed());base.days={};base.outings=[];
+   let e=await boot(JSON.stringify(base));tab(e.d,"v-prog2");await wait(100);
+   const txt=id=>(e.d.getElementById(id)||{}).textContent||"";
+   ok(txt("weekViz").trim()===""&&txt("regularity").trim()===""&&txt("outViz").trim()==="","Progrès sans donnée : 7 derniers jours, Régularité et Sorties libres masqués");
+   ok(e.d.getElementById("weightChart").parentNode.hidden&&e.d.getElementById("proteinChart").parentNode.hidden,"Progrès sans donnée : cartes Poids et Protéines masquées");
+   const full=JSON.parse(seed());full.outings=[];
+   full.days[iso(1)]={sleep:"7.5",water:6,sports:["Muscu"],weight:"70.0"};full.days[iso(3)]={weight:"70.4"};
+   e=await boot(JSON.stringify(full));tab(e.d,"v-prog2");await wait(100);
+   ok(/7 derniers jours/.test(txt("weekViz"))&&/Sommeil/.test(txt("weekViz"))&&/Eau/.test(txt("weekViz"))&&!/Protéines/.test(txt("weekViz")),"7 derniers jours : seules les courbes avec données sont affichées");
+   ok(/Régularité/.test(txt("regularity")),"Régularité visible dès qu'une case est cochée");
+   ok(!e.d.getElementById("weightChart").parentNode.hidden&&e.d.getElementById("weightChart").querySelector("svg"),"carte Poids visible avec 2 relevés");
+   ok(e.errs.length===0,"Progrès : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
