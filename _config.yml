@@ -1,0 +1,4 @@
+# GitHub Pages (Jekyll) : ne pas publier les outils de dev
+exclude:
+  - tools
+  - node_modules
