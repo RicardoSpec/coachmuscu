@@ -139,5 +139,77 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    ok(/Régularité/.test(txt("regularity")),"Régularité visible dès qu'une case est cochée");
    ok(!e.d.getElementById("weightChart").parentNode.hidden&&e.d.getElementById("weightChart").querySelector("svg"),"carte Poids visible avec 2 relevés");
    ok(e.errs.length===0,"Progrès : aucune erreur JS");}
+  // ---- 13. Variante par défaut = dernière variante utilisée sur le même exercice ----
+  {const vm=require("vm"),G={};G.window=G;vm.createContext(G);vm.runInContext(rd("data.js"),G);
+   const ex7=G.PROGRAM_BLOCKS.b7.prog.A.exos.find(x=>x.name==="Développé couché barre"),ex6=G.PROGRAM_BLOCKS.b6.prog.A.exos.find(x=>x.name==="Développé couché barre"),id=ex7.id;
+   ok(!!ex7&&!!ex6,"données de test : « Développé couché barre » présent en B6 et B7");
+   const mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o);
+   const base=()=>JSON.parse(seed());
+   const open=async(e,b,w,c)=>{tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="'+b+'"][data-w="'+w+'"][data-c="'+c+'"]').click();await wait(80);};
+   const sel=e=>e.d.querySelector('#sessionDetail .exo-var[data-exo="'+id+'"]');
+   const lbl=e=>sel(e).parentNode.querySelector("label").textContent;
+   const inKg=(e,k)=>e.d.querySelector('#sessionDetail .set[data-exo="'+k+'"][data-set="0"] .in-kg');
+   // A. même bloc : S1 en Haltères -> S2 présélectionne Haltères et l'explique
+   let s=base();s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"12",r:"10"}]},variant:{[id]:"Haltères"}});
+   let e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   ok(sel(e).value==="Haltères"&&/reprise de ta dernière séance/.test(lbl(e)),"variante présélectionnée depuis la séance précédente (+ explication)");
+   ok(inKg(e,id+"::Haltères")!==null,"les séries s'affichent sous la variante reprise");
+   // B. choix explicite d'une autre variante : respecté (plus de reprise automatique) ; « Version standard » n'existe plus
+   ok(![...sel(e).options].some(o=>/standard/i.test(o.textContent)),"liste des variantes : plus de « Version standard »");
+   sel(e).value="Machine";sel(e).dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(60);
+   ok(sel(e).value==="Machine"&&!/reprise/.test(lbl(e))&&e.st().sessions.b7_2_A.variant[id]==="Machine","variante choisie à la main : conservée");
+   // C. mémorisation à la 1re saisie (la variante ne bouge plus ensuite)
+   e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   const ik=inKg(e,id+"::Haltères");ik.value="15";ik.dispatchEvent(new e.w.Event("input",{bubbles:true}));
+   ok(e.st().sessions.b7_2_A.variant[id]==="Haltères","1re saisie : variante mémorisée dans la séance");
+   // D. séance déjà saisie sans variante : historique intact
+   s=base();s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"12",r:"10"}]},variant:{[id]:"Haltères"}});s.sessions.b7_2_A=mk({sets:{[id]:[{kg:"60",r:"8"}]}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   ok(sel(e).value===""&&inKg(e,id)&&inKg(e,id).value==="60","séance existante sans variante : inchangée (pas de reprise)");
+   // E. entre blocs : B6 en Machine -> B7 S1 présélectionne Machine
+   s=base();s.sessions.b6_2_A=mk({variant:{[ex6.id]:"Machine"}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",1,"A");
+   ok(sel(e).value==="Machine","entre blocs : la variante du bloc précédent est reprise");
+   // F. aucune donnée antérieure : version standard, sans mention
+   e=await boot(seed());await open(e,"b7",1,"A");
+   ok(sel(e).value===""&&!/reprise/.test(lbl(e))&&e.errs.length===0,"sans historique : invite « Choisis ta variante », aucune erreur JS");}
+  // ---- 14. Valeurs de la fois précédente (placeholders des cases kg/reps) ----
+  {const vm=require("vm"),G={};G.window=G;vm.createContext(G);vm.runInContext(rd("data.js"),G);
+   const id="a1",mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o),base=()=>JSON.parse(seed());
+   const open=async(e,b,w,c)=>{tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="'+b+'"][data-w="'+w+'"][data-c="'+c+'"]').click();await wait(80);};
+   const ph=(e,k,f)=>{const el=e.d.querySelector('#sessionDetail .set[data-exo="'+k+'"][data-set="0"] .'+f);return el?el.placeholder:null;};
+   // salle, même variante
+   let s=base();s.sessions.b7_1_A=mk({sets:{[id]:[{kg:"60",r:"8"}]}});
+   let e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   ok(ph(e,id,"in-kg")==="60"&&ph(e,id,"in-r")==="8","cases : valeurs de la séance précédente (même exercice)");
+   // variante reprise automatiquement -> ses valeurs
+   s=base();s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"24",r:"10"}]},variant:{[id]:"Haltères"}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   ok(ph(e,id+"::Haltères","in-kg")==="24","cases : valeurs de la variante reprise automatiquement");
+   // entre blocs
+   s=base();s.sessions.b6_2_A=mk({sets:{[id]:[{kg:"70",r:"6"}]}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",1,"A");
+   ok(ph(e,id,"in-kg")==="70","cases : valeurs reprises du bloc précédent");
+   // maison : suivi à part -> 1re séance vide, puis valeurs de la séance maison précédente
+   s=base();s.config.place="home";s.sessions.b7_1_A=mk({sets:{[id]:[{kg:"60",r:"8"}]}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",2,"A");
+   ok(ph(e,id+"::Maison","in-kg")==="kg","maison : 1re séance, rien à reprendre (historique salle séparé)");
+   s.sessions.b7_2_A=mk({sets:{[id+"::Maison"]:[{kg:"10",r:"12"}]}});
+   e=await boot(JSON.stringify(s));await open(e,"b7",3,"A");
+   ok(ph(e,id+"::Maison","in-kg")==="10"&&ph(e,id+"::Maison","in-r")==="12","maison : valeurs de la séance maison précédente");}
+  // ---- 15. La valeur affichée dans les cases dépend de la variante choisie (la plus récente pour CETTE variante) ----
+  {const id="a1",mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o);
+   const s=JSON.parse(seed());
+   s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"24",r:"10"}]},variant:{[id]:"Haltères"}});
+   s.sessions.b7_2_A=mk({sets:{[id+"::Machine"]:[{kg:"50",r:"8"}]},variant:{[id]:"Machine"}});
+   const e=await boot(JSON.stringify(s));tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="3"][data-c="A"]').click();await wait(80);
+   const sel=()=>e.d.querySelector('#sessionDetail .exo-var[data-exo="'+id+'"]');
+   const ph=k=>{const el=e.d.querySelector('#sessionDetail .set[data-exo="'+k+'"][data-set="0"] .in-kg');return el?el.placeholder:null;};
+   const pick=async v=>{sel().value=v;sel().dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(60);};
+   ok(sel().value==="Machine"&&ph(id+"::Machine")==="50","S3 : variante la plus récente (Machine) + sa dernière valeur");
+   await pick("Haltères");ok(sel().value==="Haltères"&&ph(id+"::Haltères")==="24","changer pour Haltères : cases = dernière valeur Haltères");
+   await pick("Machine");ok(ph(id+"::Machine")==="50","revenir à Machine : cases = dernière valeur Machine");
+   await pick("Poulie");ok(sel().value==="Poulie"&&ph(id+"::Poulie")==="kg","variante jamais utilisée : cases vides (pas de valeur d'une autre variante)");
+   ok(e.errs.length===0,"variantes : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
