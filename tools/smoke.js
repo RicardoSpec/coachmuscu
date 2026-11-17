@@ -80,7 +80,8 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
   const nx9=g.d.querySelector(".cell.next");ok(nx9&&nx9.getAttribute("data-b")==="b6"&&nx9.getAttribute("data-w")==="1"&&nx9.getAttribute("data-c")==="A","blocs B1–B5 clôturés : la prochaine séance est B6 S1 A");
   g.d.querySelector('.cell[data-b="b6"][data-w="1"][data-c="A"]').click();let det=g.d.getElementById("sessionDetail")?g.d.getElementById("sessionDetail").textContent:g.d.body.textContent;
   ok(/Étirement psoas/.test(det),"séance A : étirement psoas présent");
-  ok(/10×10/.test(det)&&!/0×5/.test(det),"« dernière fois » : couché repris de B1, tractions NON reprises pour le militaire");
+  {const phg=(k,f)=>{const el=g.d.querySelector('#sessionDetail .set[data-exo="'+k+'"][data-set="0"] .'+f);return el?el.placeholder:null;};
+  ok(phg("a1","in-kg")==="10"&&phg("a1","in-r")==="10"&&phg("a2","in-kg")!=="0"&&phg("a2","in-r")!=="5","« dernière fois » : couché repris de B1 dans les cases, tractions NON reprises pour le militaire");}
   g.d.querySelector('.cell[data-b="b6"][data-w="1"][data-c="C"]').click();det=g.d.getElementById("sessionDetail")?g.d.getElementById("sessionDetail").textContent:g.d.body.textContent;
   ok(/Renfo psoas/.test(det),"séance C : renfo psoas présent");
   tab(g.d,"v-day");await wait(100);
@@ -211,5 +212,32 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    await pick("Machine");ok(ph(id+"::Machine")==="50","revenir à Machine : cases = dernière valeur Machine");
    await pick("Poulie");ok(sel().value==="Poulie"&&ph(id+"::Poulie")==="kg","variante jamais utilisée : cases vides (pas de valeur d'une autre variante)");
    ok(e.errs.length===0,"variantes : aucune erreur JS");}
+  // ---- 16. Fiche exercice (Progrès) : historique détaillé par variante ; plus d'historique dans la séance ----
+  {const id="a1",mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o);
+   const s=JSON.parse(seed());
+   s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"24",r:"10"}]},variant:{[id]:"Haltères"}});
+   s.sessions.b7_2_A=mk({sets:{[id+"::Machine"]:[{kg:"50",r:"8"}]},variant:{[id]:"Machine"}});
+   const e=await boot(JSON.stringify(s));
+   const T=()=>e.d.getElementById("exoSheet").textContent;
+   tab(e.d,"v-prog2");await wait(80);
+   const pick=e.d.getElementById("exoSheetPick");
+   ok(!!pick&&[...pick.options].some(o=>o.textContent==="Développé couché barre"),"Progrès : fiche exercice listant les exercices saisis");
+   ok(/Machine/.test(T())&&/63 kg/.test(T())&&/50×8/.test(T()),"fiche : variante la plus récente (Machine) sélectionnée, 1RM et dernière fois");
+   [...e.d.querySelectorAll("#exoSheet .es-var")].find(b=>b.getAttribute("data-v")==="Haltères").click();await wait(40);
+   ok(/32 kg/.test(T())&&/24×10/.test(T())&&!/63 kg/.test(T()),"fiche : chaque variante a son propre historique");
+   tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="3"][data-c="A"]').click();await wait(80);
+   ok(!/📊 Historique/.test(e.d.getElementById("sessionDetail").textContent),"séance : le bloc « Historique » a quitté l'exercice");
+   const e0=await boot(seed());tab(e0.d,"v-prog2");await wait(80);
+   const emp=JSON.parse(seed());emp.sessions={};const e1=await boot(JSON.stringify(emp));tab(e1.d,"v-prog2");await wait(80);
+   ok(e1.d.getElementById("exoSheet").textContent.trim()==="","fiche exercice masquée sans aucune saisie");
+   ok(e.errs.length===0&&e0.errs.length===0&&e1.errs.length===0,"fiche exercice : aucune erreur JS");}
+  // ---- 17. Séances abîmées : l'écran ne plante pas ----
+  {const mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o);let n=0;
+   const cases=[s=>{s.sessions.b7_1_A=null;s.sessions.b7_2_A={done:false,sets:null};s.sessions.b7_3_A={sets:{a1:null,a2:[null,{kg:null,r:undefined},{}],"a3::X":"abc"}};},
+                s=>{s.sessions.b7_2_A=mk({sets:{a1:[{kg:"60",r:"8"}]},variant:"Haltères"});s.sessions.b7_3_A=mk({sets:{a1:[{kg:"60",r:"8"}]},variant:{a1:null}});},
+                s=>{s.sessions.b7_1_A=mk({sets:{"a1::Maison":[{kg:"10",r:"12"}]},extra:[null,{id:"x1",name:"Test"}],variant:{a1:"Haltères"}});s.config.place="home";}];
+   for(const fn of cases){const s=JSON.parse(seed());fn(s);
+     for(const w of [1,2,3,4]){const e=await boot(JSON.stringify(s));tab(e.d,"v-sport");const cell=e.d.querySelector('.cell[data-b="b7"][data-w="'+w+'"][data-c="A"]');if(cell)cell.click();await wait(50);tab(e.d,"v-prog2");await wait(50);if(e.errs.length){n++;console.log("   erreur :",e.errs[0]);}}}
+   ok(n===0,"séances abîmées (sets nul, variante invalide, extras nuls) : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
