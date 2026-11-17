@@ -300,7 +300,13 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* ---------------- Séances (multi-blocs) ---------------- */
   function sessKey(b,w,c){return b==="b1"?(w+"_"+c):(b+"_"+w+"_"+c);}
-  function sess(b,w,c){var k=sessKey(b,w,c);if(!state.sessions[k])state.sessions[k]={done:false,sets:{}};return state.sessions[k];}
+  function sess(b,w,c){var k=sessKey(b,w,c),s=state.sessions[k];
+    if(!s||typeof s!=="object"){s=state.sessions[k]={done:false,sets:{}};}
+    if(!s.sets||typeof s.sets!=="object"||Array.isArray(s.sets))s.sets={};
+    for(var q in s.sets)if(!Array.isArray(s.sets[q]))s.sets[q]=[];
+    if(s.variant&&typeof s.variant!=="object")delete s.variant;
+    if(Array.isArray(s.extra))s.extra=s.extra.filter(Boolean);
+    return s;}
   /* Récupération des séances enregistrées pendant la collision de clés (format "b3|7") :
      une seule entrée valait pour TOUTE la semaine — on la réplique sur chaque code du bloc,
      ce qui restitue exactement ce qui était affiché. One-shot, marqué dans state.config. */
@@ -386,7 +392,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   /* Les ids d'exos (a1, a2…) sont réutilisés d'un bloc à l'autre avec des exercices différents : on ne reprend la charge d'un bloc antérieur que si c'est le même mouvement (1er mot du nom ; 2 mots pour « développé »). */
   function exoKey(bl,c,exId){var id=String(exId).split("::")[0],ov=state.config&&state.config.program&&state.config.program[bl+"_"+c],p=ov||(PROGRAM_BLOCKS[bl]&&PROGRAM_BLOCKS[bl].prog&&PROGRAM_BLOCKS[bl].prog[c]);if(!p||!p.exos)return null;for(var i=0;i<p.exos.length;i++)if(p.exos[i].id===id){var n=String(p.exos[i].name||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\(.*?\)/g,"").trim().split(/\s+/);return n[0]==="developpe"?(n[0]+" "+(n[1]||"")):n[0];}return null;}
   function prevSets(b,w,c,exId){
-    function pick(bl,wk){var ss=state.sessions[sessKey(bl,wk,c)];if(ss&&ss.sets&&ss.sets[exId]){var a=ss.sets[exId];for(var i=0;i<a.length;i++){if(a[i]&&(a[i].kg!==""||a[i].r!==""))return a;}}return null;}
+    function pick(bl,wk){var ss=state.sessions[sessKey(bl,wk,c)];if(ss&&ss.sets&&Array.isArray(ss.sets[exId])){var a=ss.sets[exId];for(var i=0;i<a.length;i++){if(a[i]&&(a[i].kg!==""||a[i].r!==""))return a;}}return null;}
     for(var ww=w-1;ww>=1;ww--){var r=pick(b,ww);if(r)return r;}
     var idx=BLOCK_ORDER.indexOf(b),want=exoKey(b,c,exId);
     for(var bi=idx-1;bi>=0;bi--){var bb=BLOCK_ORDER[bi];if(want&&exoKey(bb,c,exId)!==want)continue;var wk=PROGRAM_BLOCKS[bb].weeks;for(var w2=wk;w2>=1;w2--){var r2=pick(bb,w2);if(r2)return r2;}}
@@ -464,19 +470,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     }
     var note=maxReps>15?'<span '+PG_TAG+' title="Estimation Epley moins fiable au-delà de ~15 reps">≈</span>':'';
     return '<div class="exo-prog" data-prog="'+esc(bareId)+'" role="button" tabindex="0" title="Toucher : voir le volume par séance"><span class="pg-rec">🏆 '+rec+' kg<span '+PG_TAG+'>1RM est.'+note+'</span></span>'+spark+trend+'</div>';
-  }
-
-  function exoHistHTML(b,c,setK,lastTxt,isSec,secLbl){
-    var wk=PROGRAM_BLOCKS[b].weeks,rows=[],mx=0;
-    for(var w=1;w<=wk;w++){var ss=state.sessions[sessKey(b,w,c)];if(!ss||!ss.sets||!ss.sets[setK])continue;var sets=ss.sets[setK],top=0,lbl="";
-      if(isSec){for(var i=0;i<sets.length;i++){var r=num(sets[i]&&sets[i].r);if(!isNaN(r)&&r>top)top=r;}if(top<=0)continue;lbl=top+" "+(secLbl||"s");}
-      else{var best=exoBest1RM(sets);if(!best)continue;top=Math.round(best.e);lbl=top+" kg";}
-      rows.push({w:w,top:top,lbl:lbl});if(top>mx)mx=top;}
-    var last=lastTxt?'<div class="hist-last">Dernière fois : '+esc(lastTxt)+'</div>':"";
-    if(!rows.length)return lastTxt?('<details class="base-hint" open><summary>📊 Historique</summary><div class="exo-hist">'+last+'</div></details>'):'<details class="base-hint"><summary>📊 Historique</summary><div class="exo-hist-empty">Pas encore d\'historique — remplis tes séries, elles s\'afficheront ici.</div></details>';
-    var bars=rows.map(function(r){var pct=mx>0?Math.max(6,Math.round(r.top/mx*100)):6;return '<div class="hist-row"><span class="hist-wk">S'+r.w+'</span><span class="hist-bar-wrap"><span class="hist-bar" style="width:'+pct+'%"></span></span><span class="hist-val">'+esc(r.lbl)+'</span></div>';}).join("");
-    var cap=isSec?'<div class="hist-cap">Barres = meilleur temps tenu par semaine.</div>':'<div class="hist-cap">Barres = 1RM estimé par semaine (repère de progression).</div>';
-    return '<details class="base-hint" open><summary>📊 Historique</summary><div class="exo-hist">'+bars+cap+last+'</div></details>';
   }
 
   /* ---------------- Journée ---------------- */
@@ -2025,7 +2018,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(d\'après '+(sugg.from?"ta variante "+esc(sugg.from):"tes séances sans variante")+')</span></div>':''))+
             '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
             '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
-              exoHistHTML(b,c,setK,lastTxt,isSec,secLbl)+
               (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
               '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'<div class="hint-sets">🔢 Renseigne <b>'+ex.sets+'</b> série'+(ex.sets>1?'s':'')+' pour cet exercice (utilise « + série » si tu en fais plus).</div></div></details>'+
               '<details class="base-hint"><summary>🎬 Technique &amp; démo</summary><div>'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+'</div></details>'+
@@ -3006,12 +2998,67 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     });
   }
 
+  /* ---------------- Progrès : fiche exercice (historique détaillé, séparé par variante) ---------------- */
+  var exoSheetSel="",exoSheetVar=null;
+  function setHas(x){return !!x&&((x.kg!==undefined&&x.kg!==null&&String(x.kg).trim()!=="")||(x.r!==undefined&&x.r!==null&&String(x.r).trim()!==""));}
+  function exoSheetData(){   /* un exercice = son nom (réutilisé d'un bloc à l'autre) ; séances en ordre chronologique */
+    var map={},list=[],t=0;
+    BLOCK_ORDER.forEach(function(bb){var cd=codesOf(bb),wk=PROGRAM_BLOCKS[bb].weeks;
+      for(var w=1;w<=wk;w++)cd.forEach(function(c){
+        var ss=state.sessions[sessKey(bb,w,c)],pr=progOf(bb,c);if(!ss||!ss.sets||!pr||!pr.exos)return;
+        pr.exos.forEach(function(e){
+          for(var k in ss.sets){
+            if(k!==e.id&&k.indexOf(e.id+"::")!==0)continue;
+            var arr=ss.sets[k];if(!Array.isArray(arr)||!arr.some(setHas))continue;
+            var V=k===e.id?"":k.slice(e.id.length+2),isH=(V==="Maison"&&!!e.home),nm=isH?e.home.name:e.name,u=(isH&&e.home.unit!==undefined)?e.home.unit:e.unit,key=normExName(nm),X=map[key];
+            if(!X){X=map[key]={key:key,name:nm,sec:(u==="sec"||u==="min"),lbl:u==="min"?"min":"s",entries:[],last:0};list.push(X);}
+            X.entries.push({b:bb,w:w,c:c,V:isH?"":V,sets:arr});X.last=++t;
+          }
+        });
+      });
+    });
+    list.sort(function(a,b){return b.last-a.last;});
+    return {map:map,list:list};
+  }
+  function exoSheetVal(X,en){
+    var i,top=0,r;
+    if(X.sec){for(i=0;i<en.sets.length;i++){r=num(en.sets[i]&&en.sets[i].r);if(!isNaN(r)&&r>top)top=r;}return top>0?{top:top,lbl:top+" "+X.lbl}:null;}
+    var best=exoBest1RM(en.sets);if(best){var v=Math.round(best.e);return {top:v,lbl:v+" kg",rm:true};}
+    for(i=0;i<en.sets.length;i++){r=num(en.sets[i]&&en.sets[i].r);if(!isNaN(r)&&r>top)top=r;}
+    return top>0?{top:top,lbl:top+" reps"}:null;
+  }
+  function exoSheetHTML(){
+    var D=exoSheetData();if(!D.list.length)return "";
+    var X=D.map[exoSheetSel]||D.list[0];exoSheetSel=X.key;
+    var seen={},vars=[],i;for(i=X.entries.length-1;i>=0;i--){var vv=X.entries[i].V;if(!seen[vv]){seen[vv]=1;vars.push(vv);}}   /* la plus récente d'abord */
+    var V=(exoSheetVar!==null&&seen[exoSheetVar])?exoSheetVar:vars[0];exoSheetVar=V;
+    var E=X.entries.filter(function(e){return e.V===V;});
+    var rows=E.map(function(e){var m=exoSheetVal(X,e);return m?{e:e,m:m}:null;}).filter(Boolean);
+    if(rows.some(function(r){return r.m.rm;}))rows=rows.filter(function(r){return r.m.rm;});
+    rows=rows.slice(-12);
+    var mx=0,rec=null;rows.forEach(function(r){if(r.m.top>mx){mx=r.m.top;rec=r.m.lbl;}});
+    var opts=D.list.map(function(x){return '<option value="'+esc(x.key)+'"'+(x.key===X.key?" selected":"")+'>'+esc(x.name)+'</option>';}).join("");
+    var chips=vars.length>1?'<div class="fuel-seg" style="margin:10px 0 2px">'+vars.map(function(v){return '<button type="button" class="seg es-var'+(v===V?" on":"")+'" data-v="'+esc(v)+'">'+esc(v||"Sans variante")+'</button>';}).join("")+'</div>':(V?'<div class="hist-cap">Variante : '+esc(V)+'</div>':"");
+    var bars=rows.map(function(r){var pct=mx>0?Math.max(6,Math.round(r.m.top/mx*100)):6;return '<div class="hist-row"><span class="hist-wk" style="width:auto;min-width:46px">'+esc(PROGRAM_BLOCKS[r.e.b].short)+' S'+r.e.w+'</span><span class="hist-bar-wrap"><span class="hist-bar" style="width:'+pct+'%"></span></span><span class="hist-val">'+esc(r.m.lbl)+'</span></div>';}).join("");
+    var cap=X.sec?"Barres = meilleur temps tenu par séance.":(rows.length&&rows[0].m.rm?"Barres = 1RM estimé par séance (repère de progression).":"Barres = meilleur nombre de répétitions par séance.");
+    if(vars.length>1)cap+=" Chaque variante a son propre historique : haltères et machine ne se comparent pas.";
+    var le=E[E.length-1],lt=le.sets.filter(setHas).map(function(x){return X.sec?((x.r!==""&&x.r!=null?x.r:"–")+" "+X.lbl):((x.kg!==""&&x.kg!=null?x.kg:"–")+"×"+(x.r!==""&&x.r!=null?x.r:"–"));}).join(" · ");
+    var foot='<div class="hist-last">'+(rec?'🏆 Record : '+esc(rec)+' · ':'')+'Dernière fois ('+esc(PROGRAM_BLOCKS[le.b].short)+' S'+le.w+') : '+esc(lt)+'</div>';
+    return '<div class="card pad"><div class="sec-title">💪 Fiche exercice</div><select class="exo-var" id="exoSheetPick">'+opts+'</select>'+chips+'<div class="exo-hist" style="margin-top:10px">'+bars+(bars?'<div class="hist-cap">'+cap+'</div>':'')+foot+'</div></div>';
+  }
+  function renderExoSheet(){
+    var h=document.getElementById("exoSheet");if(!h)return;h.innerHTML=exoSheetHTML();
+    var sel=h.querySelector("#exoSheetPick");if(sel)sel.onchange=function(){exoSheetSel=sel.value;exoSheetVar=null;renderExoSheet();};
+    h.querySelectorAll(".es-var").forEach(function(b){b.onclick=function(){exoSheetVar=b.getAttribute("data-v");renderExoSheet();};});
+  }
+
   function renderProgress(){
     renderGoals();
     renderSetupList();
     var wv=document.getElementById("weekViz");if(wv)wv.innerHTML=weekVizHTML();
     renderOutViz();
     renderRegularity();
+    renderExoSheet();
     renderProgressRadar();
     renderStatGrid();
 
