@@ -334,6 +334,39 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
 
   /* Charges de la dernière séance identique (même code, semaine/bloc antérieurs) */
   function setKey(exId,v){return v?exId+"::"+v:exId;}
+  /* Variante par défaut d'un exo = celle de la dernière séance antérieure où CE MÊME exercice (même nom) a été saisi ou paramétré.
+     s.variant[exId]==="" = exo saisi sans variante (historique d'avant) ; clé absente = pas encore choisi → reprise de la dernière variante.
+     Jamais appliquée si la séance a déjà des données sur l'exo (historique intact) ; mémorisée dans s.variant dès la 1re saisie (pinVariant). */
+  function hasOwn(o,k){return !!o&&Object.prototype.hasOwnProperty.call(o,k);}
+  function normExName(n){return String(n||"").toLowerCase().replace(/\s+/g," ").trim();}
+  function exoDataVariant(ss,exId){   /* null = aucune donnée ; sinon variante sous laquelle les séries ont été saisies ("" = standard) */
+    var found=null;
+    for(var k in ss.sets){if(k!==exId&&k.indexOf(exId+"::")!==0)continue;var a=ss.sets[k]||[];
+      for(var i=0;i<a.length;i++){if(a[i]&&(String(a[i].kg).trim()!==""||String(a[i].r).trim()!=="")){if(k===exId)return "";found=k.slice(exId.length+2);break;}}}
+    return found;
+  }
+  function lastVariant(b,w,c,ex){
+    var nm=normExName(ex.name),bi=BLOCK_ORDER.indexOf(b);if(!nm||bi<0)return null;
+    for(var i=bi;i>=0;i--){var bb=BLOCK_ORDER[i],cd=codesOf(bb),w0=(bb===b)?w:PROGRAM_BLOCKS[bb].weeks;
+      for(var ww=w0;ww>=1;ww--){for(var j=cd.length-1;j>=0;j--){
+        if(bb===b&&ww===w&&j>=cd.indexOf(c))continue;          /* même semaine : seulement les séances qui précèdent */
+        var ss=state.sessions[sessKey(bb,ww,cd[j])];if(!ss)continue;
+        var pr=progOf(bb,cd[j]);if(!pr||!pr.exos)continue;
+        for(var q=0;q<pr.exos.length;q++){var e=pr.exos[q];if(normExName(e.name)!==nm)continue;
+          if(hasOwn(ss.variant,e.id))return ss.variant[e.id]||"";
+          var dv=exoDataVariant(ss,e.id);if(dv!==null&&dv!=="Maison")return dv;}   /* « Maison » = séance faite à domicile, pas une variante de salle */
+      }}
+    }
+    return null;
+  }
+  function curVariant(s,b,w,c,ex){
+    var own=hasOwn(s.variant,ex.id)?s.variant[ex.id]:undefined;
+    if(own)return own;
+    if(ex._home)return "Maison";
+    if(own==="")return "";
+    if(exoDataVariant(s,ex.id)!==null)return "";               /* séance déjà saisie sans variante : on ne touche pas à l'historique */
+    return lastVariant(b,w,c,ex)||"";
+  }
   /* Base de saisie du poids par exo : total (poids affiché en kg) · bras (poids d'UN haltère) · ajout (charge ajoutée au poids du corps).
      Déduite de la variante ; à défaut de la base par défaut de l'exo (data.js) ; forçage manuel possible via state.muscuBase[setKey]. */
   var BASE_UNIT={total:"kg",bras:"kg/bras",ajout:"+kg"};
@@ -1939,7 +1972,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       '</div></div>';
     var exosHTML="";
     p.exos.forEach(function(ex){
-      var curV=(s.variant&&s.variant[ex.id])||(ex._home?"Maison":"");
+      var curV=curVariant(s,b,w,c,ex);
+      var vAuto=!!curV&&!ex._home&&!hasOwn(s.variant,ex.id)&&exoDataVariant(s,ex.id)===null;   /* variante reprise de la dernière séance (non choisie ici) */
       var setK=setKey(ex.id,curV);
       if(!s.sets[setK])s.sets[setK]=[];
       var _ar=s.sets[setK],_cp=true;for(var _q=0;_q<ex.sets;_q++){if(!_ar[_q]||String(_ar[_q].r).trim()===""){_cp=false;break;}}exDone[setK]=_cp;
@@ -1980,7 +2014,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
       var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
       var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
-      var varHTML=ex._home?'<div class="exo-var-row"><span class="home-tag">🏠 Version maison : suivie à part de la salle</span></div>':(isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)</label><select class="exo-var" data-exo="'+ex.id+'"><option value=""'+(curV===""?" selected":"")+'>Version standard</option>'+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>'));
+      var varHTML=ex._home?'<div class="exo-var-row"><span class="home-tag">🏠 Version maison : suivie à part de la salle</span></div>':(isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)'+(vAuto?" · reprise de ta dernière séance":"")+'</label><select class="exo-var" data-exo="'+ex.id+'">'+(curV===""?'<option value="" selected disabled>Choisis ta variante</option>':"")+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>'));
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
           '<div class="exo-band'+(sessExpanded[ex.id]?" open":"")+'" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="'+(sessExpanded[ex.id]?"true":"false")+'">'+
@@ -1988,7 +2022,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             '<span class="exo-band-r"><span class="tg">'+ex.target+'</span>'+stateChip+'<span class="exo-chev">▾</span></span>'+
           '</div>'+
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
-            (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(selon ta variante '+esc(sugg.from||"standard")+')</span></div>':''))+
+            (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(d\'après '+(sugg.from?"ta variante "+esc(sugg.from):"tes séances sans variante")+')</span></div>':''))+
             '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
             '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
               exoHistHTML(b,c,setK,lastTxt,isSec,secLbl)+
@@ -2026,7 +2060,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       var kgEl=row.querySelector(".in-kg"),rEl=row.querySelector(".in-r");
       if(kgEl)kgEl.value=rec.kg||"";
       if(rEl)rEl.value=rec.r||"";
-      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};var v=s.sets[exo][idx];if((v.kg&&(""+v.kg).trim())||(v.r&&(""+v.r).trim()))linkSessionSport("Muscu",s.date||todayStr());save();}
+      function upd(){if(!s.sets[exo])s.sets[exo]=[];while(s.sets[exo].length<=idx)s.sets[exo].push({kg:"",r:""});s.sets[exo][idx]={kg:kgEl?kgEl.value:"",r:rEl?rEl.value:""};var v=s.sets[exo][idx];if((v.kg&&(""+v.kg).trim())||(v.r&&(""+v.r).trim())){pinVariant(exo);linkSessionSport("Muscu",s.date||todayStr());}save();}
       if(kgEl)kgEl.addEventListener("input",upd);
       if(rEl)rEl.addEventListener("input",upd);
       if(kgEl)kgEl.addEventListener("change",function(){autoFold(exo);});if(rEl)rEl.addEventListener("change",function(){autoFold(exo);});
@@ -2038,6 +2072,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     });
     wrap.querySelectorAll(".exo-more-btn").forEach(function(btn){btn.addEventListener("click",function(){var m=document.getElementById("more-"+btn.getAttribute("data-more"));if(m){var op=m.style.display==="none";m.style.display=op?"":"none";btn.classList.toggle("open",op);}});});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
+    function pinVariant(k){var id=String(k).split("::")[0],m=exoMeta(id);if(!m||m._home||hasOwn(s.variant,id))return;if(!s.variant)s.variant={};s.variant[id]=String(k).indexOf("::")>=0?String(k).slice(id.length+2):"";}
     /* Repli automatique : quand toutes les séries d'un exo ont leurs reps (au moment où on quitte le champ), le bandeau se referme ; on peut le rouvrir. */
     function exComplete(k){var m=exoMeta(String(k).split("::")[0]);if(!m)return false;var arr=s.sets[k]||[];for(var q=0;q<m.sets;q++){var it=arr[q];if(!it||String(it.r).trim()==="")return false;}return true;}
     function autoFold(k){var id=String(k).split("::")[0],now=exComplete(k),was=exDone[k];exDone[k]=now;if(!now||was)return;
@@ -2046,11 +2081,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
         try{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}catch(e){}},250);}
     wrap.querySelectorAll(".exo-var").forEach(function(sel){sel.onchange=function(){
       var exId=sel.getAttribute("data-exo"),val=sel.value;
-      function applyVar(v){if(!s.variant)s.variant={};if(v)s.variant[exId]=v;else delete s.variant[exId];save();renderSessionDetail();}
-      if(val==="__autre"){var back=function(){sel.value=(s.variant&&s.variant[exId])||"";};uiPrompt("Variante (ex. machine convergente, Smith, poulie basse…) :","",function(v){if(!v){back();return;}applyVar(v);},back);return;}
+      function applyVar(v){if(!s.variant)s.variant={};s.variant[exId]=v||"";save();renderSessionDetail();}
+      if(val==="__autre"){var back=function(){var mm=exoMeta(exId);sel.value=mm?curVariant(s,b,w,c,mm):"";};uiPrompt("Variante (ex. machine convergente, Smith, poulie basse…) :","",function(v){if(!v){back();return;}applyVar(v);},back);return;}
       applyVar(val);
     };});
-    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var v=(s.variant&&s.variant[id])||(m._home?"Maison":"");var arr=s.sets[setKey(id,v)]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
+    function refreshChip(id){var band=wrap.querySelector('.exo-band[data-exo="'+id+'"]');var m=exoMeta(id);if(!band||!m)return;var v=curVariant(s,b,w,c,m);var arr=s.sets[setKey(id,v)]||[],f=0;for(var k=0;k<m.sets;k++){var it=arr[k];if(it&&(String(it.kg).trim()!==""||String(it.r).trim()!==""))f++;}var chip=band.querySelector(".exo-state");if(!f){if(chip)chip.parentNode.removeChild(chip);return;}if(!chip){chip=document.createElement("span");chip.className="exo-state";band.querySelector(".exo-band-r").insertBefore(chip,band.querySelector(".exo-chev"));}chip.textContent=f>=m.sets?"✓":f+"/"+m.sets;chip.classList.toggle("done",f>=m.sets);}
     wrap.querySelectorAll(".exo-band").forEach(function(band){
       function tog(){var id=band.getAttribute("data-exo");var body=document.getElementById("body-"+id);if(!body)return;var col=body.classList.toggle("collapsed");band.classList.toggle("open",!col);band.setAttribute("aria-expanded",col?"false":"true");sessExpanded[id]=!col;refreshChip(id);}
       band.addEventListener("click",tog);
