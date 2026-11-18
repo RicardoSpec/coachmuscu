@@ -778,7 +778,8 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   /* Aperçu pliable commun (même gabarit que « Vers la distance olympique » du tri) :
      barre de progression + ligne prévision. Sert à muscu et aux sports à niveaux. */
-  function sportApercuHTML(id){
+  function sportApercuHTML(id){return "";   /* carte « Vers ton objectif » retirée */
+
     var sp=SPORTS_LIB[id];if(!sp)return "";
     var uc=sportUCfg(id),cur=num(uc.cur)||0,tgt=num(uc.target)||0;
     if(tgt<=cur)return "";
@@ -798,6 +799,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       note+'</details>';
   }
   function muscuApercuHTML(){
+    return "";   /* carte « Vers ton objectif force » retirée : le palier est en tête de l'objectif déplié */
     if(!actEnabled("muscu"))return "";
     var done=doneCount(),tot=totalSessions(),pct=tot>0?Math.round(done/tot*100):0;
     var N=BLOCK_ORDER.length,ns=nextSession(),curP=ns?(BLOCK_ORDER.indexOf(ns.block)+1):N,blk=ns?PROGRAM_BLOCKS[ns.block]:null;
@@ -824,10 +826,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       return '<div class="card pad so-card'+(selSports[id]?' sel':'')+(paneCollapse[id]!==false?' collapsed':'')+'" data-sport="'+esc(id)+'"><h2 class="page pane-title">'+esc(ic)+' '+esc(nm)+' <span class="so-lv">niv. '+cur+' → '+tgt+'</span>'+dlSub+'</h2>'+
         sportApercuHTML(id)+
         '<div class="lvl-nav"><button type="button" class="lvl-arrow so-prev" data-sp="'+esc(id)+'"'+(idx<=0?" disabled":"")+'>‹</button>'+
-          '<div class="lvl-mid"><div class="lvl-title">Palier '+lvN+' · '+esc(L.t||"")+'</div><div class="lvl-sub">'+(idx+1)+'/'+paliers.length+'</div></div>'+
+          '<div class="lvl-mid"><div class="lvl-title lvl-tap" data-sp="'+esc(id)+'" role="button" tabindex="0" aria-expanded="'+(soDescOpen[id]?"true":"false")+'">Palier '+(idx+1)+'/'+paliers.length+'</div></div>'+
           '<button type="button" class="lvl-arrow so-next" data-sp="'+esc(id)+'"'+(idx>=paliers.length-1?" disabled":"")+'>›</button></div>'+
-        '<div class="so-dtxt">'+esc(L.d||"")+'</div>'+prog+week+'<button type="button" class="btn ghost so-log-add" data-sp="'+esc(id)+'">＋ Enregistrer une séance</button>'+(function(){if(sportSessOpen){var _o=sportSessOpen.split("|");if(_o[0]===id)return sportSessDetailHTML(id,_o.slice(1).join("|"),sportSessOpenIdx);}return "";})()+'</div>';
+        (soDescOpen[id]?'<div class="so-dtxt"><b>'+esc(L.t||"")+'</b> — '+esc(L.d||"")+'</div>':'')+prog+week+'<button type="button" class="btn ghost so-log-add" data-sp="'+esc(id)+'">＋ Enregistrer une séance</button>'+(function(){if(sportSessOpen){var _o=sportSessOpen.split("|");if(_o[0]===id)return sportSessDetailHTML(id,_o.slice(1).join("|"),sportSessOpenIdx);}return "";})()+'</div>';
   }
+  function objPalLine(o){if((o.sports||[]).indexOf("muscu")<0||!actEnabled("muscu"))return "";var N=BLOCK_ORDER.length,ns=nextSession(),curP=ns?(BLOCK_ORDER.indexOf(ns.block)+1):N;return '<div class="objc-pal">Palier '+curP+'/'+N+'</div>';}
   function isTriGroup(o){var s=o.sports||[];return s.indexOf("nage")>=0&&s.indexOf("velo")>=0&&s.indexOf("course")>=0;}
 
   /* ---- Journal des séances de sport : métriques par sport + détail + historique (parité muscu) ---- */
@@ -954,6 +957,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     host.querySelectorAll(".so-card[data-sport] > .pane-title").forEach(function(t){t.onclick=function(){var c=t.closest(".so-card"),id=c&&c.getAttribute("data-sport");if(id){paneCollapse[id]=(paneCollapse[id]===false);renderSportObjectives();}};});
     host.querySelectorAll(".grp-title[data-group]").forEach(function(t){t.onclick=function(){var k="grp:"+t.getAttribute("data-group");paneCollapse[k]=(paneCollapse[k]===false);renderSportObjectives();};});
     host.querySelectorAll(".grp-split").forEach(function(b){b.onclick=function(e){e.stopPropagation();delObj(b.getAttribute("data-group"));syncTri();renderSportObjectives();renderCalendars();};});
+    host.querySelectorAll(".lvl-tap[data-sp]").forEach(function(t){t.onclick=function(e){e.stopPropagation();var k=t.getAttribute("data-sp");soDescOpen[k]=!soDescOpen[k];renderSportObjectives();};t.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();t.click();}};});
     host.querySelectorAll(".so-card[data-sport]").forEach(function(card){
       var id=card.getAttribute("data-sport"),tmr=null;
       function arm(e){var t=e.target;if(t&&t.closest&&t.closest("button,input,select,textarea,a,summary,.lvl-nav,.so-week"))return;tmr=setTimeout(function(){tmr=null;selSports[id]=!selSports[id];if(!selSports[id])delete selSports[id];if(navigator.vibrate){try{navigator.vibrate(25);}catch(_){}}renderSportObjectives();},600);}
@@ -1072,6 +1076,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function swipeInHScroll(el){
     for(var n=el;n&&n!==document.body;n=n.parentElement){if(n.scrollWidth>n.clientWidth+2){var ov=getComputedStyle(n).overflowX||"";if(ov==="auto"||ov==="scroll")return true;}}return false;
   }
+  var muscuFocusOpen=false,soDescOpen={};   /* paragraphe du palier : affiché au tap sur « Palier X/X » (état de session) */
   /* Appui long (≈0,45 s) sur un bouton réduit à un emoji : bulle d'explication (data-tip, sinon aria-label, sinon title). Le clic qui suit est ignoré. */
   function wireEmojiTips(){
     var tmr=null,tip=null,hideT=null,eat=false;
@@ -1922,7 +1927,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   }
   function gridBody(block){
     var blk=PROGRAM_BLOCKS[block],n=nextSession(),_cd=codesOf(block);
-    var h=(blk.focus?'<div class="blk-focus">🎯 '+blk.focus+'</div>':'')+'<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
+    var h='<div class="legend"><span><i class="dot-next"></i>Prochaine</span><span><i class="dot-done"></i>Faite</span><span><i class="dot-todo"></i>À faire</span></div>'+
       '<table class="grid"><tr><th></th>';
     _cd.forEach(function(c){h+="<th>"+c+"</th>";});
     h+="</tr>";
@@ -1964,13 +1969,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     muscuLvl=Math.max(0,Math.min(N-1,muscuLvl));
     var block=BLOCK_ORDER[muscuLvl],blk=PROGRAM_BLOCKS[block],doneN=blockDone(block),cl=blockClosed(block),totN=cl?doneN:blockTotal(block),done=doneN>=totN;
     var nav='<div class="lvl-nav"><button type="button" class="lvl-arrow lvl-prev" aria-label="Palier précédent"'+(muscuLvl<=0?" disabled":"")+'>‹</button>'+
-      '<div class="lvl-mid"><div class="lvl-title">Palier '+(muscuLvl+1)+'/'+N+' · '+esc(blk.name)+'</div><div class="lvl-sub">'+doneN+'/'+totN+' séances'+(cl?' · clôturé 🔒':(done?' · terminé ✓':''))+'</div></div>'+
+      '<div class="lvl-mid"><div class="lvl-title lvl-tap" id="lvlTap" role="button" tabindex="0" aria-expanded="'+(muscuFocusOpen?"true":"false")+'">Palier '+(muscuLvl+1)+'/'+N+'</div></div>'+
       '<button type="button" class="lvl-arrow lvl-next" aria-label="Palier suivant"'+(muscuLvl>=N-1?" disabled":"")+'>›</button></div>';
-    host.innerHTML=nav+'<div class="card pad blockcard open">'+gridBody(block)+'</div><div class="blk-actions"><button type="button" class="btn ghost blk-close" data-tip="'+(cl?'Rouvrir ce bloc':'Clôturer ce bloc (ne plus le proposer)')+'" aria-label="'+(cl?'Rouvrir ce bloc':'Clôturer ce bloc (ne plus le proposer)')+'">'+(cl?'🔓':'🔒')+'</button><button type="button" class="btn ghost msess-open" data-tip="Personnaliser les séances" aria-label="Personnaliser les séances">✎</button></div>';
+    host.innerHTML=nav+(muscuFocusOpen&&blk.focus?'<div class="blk-focus">🎯 <b>'+esc(blk.name)+'</b> — '+blk.focus+'</div>':'')+'<div class="card pad blockcard open">'+gridBody(block)+'</div><div class="blk-actions"><button type="button" class="btn ghost blk-close" data-tip="'+(cl?'Rouvrir ce bloc':'Clôturer ce bloc (ne plus le proposer)')+'" aria-label="'+(cl?'Rouvrir ce bloc':'Clôturer ce bloc (ne plus le proposer)')+'">'+(cl?'🔓':'🔒')+'</button><button type="button" class="btn ghost msess-open" data-tip="Personnaliser les séances" aria-label="Personnaliser les séances">✎</button><button type="button" class="btn ghost blk-place" data-tip="Lieu de la séance (salle / maison)" aria-label="Lieu de la séance (salle / maison)">📍</button></div>';
     var bcl=host.querySelector(".blk-close");if(bcl)bcl.onclick=function(){if(!state.config)state.config={};var ca=state.config.blocksClosed||(state.config.blocksClosed=[]),ci=ca.indexOf(block);if(ci>=0)ca.splice(ci,1);else ca.push(block);save();muscuLvl=null;currentSel=null;refreshSportViews();renderCalendars();};
+    var lt=host.querySelector("#lvlTap");if(lt){lt.onclick=function(){muscuFocusOpen=!muscuFocusOpen;renderProgram();};lt.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();lt.click();}};}
+    var bpl=host.querySelector(".blk-place");if(bpl)bpl.onclick=placeDialog;
     var mo=host.querySelector(".msess-open");if(mo)mo.onclick=function(){muscuSessMode=true;settingsSessSel=null;renderProgram();};
-    var pv=host.querySelector(".lvl-prev");if(pv)pv.onclick=function(){if(muscuLvl>0){muscuLvl--;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
-    var nx=host.querySelector(".lvl-next");if(nx)nx.onclick=function(){if(muscuLvl<N-1){muscuLvl++;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
+    var pv=host.querySelector(".lvl-prev");if(pv)pv.onclick=function(){if(muscuLvl>0){muscuLvl--;muscuFocusOpen=false;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
+    var nx=host.querySelector(".lvl-next");if(nx)nx.onclick=function(){if(muscuLvl<N-1){muscuLvl++;muscuFocusOpen=false;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
     host.querySelectorAll(".cell").forEach(function(cell){
       cell.addEventListener("click",function(){
         sessExpanded={};sessTool={};
@@ -1998,6 +2005,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
   function placeRowHTML(){var pc=(state.config&&state.config.place)||"auto",gu=(state.config&&state.config.gymUntil)||"";
     return '<div class="place-row"><span class="place-l">📍 Lieu</span>'+[["auto","Auto"],["gym","🏋️ Salle"],["home","🏠 Maison"]].map(function(x){return '<button type="button" class="pl-b'+(pc===x[0]?' on':'')+'" data-pl="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>'+
       '<div class="place-until">Abonnement salle jusqu\'au <input type="date" id="gymUntil" value="'+esc(gu)+'"> <span class="place-now">→ version '+(placeNow()==="home"?"maison":"salle")+'</span></div>';}
+  function placeDialog(){
+    var ov=document.createElement("div");ov.className="ui-ov";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");
+    function fill(){var pc=(state.config&&state.config.place)||"auto",gu=(state.config&&state.config.gymUntil)||"";
+      ov.innerHTML='<div class="ui-box"><div class="ui-msg">📍 Où fais-tu ta séance ?</div><div class="place-row" style="margin-top:0">'+[["auto","Auto"],["gym","🏋️ Salle"],["home","🏠 Maison"]].map(function(x){return '<button type="button" class="pl-b'+(pc===x[0]?' on':'')+'" data-pl="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div><div class="place-until">Abonnement salle jusqu\'au <input type="date" id="gymUntil" value="'+esc(gu)+'"> <span class="place-now">→ version '+(placeNow()==="home"?"maison":"salle")+'</span></div><div class="ui-btns" style="margin-top:14px"><button type="button" class="btn ghost ui-no">Fermer</button></div></div>';}
+    function close(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
+    function refresh(){if(currentSel)renderSessionDetail();}
+    fill();document.body.appendChild(ov);
+    ov.addEventListener("click",function(e){var t=e.target;if(t===ov){close();return;}var b=t.closest&&t.closest(".pl-b");if(b){if(!state.config)state.config={};var v=b.getAttribute("data-pl");if(v==="auto")delete state.config.place;else state.config.place=v;save();close();refresh();return;}if(t.closest&&t.closest(".ui-no"))close();});
+    ov.addEventListener("change",function(e){if(e.target&&e.target.id==="gymUntil"){if(!state.config)state.config={};if(e.target.value)state.config.gymUntil=e.target.value;else delete state.config.gymUntil;save();var pn=ov.querySelector(".place-now");if(pn)pn.textContent="→ version "+(placeNow()==="home"?"maison":"salle");refresh();}});
+    ov.addEventListener("keydown",function(e){if(e.key==="Escape")close();});
+    try{var f=ov.querySelector(".pl-b.on");if(f)f.focus();}catch(e){}
+  }
   function renderSessionDetail(){
     if(!currentSel)return;
     var b=currentSel.block,w=currentSel.w,c=currentSel.c;
@@ -2005,8 +2024,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var head=
       '<div class="eyebrow">Séance ouverte</div>'+
       '<div class="card pad">'+
-      '<div class="sd-head"><div><div class="lbl">'+PROGRAM_BLOCKS[b].name+' · Semaine '+w+' · '+p.sub+'</div>'+
-      '<h3>'+p.title.replace(/—.*/,"").trim()+' '+c+'</h3></div></div>'+(hasHome?placeRowHTML():'')+
       '<div class="field" style="margin-top:12px"><button class="btn '+(s.done?'ghost':'accent')+'" id="toggleDone">'+(s.done?'Annuler':'Marquer la séance comme faite')+'</button></div>'+
       (s.done?'<div class="donedate"><label>Faite le <input type="date" id="doneDate" value="'+esc(s.date||todayStr())+'"></label></div>':'')+
       '<div class="rest"><div class="rest-disp" id="restDisp">0:00</div><div class="rest-btns">'+
@@ -2092,8 +2109,6 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var wrap=document.getElementById("sessionDetail");
     wrap.innerHTML=head+exosHTML+extraHTML+addBtnHTML+'</div>';
     setExoStickyTop();
-    wrap.querySelectorAll(".pl-b").forEach(function(bt){bt.onclick=function(){if(!state.config)state.config={};var v=bt.getAttribute("data-pl");if(v==="auto")delete state.config.place;else state.config.place=v;save();renderSessionDetail();};});
-    var _gu=wrap.querySelector("#gymUntil");if(_gu)_gu.onchange=function(){if(!state.config)state.config={};if(_gu.value)state.config.gymUntil=_gu.value;else delete state.config.gymUntil;save();renderSessionDetail();};
 
     wrap.querySelectorAll(".set").forEach(function(row){
       var exo=row.getAttribute("data-exo");var idx=parseInt(row.getAttribute("data-set"),10);
@@ -3693,7 +3708,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
           var nameHtml=editing?('<input type="text" class="objc-rename" data-obj="'+esc(o.id)+'" value="'+esc(o.name)+'">'):('<b>'+esc(o.name)+'</b>');
           var expBtn=(!editing)?('<button type="button" class="objc-exp" data-obj="'+esc(o.id)+'" aria-label="Déplier">'+(objExpand[o.id]?"▾":"▸")+'</button>'):"";
           var acts=editing?('<button type="button" class="objc-rsave" data-obj="'+esc(o.id)+'" aria-label="Enregistrer">✓</button>'):(expBtn+'<button type="button" class="objc-ren" data-obj="'+esc(o.id)+'" aria-label="Renommer">✎</button><button type="button" class="objc-del" data-obj="'+esc(o.id)+'" aria-label="Supprimer">✕</button>');
-          var detail=objExpand[o.id]?('<div class="objc-detail">'+(o.sports||[]).map(function(sid){var sp=_sl[sid];if(!sp)return "";var u=sportUCfg(sid),mx=(sp.levels||[]).length-1,c=Math.max(0,Math.min(mx,num(u.cur)||0)),t=Math.max(0,Math.min(mx,num(u.target)||0));function op(sel){return (sp.levels||[]).map(function(lv){return '<option value="'+lv.n+'"'+(lv.n===sel?" selected":"")+'>'+lv.n+'</option>';}).join("");}var _pals=[];for(var _pp=c+1;_pp<=t;_pp++)_pals.push(_pp);var _edit=(sessEdit&&sessEdit.id===sid&&_pals.length);var _sbtn=_pals.length?('<button type="button" class="objs-sessed'+(_edit?' on':'')+'" data-sp="'+esc(sid)+'">✎ Séances</button>'):'';var _sbox=_edit?('<div class="objs-sessbox"><div class="objs-palrow">Palier <select class="objs-pal" data-sp="'+esc(sid)+'">'+_pals.map(function(pv){return '<option value="'+pv+'"'+(pv===sessEdit.lvN?" selected":"")+'>'+pv+'</option>';}).join("")+'</select></div>'+sessEditorHTML(sid,sessEdit.lvN)+'</div>'):'';return '<div class="objc-splv"><span class="objc-splv-n">'+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</span><span class="objc-splv-sel">niv <select class="objd-cur" data-sp="'+esc(sid)+'">'+op(c)+'</select> → <select class="objd-tgt" data-sp="'+esc(sid)+'">'+op(t)+'</select></span>'+_sbtn+'<button type="button" class="objc-rmsp" data-obj="'+esc(o.id)+'" data-sp="'+esc(sid)+'" aria-label="Retirer ce sport">✕</button></div>'+_sbox;}).join("")+(function(){var av=(_sl.order||[]).filter(function(sid){return _sl[sid]&&(o.sports||[]).indexOf(sid)<0;});return av.length?('<div class="objc-addsp"><span class="objc-addsp-lbl">+ Ajouter :</span>'+av.map(function(sid){return '<button type="button" class="objc-addspbtn" data-obj="'+esc(o.id)+'" data-sp="'+esc(sid)+'">'+esc(_sl[sid].icon||"")+' '+esc(_sl[sid].name||sid)+'</button>';}).join("")+'</div>'):"";})()+'<label class="objc-dledit" style="display:flex;align-items:center;gap:8px;margin:8px 0 2px">📅 Échéance <input type="date" class="objd-dl" data-obj="'+esc(o.id)+'" value="'+esc(o.deadline||"")+'"></label>'+'<div class="objc-detail-note">Personnalise les séances de chaque sport avec ✎ Séances ci-dessus.</div></div>'):"";
+          var detail=objExpand[o.id]?('<div class="objc-detail">'+objPalLine(o)+(o.sports||[]).map(function(sid){var sp=_sl[sid];if(!sp)return "";var u=sportUCfg(sid),mx=(sp.levels||[]).length-1,c=Math.max(0,Math.min(mx,num(u.cur)||0)),t=Math.max(0,Math.min(mx,num(u.target)||0));function op(sel){return (sp.levels||[]).map(function(lv){return '<option value="'+lv.n+'"'+(lv.n===sel?" selected":"")+'>'+lv.n+'</option>';}).join("");}var _pals=[];for(var _pp=c+1;_pp<=t;_pp++)_pals.push(_pp);var _edit=(sessEdit&&sessEdit.id===sid&&_pals.length);var _sbtn=_pals.length?('<button type="button" class="objs-sessed'+(_edit?' on':'')+'" data-sp="'+esc(sid)+'">✎ Séances</button>'):'';var _sbox=_edit?('<div class="objs-sessbox"><div class="objs-palrow">Palier <select class="objs-pal" data-sp="'+esc(sid)+'">'+_pals.map(function(pv){return '<option value="'+pv+'"'+(pv===sessEdit.lvN?" selected":"")+'>'+pv+'</option>';}).join("")+'</select></div>'+sessEditorHTML(sid,sessEdit.lvN)+'</div>'):'';return '<div class="objc-splv"><span class="objc-splv-n">'+esc(sp.icon||"")+' '+esc(sp.name||sid)+'</span><span class="objc-splv-sel">niv <select class="objd-cur" data-sp="'+esc(sid)+'">'+op(c)+'</select> → <select class="objd-tgt" data-sp="'+esc(sid)+'">'+op(t)+'</select></span>'+_sbtn+'<button type="button" class="objc-rmsp" data-obj="'+esc(o.id)+'" data-sp="'+esc(sid)+'" aria-label="Retirer ce sport">✕</button></div>'+_sbox;}).join("")+(function(){var av=(_sl.order||[]).filter(function(sid){return _sl[sid]&&(o.sports||[]).indexOf(sid)<0;});return av.length?('<div class="objc-addsp"><span class="objc-addsp-lbl">+ Ajouter :</span>'+av.map(function(sid){return '<button type="button" class="objc-addspbtn" data-obj="'+esc(o.id)+'" data-sp="'+esc(sid)+'">'+esc(_sl[sid].icon||"")+' '+esc(_sl[sid].name||sid)+'</button>';}).join("")+'</div>'):"";})()+'<label class="objc-dledit" style="display:flex;align-items:center;gap:8px;margin:8px 0 2px">📅 Échéance <input type="date" class="objd-dl" data-obj="'+esc(o.id)+'" value="'+esc(o.deadline||"")+'"></label>'+'<div class="objc-detail-note">Personnalise les séances de chaque sport avec ✎ Séances ci-dessus.</div></div>'):"";
           return '<div class="objc-item"><div class="objc-row"><span class="objc-ic">'+esc(o.icon||"🎯")+'</span><span class="objc-tx">'+nameHtml+'<span class="objc-sub">'+spTags+dlTag+'</span></span>'+acts+'</div>'+detail+triEdit+'</div>';
         }).join("");
         var form=objCreating?('<div class="objc-form">'+
