@@ -1,0 +1,209 @@
+diff --git a/app.js b/app.js
+index c130c63..aa7a1cb 100644
+--- a/app.js
++++ b/app.js
+@@ -325,6 +325,38 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+     });
+     state.config.weekKeyFix=1;if(moved)save();
+   }
++  /* Migration unique : rattache l'historique muscu saisi SANS variante à une variante, d'après le nom de l'exo (liste validée par Enzo).
++     sets[exId] -> sets[exId::Variante] + s.variant[exId]. Intactes : séances déjà rattachées (variante choisie, « Maison »), exos hors liste, conflits.
++     Journal [clé séance, exId, variante] dans state.config.variantMigLog pour pouvoir revenir en arrière. */
++  var VARIANT_BY_NAME=(function(){var m={},L={
++    "Haltères":["Développé couché (haltères/barre)","Développé couché barre","Développé incliné haltères","Développé épaules haltères","Élévations latérales","Élévations latérales (drop set)","Élévations frontales","Curl marteau","Oiseau (épaules arrière)","Pull-over haltère","Rowing haltère 1 bras","Fentes marchées haltères","Fentes marchées","Curl + extension triceps","Développé militaire barre","Développé militaire (debout/assis)","Curl barre"],
++    "Barre":["Squat barre","Squat","Soulevé de terre roumain"],
++    "Poulie":["Extension triceps à la poulie (corde)","Extension triceps poulie","Tirage vertical poulie","Tirage horizontal poulie","Face pull (poulie)","Crunch à la poulie"],
++    "Machine":["Presse à cuisses","Mollets debout","Dips / développé machine","Rowing barre / machine","Écarté poulie / pec deck"],
++    "Poids du corps":["Tractions pronation","Tractions lestées","Dips lestés","Relevés de jambes suspendus","Relevés de jambes lestés","Crunch au sol lesté","Roue abdos","Roue abdos / planche dynamique","Pont fessier","Fentes sautées","Tirage élastique"]};
++    Object.keys(L).forEach(function(v){L[v].forEach(function(n){m[normExName(n)]=v;});});return m;})();
++  function migrateVariantsOnce(){
++    if(!state.config)state.config={};
++    if(state.config.variantMig)return;
++    var log=[];
++    BLOCK_ORDER.forEach(function(b){var cd=codesOf(b),wk=PROGRAM_BLOCKS[b].weeks;
++      for(var w=1;w<=wk;w++)cd.forEach(function(c){
++        var key=sessKey(b,w,c),s=state.sessions&&state.sessions[key],pr=progOf(b,c);
++        if(!s||typeof s!=="object"||!s.sets||typeof s.sets!=="object"||!pr||!pr.exos)return;
++        pr.exos.forEach(function(e){
++          var V=VARIANT_BY_NAME[normExName(e.name)],arr=s.sets[e.id],nk;
++          if(!V||!Array.isArray(arr)||!arr.some(setHas))return;
++          if(hasOwn(s.variant,e.id)&&s.variant[e.id])return;                       /* déjà rattaché à une variante (ou « Maison ») */
++          nk=e.id+"::"+V;
++          if(Array.isArray(s.sets[nk])&&s.sets[nk].some(setHas))return;             /* conflit : on ne fusionne pas */
++          s.sets[nk]=arr;delete s.sets[e.id];
++          if(!s.variant||typeof s.variant!=="object")s.variant={};
++          s.variant[e.id]=V;log.push([key,e.id,V]);
++        });
++      });
++    });
++    if(log.length||Object.keys(state.sessions||{}).length){state.config.variantMig=1;if(log.length)state.config.variantMigLog=log;save();}
++  }
+   /* ---------- Personnalisation durable des séances (override dans state.config) ---------- */
+   function progCfg(){if(!state.config)state.config={};if(!state.config.program)state.config.program={};return state.config.program;}
+   function progOf(b,c){return progCfg()[b+"_"+c]||PROGRAM_BLOCKS[b].prog[c];}
+@@ -2016,7 +2048,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+           '</div>'+
+           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
+             (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(d\'après '+(sugg.from?"ta variante "+esc(sugg.from):"tes séances sans variante")+')</span></div>':''))+
+-            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'" aria-label="Repos conseillé : '+rest+' s" style="font-size:18px;padding:5px 14px">⏱</button>'+
++            '<div class="exo-foot" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'" aria-label="Repos conseillé : '+rest+' s" style="font-size:18px;padding:5px 14px">⏱</button>'+
+               ((isSec&&!ex._home)?'':toolBtn(ex,"var",ex._home?"🏠":"🔀",ex._home?"Version maison":"Variante (selon ton matériel)"))+toolBtn(ex,"demo","🎬","Technique et démo")+'</div>'+
+             '<div class="exo-more" id="panel-'+ex.id+'" style="display:'+(sessTool[ex.id]?"":"none")+';margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
+               '<div data-panel="var" style="display:'+(sessTool[ex.id]==="var"?"":"none")+'">'+varHTML+'</div>'+
+@@ -2644,7 +2676,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+ 
+   /* ---------------- Progrès : protéines ---------------- */
+   function pEff(t){return t?(t.protEff!=null?t.protEff:t.prot):0;}
+-  function proteinEntries(){var arr=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)arr.push({d:d,p:pEff(t)});});arr.sort(function(a,b){return a.d<b.d?-1:1;});return arr;}
++  function proteinEntries(){var arr=[];Object.keys(state.days).forEach(function(d){var t=dayTotals(d);if(t&&t.prot>0)arr.push({d:d,p:t.prot});});arr.sort(function(a,b){return a.d<b.d?-1:1;});return arr;}
+   function renderProteinChart(){
+     var host=document.getElementById("proteinChart");if(!host)return;var e=proteinEntries();
+     if(host.parentNode)host.parentNode.hidden=e.length<2;
+@@ -3006,7 +3038,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+   }
+ 
+   /* ---------------- Progrès : fiche exercice (historique détaillé, séparé par variante) ---------------- */
+-  var exoSheetSel="",exoSheetVar=null;
++  var exoSheetSel="",exoSheetVar=null,exoSheetOpen=true;   /* exoSheetOpen : fiche dépliée (état de session, non persisté) */
+   function setHas(x){return !!x&&((x.kg!==undefined&&x.kg!==null&&String(x.kg).trim()!=="")||(x.r!==undefined&&x.r!==null&&String(x.r).trim()!==""));}
+   function exoSheetData(){   /* un exercice = son nom (réutilisé d'un bloc à l'autre) ; séances en ordre chronologique */
+     var map={},list=[],t=0;
+@@ -3070,12 +3102,17 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
+     var hint="";
+     if(!X.sec){var def=X.def,eb=baseFor(def.id,V,def.base);
+       hint='<details class="base-hint"><summary>⚖️ Poids en '+BASE_UNIT[eb]+' — comment le noter&nbsp;?</summary><div>'+baseHint(eb)+'<div class="hint-sets">🔢 Renseigne <b>'+def.sets+'</b> série'+(def.sets>1?'s':'')+' pour cet exercice (utilise « + série » si tu en fais plus).</div></div></details>';}
+-    return '<div class="card pad"><div class="sec-title">💪 Fiche exercice</div><select class="exo-var" id="exoSheetPick">'+opts+'</select>'+chips+'<div class="exo-hist" style="margin-top:10px">'+(rows.length?exoSheetChart(rows)+'<div class="hist-cap">'+cap+'</div>':'')+foot+'</div>'+hint+'</div>';
++    var cyc=vars.length>1?vars[(vars.indexOf(V)+1)%vars.length]:null;   /* 🔀 : variante suivante (même logo que dans la séance) */
++    var head='<div class="es-head'+(exoSheetOpen?" open":"")+'" id="exoSheetHead" role="button" tabindex="0" aria-expanded="'+(exoSheetOpen?"true":"false")+'"><span class="sec-title">💪 Fiche exercice</span>'+(exoSheetOpen?"":'<span class="es-ctx">'+esc(X.name+(V?" — "+V:""))+'</span>')+'<span class="es-r">'+(cyc!==null?'<button type="button" class="rest-chip es-cyc" data-v="'+esc(cyc)+'" aria-label="Variante suivante : '+esc(cyc||"Sans variante")+'">🔀</button>':'')+'<span class="exo-chev">▾</span></span></div>';
++    return '<div class="card pad">'+head+(exoSheetOpen?('<select class="exo-var" id="exoSheetPick">'+opts+'</select>'+chips+'<div class="exo-hist" style="margin-top:10px">'+(rows.length?exoSheetChart(rows)+'<div class="hist-cap">'+cap+'</div>':'')+foot+'</div>'+hint):'')+'</div>';
+   }
+   function renderExoSheet(){
+     var h=document.getElementById("exoSheet");if(!h)return;h.innerHTML=exoSheetHTML();
+     var sel=h.querySelector("#exoSheetPick");if(sel)sel.onchange=function(){exoSheetSel=sel.value;exoSheetVar=null;renderExoSheet();};
+     h.querySelectorAll(".es-var").forEach(function(b){b.onclick=function(){exoSheetVar=b.getAttribute("data-v");renderExoSheet();};});
++    var hd=h.querySelector("#exoSheetHead");
++    if(hd){var tg=function(){exoSheetOpen=!exoSheetOpen;renderExoSheet();};hd.onclick=tg;hd.onkeydown=function(ev){if((ev.key==="Enter"||ev.key===" ")&&ev.target===hd){ev.preventDefault();tg();}};}
++    var cy=h.querySelector(".es-cyc");if(cy)cy.onclick=function(ev){ev.stopPropagation();exoSheetVar=cy.getAttribute("data-v");renderExoSheet();};
+   }
+ 
+   function renderProgress(){
+@@ -4197,7 +4234,7 @@ var P=sportPlan(),pd=num(P.perDay)||1,mc=num(P.maxConsec)||3;
+       function fb(){try{ta.focus();ta.select();document.execCommand("copy");ok();}catch(e){}}
+       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb);}else{fb();}
+     });
+-    migrateWeekKeys();pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();migrateMuscuLink();syncTri();migrateOrphanSportsOnce();migrateObjLinks();
++    migrateWeekKeys();migrateVariantsOnce();pRenameDeadlinesOnce();pEnsureSeed();pMigrateStates();pMigrateDayTypes();seedPlanOnce();triStartMigrateOnce();triReslotByDate();migrateTriLink();migrateMuscuLink();syncTri();migrateOrphanSportsOnce();migrateObjLinks();
+     if("serviceWorker" in navigator){try{navigator.serviceWorker.register(APP_V==="0"?"sw.js":"sw.js?v="+APP_V).catch(function(){});}catch(e){}}
+     activateTab("v-day");
+     maybeShowA2HS();
+diff --git a/index.html b/index.html
+index 6900ec5..b99a389 100644
+--- a/index.html
++++ b/index.html
+@@ -14,7 +14,7 @@
+   <link rel="shortcut icon" href="favicon.ico">
+   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+   <!-- Styles externes -->
+-  <link rel="stylesheet" href="style.css?v=245">
++  <link rel="stylesheet" href="style.css?v=246">
+ </head>
+ <body>
+ 
+@@ -195,8 +195,8 @@
+   <!-- ====================== SCRIPTS ======================
+        Ordre important : data.js (variables PROGRAM, PROGRAM2, TRI, BRISTOL…)
+        doit être chargé AVANT app.js (logique, rendu, stockage). -->
+-  <script src="data.js?v=245"></script>
+-  <script src="sports.js?v=245"></script>
+-  <script src="app.js?v=245"></script>
++  <script src="data.js?v=246"></script>
++  <script src="sports.js?v=246"></script>
++  <script src="app.js?v=246"></script>
+ </body>
+ </html>
+diff --git a/style.css b/style.css
+index 9f821b5..bcf0869 100644
+--- a/style.css
++++ b/style.css
+@@ -177,8 +177,17 @@ table.grid td.wk .wkd{display:block;font-size:10px;color:#9aa7b3;font-weight:600
+ .exo-state.done{color:#fff;background:#34a96a}
+ .exo-chev{font-size:12px;color:var(--muted);transition:transform .2s;flex:none}
+ .exo-band.open .exo-chev{transform:rotate(180deg)}
+-.exo-body{margin-top:12px}
++.exo-body{margin-top:0}
++.exo-band.open{padding-bottom:2px}
++.exo-foot .rest-chip{margin-top:0}
+ .exo-body.collapsed{display:none}
++.es-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
++.es-head .sec-title{margin:0;flex:none}
++.es-head.open{margin-bottom:12px}
++.es-ctx{flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
++.es-r{display:flex;align-items:center;gap:10px;margin-left:auto;flex:none}
++.es-head.open .exo-chev{transform:rotate(180deg)}
++.es-cyc{margin-top:0;font-size:18px;padding:5px 14px}
+ .exo-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
+ .exo-tools .info-btn{width:30px;height:30px;border-radius:50%;padding:0;font-size:19px;font-style:normal;font-weight:700;line-height:1}
+ .demo-link{display:inline-block;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none}
+diff --git a/tools/smoke.js b/tools/smoke.js
+index c063257..28d0429 100644
+--- a/tools/smoke.js
++++ b/tools/smoke.js
+@@ -12,6 +12,7 @@ function seed(o){o=o||{};const s={sessions:{},days:{},tri:{"1_nat":{done:true,da
+   sportsUser:{nage:{on:true,cur:0,target:2,minutes:45,days:[],lvlBase:0,deadline:"",tickets:3},velo:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},course:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},muscu:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:o.dl||""}}}};
+   const PB={b1:[5,"ABCD"],b2:[4,"ABCD"],b3:[8,"ABCD"],b4:[12,"ABCDE"],b5:[10,"ABCDEF"],b6:[2,"AC"]};
+   for(const b in PB)for(let w=1;w<=PB[b][0];w++)for(const c of PB[b][1])s.sessions[(b==="b1"?w+"_"+c:b+"_"+w+"_"+c)]={done:true,date:"2026-11-01",sets:{}};
++  s.config.variantMig=1;   /* déjà migré : les tests d'historique sans variante visent le chemin legacy ; la migration a sa propre section (17) */
+   return JSON.stringify(s);}
+ function boot(ls,pre){return new Promise(res=>{const errs=[];
+   const dom=new JSDOM(HTML,{runScripts:"dangerously",pretendToBeVisual:true,url:"https://x.test/",beforeParse(w){w.localStorage.setItem("suiviMuscu_v1",ls);if(pre)pre(w);
+@@ -268,5 +269,50 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
+    ok(F().querySelectorAll("svg circle").length===3&&/24 kg → 28 kg/.test(F().textContent)&&/\+4 kg sur 3 séances/.test(F().textContent),"fiche : courbe de la charge max (24 → 28 kg, 3 séances)");
+    ok(/Poids en kg\/bras — comment le noter/.test(F().textContent),"fiche : « Poids en kg/bras — comment le noter » (variante Haltères)");
+    ok(e.errs.length===0,"séance / fiche : aucune erreur JS");}
++  // ---- 17. v246 : migration des variantes, fiche réductible + 🔀, logos centrés, courbe protéines brute ----
++  {const hasKey=(o,k)=>Object.prototype.hasOwnProperty.call(o,k),mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o),s0=JSON.parse(seed());
++   s0.sessions.b7_1_A=mk({sets:{a1:[{kg:"60",r:"8"}],a2:[{kg:"40",r:"8"}],a6:[{kg:"5",r:"10"}]}});            // barre→Haltères, militaire→Haltères, relevés→Poids du corps
++   s0.sessions.b7_2_A=mk({sets:{a1:[{kg:"62",r:"8"}],"a2::Barre":[{kg:"42",r:"8"}],a7:[{kg:"20",r:"12"}]},variant:{a2:"Barre"}});   // a2 déjà rattaché : intact ; a7 → Poulie
++   s0.sessions.b7_3_A=mk({sets:{"a1::Machine":[{kg:"90",r:"6"}]},variant:{a1:"Machine"}});                 // 2e variante pour la fiche
++   s0.sessions.b7_4_A=mk({sets:{a6:[{kg:"7",r:"10"}],"a6::Poids du corps":[{kg:"6",r:"10"}],a8:[{kg:"",r:"30"}],a5:[{kg:"",r:""}]}});   // a6 : conflit (cible déjà saisie) ; a8 hors liste ; a5 vide
++   delete s0.config.variantMig;
++   s0.days["2026-11-10"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
++   s0.days["2026-11-11"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
++   const e=await boot(JSON.stringify(s0));let st=e.st();const S=k=>st.sessions[k];
++   ok(S("b7_1_A").sets["a1::Haltères"]&&S("b7_1_A").sets["a1::Haltères"][0].kg==="60"&&!("a1" in S("b7_1_A").sets)&&S("b7_1_A").variant.a1==="Haltères","migration : Développé couché barre → Haltères (kg conservés, clé déplacée)");
++   ok(S("b7_1_A").sets["a2::Haltères"]&&S("b7_1_A").variant.a2==="Haltères","migration : Développé militaire barre → Haltères (liste validée)");
++   ok(S("b7_1_A").sets["a6::Poids du corps"]&&S("b7_1_A").variant.a6==="Poids du corps","migration : Relevés de jambes lestés → Poids du corps");
++   ok(S("b7_2_A").sets["a7::Poulie"]&&S("b7_2_A").variant.a7==="Poulie","migration : Extension triceps poulie → Poulie");
++   ok(S("b7_2_A").sets["a2::Barre"][0].kg==="42"&&S("b7_2_A").variant.a2==="Barre","migration : séance déjà rattachée à une variante : intacte");
++   ok(S("b7_4_A").sets.a6[0].kg==="7"&&S("b7_4_A").sets["a6::Poids du corps"][0].kg==="6"&&!S("b7_4_A").variant,"migration : conflit (cible déjà saisie) : rien n'est fusionné ni écrasé");
++   ok(S("b7_4_A").sets.a8[0].r==="30"&&Array.isArray(S("b7_4_A").sets.a5)&&!hasKey(S("b7_4_A").sets,"a5::Haltères"),"migration : exo hors liste / séries vides : intacts");
++   ok(st.config.variantMig===1&&st.config.variantMigLog.length===5,"migration : drapeau posé + journal des déplacements (5)");
++   const e2=await boot(JSON.stringify(st));const st2=e2.st();
++   ok(JSON.stringify(st2.sessions)===JSON.stringify(st.sessions)&&st2.config.variantMigLog.length===5,"migration : idempotente au démarrage suivant");
++   ok(e.errs.length===0,"migration : aucune erreur JS");
++   // fiche exercice : 🔀 + réductible
++   tab(e.d,"v-prog2");await wait(80);
++   const F=()=>e.d.getElementById("exoSheet"),H=()=>F().querySelector("#exoSheetHead");
++   {const pk=F().querySelector("#exoSheetPick");pk.value="développé couché barre";pk.dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(40);}   // 2 variantes : Haltères (migrée) + Machine
++   ok(!!F().querySelector(".es-cyc")&&F().querySelector(".es-cyc").textContent==="🔀"&&H().getAttribute("aria-expanded")==="true"&&!!F().querySelector("#exoSheetPick"),"fiche : 🔀 présent, dépliée par défaut");
++   const cur=()=>F().querySelector(".es-var.on").getAttribute("data-v");const v0=cur();
++   F().querySelector(".es-cyc").click();await wait(40);const v1=cur();
++   ok(v1!==v0&&H().getAttribute("aria-expanded")==="true","fiche : 🔀 passe à la variante suivante (reste dépliée)");
++   H().click();await wait(40);
++   ok(H().getAttribute("aria-expanded")==="false"&&!F().querySelector("#exoSheetPick")&&!F().querySelector(".exo-hist")&&F().querySelector(".es-ctx").textContent.indexOf(v1)>=0,"fiche : réduite (titre + exo — variante seulement)");
++   F().querySelector(".es-cyc").click();await wait(40);
++   ok(H().getAttribute("aria-expanded")==="false"&&F().querySelector(".es-ctx").textContent.indexOf(v1)<0,"fiche réduite : 🔀 change de variante sans déplier");
++   tab(e.d,"v-sport");tab(e.d,"v-prog2");await wait(60);
++   ok(H().getAttribute("aria-expanded")==="false","fiche : état réduit conservé en changeant d'onglet");
++   H().click();await wait(40);
++   ok(H().getAttribute("aria-expanded")==="true"&&!!F().querySelector("#exoSheetPick"),"fiche : re-dépliée");
++   // courbe protéines = valeurs brutes (riz seul : 40 g bruts, 0 g « efficaces »)
++   ok(/Moyenne <b>40 g<\/b>/.test(e.d.getElementById("proteinChart").innerHTML),"Progrès : courbe protéines en valeurs brutes (40 g, pas 0)");
++   // logos muscu : centrés, collés au titre
++   tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
++   const ft=e.d.querySelector("#sessionDetail .exo-foot");
++   ok(/justify-content:center/.test(ft.getAttribute("style")),"séance : ligne de logos centrée");
++   ok(/\.exo-body\{margin-top:0\}/.test(rd("style.css"))&&/\.exo-foot \.rest-chip\{margin-top:0\}/.test(rd("style.css")),"séance : plus d'espace entre le titre et les logos (CSS)");
++   ok(e.errs.length===0,"v246 : aucune erreur JS");}
+   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
+ })();
