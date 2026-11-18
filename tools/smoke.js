@@ -353,5 +353,49 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    cb.click();await wait(60);
    ok((e.st().config.blocksClosed||[]).length===1,"clic normal sur 🔒 : clôture toujours opérante");
    ok(e.errs.length===0,"v246 (2) : aucune erreur JS");}
+  // ---- 19. v247 : palier épuré, plus de carte « Vers ton objectif », séance sans en-tête, 📍 en fenêtre dédiée ----
+  {const e=await boot(seed()),ev=(el,t)=>el.dispatchEvent(new e.w.Event(t,{bubbles:true}));
+   tab(e.d,"v-sport");await wait(80);
+   const T=()=>e.d.querySelector("#progBlocks .lvl-title");
+   ok(/^Palier \d+\/\d+$/.test(T().textContent.trim()),"palier muscu : titre « Palier X/X » seul (sans nom)");
+   ok(!e.d.querySelector("#progBlocks .lvl-sub")&&!/séances/.test(e.d.querySelector("#progBlocks .lvl-nav").textContent),"palier muscu : plus de « X/X séances » sous le titre");
+   ok(!e.d.querySelector("#progBlocks .blk-focus"),"palier muscu : paragraphe masqué par défaut");
+   T().click();await wait(30);
+   ok(!!e.d.querySelector("#progBlocks .blk-focus")&&T().getAttribute("aria-expanded")==="true","palier muscu : paragraphe affiché au tap sur « Palier X/X »");
+   T().click();await wait(30);
+   ok(!e.d.querySelector("#progBlocks .blk-focus"),"palier muscu : paragraphe re-masqué au 2e tap");
+   ok(e.d.getElementById("muscuApercu").innerHTML.trim()===""&&![...e.d.querySelectorAll("summary,.tp-head")].some(x=>/Vers ton objectif/.test(x.textContent)),"carte « Vers ton objectif … » supprimée (muscu et autres sports)");
+   // objectif déplié : « Palier X/N » en tête
+   e.d.getElementById("settingsBtn").click();e.d.querySelectorAll(".set-grptog").forEach(b=>b.click());e.d.querySelectorAll(".set-sectog").forEach(b=>b.click());await wait(60);
+   let found=false;const nb=e.d.querySelectorAll(".objc-exp").length;
+   for(let i=0;i<nb&&!found;i++){const bt=e.d.querySelectorAll(".objc-exp")[i];if(!bt)break;bt.click();await wait(30);const det=e.d.querySelectorAll(".objc-detail")[0];
+     const pal=[...e.d.querySelectorAll(".objc-detail")].find(d=>d.firstElementChild&&d.firstElementChild.classList.contains("objc-pal"));if(pal){found=true;ok(/^Palier \d+\/\d+$/.test(pal.firstElementChild.textContent.trim()),"objectif déplié : « Palier X/X » en première info");}}
+   ok(found,"objectif déplié (avec muscu) : ligne Palier présente en tête");
+   e.d.getElementById("settingsClose").click();tab(e.d,"v-sport");await wait(60);
+   // paliers des autres sports
+   const st=e.d.querySelector(".so-card .lvl-title");
+   if(st){ok(/^Palier \d+\/\d+$/.test(st.textContent.trim())&&!e.d.querySelector(".so-card .lvl-sub")&&!e.d.querySelector(".so-card .so-dtxt"),"paliers des autres sports : titre épuré, description masquée");
+     st.click();await wait(30);ok(!!e.d.querySelector(".so-card .so-dtxt"),"paliers des autres sports : description au tap");}
+   else ok(true,"(aucune carte sport dans ce seed)");
+   // séance sans en-tête ni ligne lieu
+   e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
+   const sd=e.d.getElementById("sessionDetail");
+   ok(!sd.querySelector(".sd-head")&&!sd.querySelector(".place-row")&&!/Séance A A|Semaine 1 ·/.test(sd.textContent),"séance : plus d'en-tête (« Séance A A », style) ni de ligne lieu");
+   // 📍 : fenêtre dédiée
+   const bp=e.d.querySelector(".blk-place");
+   ok(!!bp&&bp.textContent.trim()==="📍"&&!!bp.getAttribute("aria-label"),"palier : bouton 📍 à côté de 🔒 et ✎");
+   bp.click();await wait(30);
+   ok(e.d.querySelectorAll(".ui-ov .pl-b").length===3&&!!e.d.querySelector(".ui-ov #gymUntil"),"📍 : fenêtre dédiée (Auto / Salle / Maison + fin d'abonnement)");
+   e.d.querySelector('.ui-ov .pl-b[data-pl="home"]').click();await wait(30);
+   ok(!e.d.querySelector(".ui-ov")&&e.st().config.place==="home","📍 : choix « Maison » enregistré, fenêtre refermée");
+   e.d.querySelector(".blk-place").click();await wait(30);
+   ok(e.d.querySelector('.ui-ov .pl-b[data-pl="home"]').classList.contains("on"),"📍 : le choix courant est mis en évidence");
+   const gu=e.d.querySelector("#gymUntil");gu.value="2027-01-31";ev(gu,"change");await wait(30);
+   ok(e.st().config.gymUntil==="2027-01-31","📍 : date de fin d'abonnement enregistrée");
+   e.d.querySelector(".ui-ov .ui-no").click();await wait(20);
+   ok(!e.d.querySelector(".ui-ov"),"📍 : « Fermer » referme la fenêtre");
+   const css=rd("style.css");
+   ok(/\.blk-actions \.btn\{display:inline-block;width:auto;max-width:100%/.test(css)&&/\.blk-actions\{display:flex;justify-content:center;flex-wrap:wrap/.test(css),"palier : boutons emoji ne débordent plus (width:auto, retour à la ligne)");
+   ok(e.errs.length===0,"v247 : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
