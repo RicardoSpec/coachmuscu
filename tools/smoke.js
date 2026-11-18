@@ -12,6 +12,7 @@ function seed(o){o=o||{};const s={sessions:{},days:{},tri:{"1_nat":{done:true,da
   sportsUser:{nage:{on:true,cur:0,target:2,minutes:45,days:[],lvlBase:0,deadline:"",tickets:3},velo:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},course:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},muscu:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:o.dl||""}}}};
   const PB={b1:[5,"ABCD"],b2:[4,"ABCD"],b3:[8,"ABCD"],b4:[12,"ABCDE"],b5:[10,"ABCDEF"],b6:[2,"AC"]};
   for(const b in PB)for(let w=1;w<=PB[b][0];w++)for(const c of PB[b][1])s.sessions[(b==="b1"?w+"_"+c:b+"_"+w+"_"+c)]={done:true,date:"2026-11-01",sets:{}};
+  s.config.variantMig=1;   /* déjà migré : les tests d'historique sans variante visent le chemin legacy ; la migration a sa propre section (17) */
   return JSON.stringify(s);}
 function boot(ls,pre){return new Promise(res=>{const errs=[];
   const dom=new JSDOM(HTML,{runScripts:"dangerously",pretendToBeVisual:true,url:"https://x.test/",beforeParse(w){w.localStorage.setItem("suiviMuscu_v1",ls);if(pre)pre(w);
@@ -268,5 +269,89 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    ok(F().querySelectorAll("svg circle").length===3&&/24 kg → 28 kg/.test(F().textContent)&&/\+4 kg sur 3 séances/.test(F().textContent),"fiche : courbe de la charge max (24 → 28 kg, 3 séances)");
    ok(/Poids en kg\/bras — comment le noter/.test(F().textContent),"fiche : « Poids en kg/bras — comment le noter » (variante Haltères)");
    ok(e.errs.length===0,"séance / fiche : aucune erreur JS");}
+  // ---- 17. v246 : migration des variantes, fiche réductible + 🔀, logos centrés, courbe protéines brute ----
+  {const hasKey=(o,k)=>Object.prototype.hasOwnProperty.call(o,k),mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o),s0=JSON.parse(seed());
+   s0.sessions.b7_1_A=mk({sets:{a1:[{kg:"60",r:"8"}],a6:[{kg:"5",r:"10"}],a7:[{kg:"20",r:"12"}]}});          // a1 couché barre (total) : unité ≠ Haltères → intact ; a6 → Poids du corps ; a7 → Poulie
+   s0.sessions.b7_1_C=mk({sets:{c7:[{kg:"8",r:"12"}],c4:[{kg:"30",r:"10"}]}});                              // c7 Oiseau (par bras) → Haltères ; c4 Curl barre (total) : unité ≠ Haltères → intact
+   s0.sessions.b7_2_A=mk({sets:{"a2::Barre":[{kg:"42",r:"8"}]},variant:{a2:"Barre"}});                       // déjà rattaché : intact
+   s0.sessions.b7_3_A=mk({sets:{"a1::Machine":[{kg:"90",r:"6"}]},variant:{a1:"Machine"}});                   // 2e variante pour la fiche
+   s0.sessions.b7_4_A=mk({sets:{a6:[{kg:"7",r:"10"}],"a6::Poids du corps":[{kg:"6",r:"10"}],a8:[{kg:"",r:"30"}],a7:[{kg:"",r:""}]}});   // a6 : conflit ; a8 hors liste ; a7 vide
+   delete s0.config.variantMig;
+   s0.days["2026-11-10"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
+   s0.days["2026-11-11"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
+   const e=await boot(JSON.stringify(s0));let st=e.st();const S=k=>st.sessions[k];
+   ok(S("b7_1_C").sets["c7::Haltères"]&&S("b7_1_C").sets["c7::Haltères"][0].kg==="8"&&!hasKey(S("b7_1_C").sets,"c7")&&S("b7_1_C").variant.c7==="Haltères","migration : Oiseau (par bras) → Haltères (kg conservés, clé déplacée)");
+   ok(S("b7_1_A").sets["a6::Poids du corps"]&&S("b7_1_A").variant.a6==="Poids du corps","migration : Relevés de jambes lestés (+kg) → Poids du corps");
+   ok(S("b7_1_A").sets["a7::Poulie"]&&S("b7_1_A").variant.a7==="Poulie","migration : Extension triceps poulie (total) → Poulie");
+   ok(S("b7_1_A").sets.a1[0].kg==="60"&&!hasKey(S("b7_1_A").variant,"a1")&&S("b7_1_C").sets.c4[0].kg==="30"&&!hasKey(S("b7_1_C").variant,"c4"),"migration : unité ≠ variante (couché barre, curl barre → Haltères) : pas de conversion, historique intact sans variante");
+   ok(S("b7_2_A").sets["a2::Barre"][0].kg==="42"&&S("b7_2_A").variant.a2==="Barre","migration : séance déjà rattachée à une variante : intacte");
+   ok(S("b7_4_A").sets.a6[0].kg==="7"&&S("b7_4_A").sets["a6::Poids du corps"][0].kg==="6"&&!S("b7_4_A").variant,"migration : conflit (cible déjà saisie) : rien n'est fusionné ni écrasé");
+   ok(S("b7_4_A").sets.a8[0].r==="30"&&Array.isArray(S("b7_4_A").sets.a7)&&!hasKey(S("b7_4_A").sets,"a7::Poulie"),"migration : exo hors liste / séries vides : intacts");
+   ok(st.config.variantMig===1&&st.config.variantMigLog.length===3,"migration : drapeau posé + journal des déplacements (3)");
+   const e2=await boot(JSON.stringify(st));const st2=e2.st();
+   ok(JSON.stringify(st2.sessions)===JSON.stringify(st.sessions)&&st2.config.variantMigLog.length===3,"migration : idempotente au démarrage suivant");
+   ok(e.errs.length===0,"migration : aucune erreur JS");
+   // fiche exercice : 🔀 + réductible
+   tab(e.d,"v-prog2");await wait(80);
+   const F=()=>e.d.getElementById("exoSheet"),H=()=>F().querySelector("#exoSheetHead");
+   {const pk=F().querySelector("#exoSheetPick");pk.value="développé couché barre";pk.dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(40);}   // 2 variantes : Haltères (migrée) + Machine
+   ok(!!F().querySelector(".es-cyc")&&F().querySelector(".es-cyc").textContent==="🔀"&&H().getAttribute("aria-expanded")==="true"&&!!F().querySelector("#exoSheetPick"),"fiche : 🔀 présent, dépliée par défaut");
+   const cur=()=>F().querySelector(".es-var.on").getAttribute("data-v");const v0=cur();
+   F().querySelector(".es-cyc").click();await wait(40);const v1=cur();
+   ok(v1!==v0&&H().getAttribute("aria-expanded")==="true","fiche : 🔀 passe à la variante suivante (reste dépliée)");
+   H().click();await wait(40);
+   ok(H().getAttribute("aria-expanded")==="false"&&!F().querySelector("#exoSheetPick")&&!F().querySelector(".exo-hist")&&/développé couché barre/i.test(F().querySelector(".es-ctx").textContent)&&(v1===""||F().querySelector(".es-ctx").textContent.indexOf(v1)>=0),"fiche : réduite (titre + exo — variante seulement)");
+   const ctx0=F().querySelector(".es-ctx").textContent;
+   F().querySelector(".es-cyc").click();await wait(40);
+   ok(H().getAttribute("aria-expanded")==="false"&&F().querySelector(".es-ctx").textContent!==ctx0,"fiche réduite : 🔀 change de variante sans déplier");
+   tab(e.d,"v-sport");tab(e.d,"v-prog2");await wait(60);
+   ok(H().getAttribute("aria-expanded")==="false","fiche : état réduit conservé en changeant d'onglet");
+   H().click();await wait(40);
+   ok(H().getAttribute("aria-expanded")==="true"&&!!F().querySelector("#exoSheetPick"),"fiche : re-dépliée");
+   // courbe protéines = valeurs brutes (riz seul : 40 g bruts, 0 g « efficaces »)
+   ok(/Moyenne <b>40 g<\/b>/.test(e.d.getElementById("proteinChart").innerHTML),"Progrès : courbe protéines en valeurs brutes (40 g, pas 0)");
+   // logos muscu : centrés, collés au titre
+   tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
+   const ft=e.d.querySelector("#sessionDetail .exo-foot");
+   ok(/justify-content:center/.test(ft.getAttribute("style")),"séance : ligne de logos centrée");
+   ok(/\.exo-body\{margin-top:0\}/.test(rd("style.css"))&&/\.exo-foot \.rest-chip\{margin-top:0\}/.test(rd("style.css")),"séance : plus d'espace entre le titre et les logos (CSS)");
+   ok(e.errs.length===0,"v246 : aucune erreur JS");}
+  // ---- 18. coche ✓ / x/x à jour au repli, boutons emoji + appui long ----
+  {const e=await boot(seed()),ev=(el,t)=>el.dispatchEvent(new e.w.Event(t,{bubbles:true}));
+   tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
+   const band=e.d.querySelector("#sessionDetail .exo-band");band.click();await wait(30);
+   const id=band.getAttribute("data-exo"),rows=[...e.d.querySelectorAll('#sessionDetail .set')].filter(r=>r.closest("#body-"+id)),n=rows.length,chip=()=>band.querySelector(".exo-state");
+   ok(!chip(),"exo : pas de pastille tant que rien n'est saisi");
+   const r0=rows[0].querySelector(".in-r");r0.value="8";ev(r0,"input");
+   ok(chip()&&chip().textContent==="1/"+n&&band.classList.contains("open"),"exo : x/x mis à jour dès la saisie (reste ouvert)");
+   rows.forEach((r,i)=>{const k=r.querySelector(".in-kg"),q=r.querySelector(".in-r");if(k){k.value="20";ev(k,"input");}q.value="8";ev(q,"input");ev(q,"change");});
+   await wait(400);
+   ok(!band.classList.contains("open")&&band.getAttribute("aria-expanded")==="false","exo : se referme quand toutes les séries sont remplies");
+   ok(chip()&&chip().textContent==="✓"&&chip().classList.contains("done"),"exo refermé : coche ✓ affichée (pastille « done »)");
+   // boutons emoji : explication présente + appui long
+   const bad=[];const audit=(lab)=>e.d.querySelectorAll("button,[role=button]").forEach(b=>{const t=(b.textContent||"").trim();if(t&&!/[A-Za-z0-9\u00C0-\u024F]/.test(t)&&!(b.getAttribute("data-tip")||b.getAttribute("aria-label")||b.getAttribute("title")))bad.push(lab+" : "+t+" "+(b.className||""));});
+   audit("séance");tab(e.d,"v-day");await wait(60);audit("jour");tab(e.d,"v-prog2");await wait(60);audit("progrès");tab(e.d,"v-sport");await wait(60);audit("sport");
+   e.d.getElementById("settingsBtn").click();e.d.querySelectorAll(".set-grptog").forEach(b=>b.click());e.d.querySelectorAll(".set-sectog").forEach(b=>b.click());await wait(60);audit("réglages");
+   ok(bad.length===0,"tous les boutons réduits à un emoji ont une explication"+(bad.length?" — manquants : "+[...new Set(bad)].join(" | "):""));
+   e.d.getElementById("settingsClose").click();tab(e.d,"v-sport");await wait(60);
+   const cb=e.d.querySelector(".blk-close"),mo=e.d.querySelector(".msess-open");
+   ok(cb&&mo&&cb.textContent.trim()==="🔒"&&mo.textContent.trim()==="✎"&&!/[A-Za-z]/.test(cb.textContent+mo.textContent),"palier : boutons Clôturer / Personnaliser réduits à l'emoji");
+   const holdTime=async(el,ms)=>{ev(el,"pointerdown");await wait(ms);};
+   await holdTime(cb,150);ev(cb,"pointerup");await wait(500);
+   ok(!e.d.querySelector(".lp-tip"),"appui court : pas de bulle");
+   await holdTime(cb,600);
+   ok(!!e.d.querySelector(".lp-tip")&&/Clôturer ce bloc/.test(e.d.querySelector(".lp-tip").textContent),"appui long 🔒 : bulle « Clôturer ce bloc… »");
+   ev(cb,"pointerup");cb.click();await wait(50);
+   ok(!(e.st().config.blocksClosed||[]).length,"appui long : le clic qui suit est ignoré (bloc non clôturé)");
+   await holdTime(mo,600);ev(mo,"pointerup");
+   ok(/Personnaliser les séances/.test((e.d.querySelector(".lp-tip")||{}).textContent||""),"appui long ✎ : bulle « Personnaliser les séances »");
+   e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
+   const rb=e.d.querySelector("#sessionDetail .exo-foot .rest-chip");await holdTime(rb,600);ev(rb,"pointerup");
+   ok(/Repos conseillé/.test((e.d.querySelector(".lp-tip")||{}).textContent||""),"appui long ⏱ (séance) : bulle d'explication");
+   ev(e.d.body,"pointerdown");await wait(20);
+   ok(!e.d.querySelector(".lp-tip"),"bulle : disparaît au toucher suivant");
+   cb.click();await wait(60);
+   ok((e.st().config.blocksClosed||[]).length===1,"clic normal sur 🔒 : clôture toujours opérante");
+   ok(e.errs.length===0,"v246 (2) : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
