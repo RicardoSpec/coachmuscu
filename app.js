@@ -565,7 +565,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       }
     });
   }
-  var sessExpanded={};
+  var sessExpanded={},sessTool={};   /* sessTool[exId] = outil ouvert sous la ligne d'emojis ("var" | "demo") */
   var exDone={}; /* exercice terminé (toutes séries avec reps) : sert au repli automatique */ /* exId -> déplié, conservé entre re-rendus d'une même séance */
   var radarPeriod=30, fuelOpen=false, radarDetail=false;
   var EXO_VARIANTS=["Barre","Haltères","Machine","Poulie","Poids du corps"]; /* variantes génériques par matériel (fallback si ex.variants absent) */
@@ -1200,7 +1200,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       if(sport){
         var qds=hero.querySelector("#quickDoneSport");if(qds)qds.onclick=function(){toggleSportSess(s.id,next.iso);renderChip();renderHero();renderCalendars();renderDayRadar();};
       }else if(muscu){
-        var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
+        var gs=hero.querySelector("#goSession");if(gs)gs.onclick=function(){sessExpanded={};sessTool={};currentSel={block:s.block,w:s.w,c:s.code};goSport("muscu");var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});};
         var qd=hero.querySelector("#quickDone");if(qd)qd.onclick=function(){var r=sess(s.block,s.w,s.code);r.done=true;if(!r.date)r.date=todayStr();linkSessionSport("Muscu",r.date);save();renderChip();renderHero();renderCalendars();};
       }else{
         var gt=hero.querySelector("#goSessionTri");if(gt)gt.onclick=function(){currentTri={w:s.w,dz:s.disc};goSport("tri");var td=document.getElementById("triDetail");if(td&&td.scrollIntoView)td.scrollIntoView({behavior:"smooth",block:"start"});};
@@ -1924,7 +1924,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var nx=host.querySelector(".lvl-next");if(nx)nx.onclick=function(){if(muscuLvl<N-1){muscuLvl++;currentSel=null;renderProgram();var sd=document.getElementById("sessionDetail");if(sd)sd.innerHTML="";}};
     host.querySelectorAll(".cell").forEach(function(cell){
       cell.addEventListener("click",function(){
-        sessExpanded={};
+        sessExpanded={};sessTool={};
         currentSel={block:cell.getAttribute("data-b"),w:parseInt(cell.getAttribute("data-w"),10),c:cell.getAttribute("data-c")};
         renderProgram();renderSessionDetail();
         var sd=document.getElementById("sessionDetail");if(sd&&sd.scrollIntoView)sd.scrollIntoView({behavior:"smooth",block:"start"});
@@ -2007,7 +2007,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       for(var fi=0;fi<ex.sets;fi++){var _it=_a[fi];if(_it&&(String(_it.kg).trim()!==""||String(_it.r).trim()!==""))filled++;}
       var stateChip=filled>=ex.sets?'<span class="exo-state done">✓</span>':(filled>0?'<span class="exo-state">'+filled+'/'+ex.sets+'</span>':'');
       var vopts=(ex.variants&&ex.variants.length?ex.variants:EXO_VARIANTS);
-      var varHTML=ex._home?'<div class="exo-var-row"><span class="home-tag">🏠 Version maison : suivie à part de la salle</span></div>':(isSec?"":('<div class="exo-var-row"><label>Variante (selon ton matériel)'+(vAuto?" · reprise de ta dernière séance":"")+'</label><select class="exo-var" data-exo="'+ex.id+'">'+(curV===""?'<option value="" selected disabled>Choisis ta variante</option>':"")+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>'));
+      var varHTML=ex._home?'<div class="exo-var-row"><span class="home-tag">🏠 Version maison : suivie à part de la salle</span></div>':(isSec?"":('<div class="exo-var-row"><label>Variante'+(vAuto?" · reprise de ta dernière séance":"")+'</label><select class="exo-var" data-exo="'+ex.id+'">'+(curV===""?'<option value="" selected disabled>Choisis ta variante</option>':"")+vopts.map(function(o){return '<option'+(o===curV?" selected":"")+'>'+esc(o)+'</option>';}).join("")+(curV&&vopts.indexOf(curV)<0?'<option selected>'+esc(curV)+'</option>':"")+'<option value="__autre">✏️ Autre…</option></select></div>'));
       exosHTML+=
         '<div class="exo" data-ex="'+ex.id+'">'+
           '<div class="exo-band'+(sessExpanded[ex.id]?" open":"")+'" data-exo="'+ex.id+'" role="button" tabindex="0" aria-expanded="'+(sessExpanded[ex.id]?"true":"false")+'">'+
@@ -2016,11 +2016,11 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
           '</div>'+
           '<div class="exo-body'+(sessExpanded[ex.id]?"":" collapsed")+'" id="body-'+ex.id+'">'+
             (lastTxt?'':(sugg?'<div class="lastrep sugg">≈ Conseil : '+esc(sugg.kg)+' '+esc(kgUnit)+' × '+esc(sugg.r)+' <span class="sugg-src">(d\'après '+(sugg.from?"ta variante "+esc(sugg.from):"tes séances sans variante")+')</span></div>':''))+
-            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'">⏱ Repos conseillé : '+rest+' s</button><button type="button" class="exo-more-btn" data-more="'+ex.id+'" aria-label="Infos exercice" style="padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;color:var(--ink);cursor:pointer">＋ infos</button></div>'+
-            '<div class="exo-more" id="more-'+ex.id+'" style="display:none;margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
-              (isSec?'':'<details class="base-hint"><summary>🔀 Variante (selon ton matériel)</summary><div>'+varHTML+'</div></details>')+
-              '<details class="base-hint"><summary>⚖️ Poids en '+kgUnit+' — comment le noter&nbsp;?</summary><div>'+baseHint(exBase)+'<div class="hint-sets">🔢 Renseigne <b>'+ex.sets+'</b> série'+(ex.sets>1?'s':'')+' pour cet exercice (utilise « + série » si tu en fais plus).</div></div></details>'+
-              '<details class="base-hint"><summary>🎬 Technique &amp; démo</summary><div>'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div>'+'</div></details>'+
+            '<div class="exo-foot" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="rest-chip" data-sec="'+rest+'" aria-label="Repos conseillé : '+rest+' s" style="font-size:18px;padding:5px 14px">⏱</button>'+
+              ((isSec&&!ex._home)?'':toolBtn(ex,"var",ex._home?"🏠":"🔀",ex._home?"Version maison":"Variante (selon ton matériel)"))+toolBtn(ex,"demo","🎬","Technique et démo")+'</div>'+
+            '<div class="exo-more" id="panel-'+ex.id+'" style="display:'+(sessTool[ex.id]?"":"none")+';margin-bottom:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0">'+
+              '<div data-panel="var" style="display:'+(sessTool[ex.id]==="var"?"":"none")+'">'+varHTML+'</div>'+
+              '<div data-panel="demo" style="display:'+(sessTool[ex.id]==="demo"?"":"none")+'">'+ex.help+'<img class="exo-img" src="./images/'+slugify(ex.name+(curV?" "+curV:""))+'.jpg" alt=""'+(curV?' onerror="this.onerror=function(){this.onerror=null;this.style.display=\'none\'};this.src=\'./images/'+slugify(ex.name)+'.jpg\';"':' onerror="this.style.display=\'none\'"')+'>'+'<div class="exo-media"><a class="demo-link" href="https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+(curV?" "+curV:"")+" musculation technique")+'" target="_blank" rel="noopener">▸ Voir une démo vidéo</a></div></div>'+
             '</div>'+
             '<div class="sets">'+setsHTML+'</div>'+
             '<div class="setadd"><button class="add-set-std" data-setk="'+esc(setK)+'">+ série</button>'+(nSets>ex.sets?'<button class="del-set-std" data-setk="'+esc(setK)+'">− série</button>':'')+'</div>'+
@@ -2062,8 +2062,15 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       el.addEventListener("click",tgl);
       el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tgl();}});
     });
-    wrap.querySelectorAll(".exo-more-btn").forEach(function(btn){btn.addEventListener("click",function(){var m=document.getElementById("more-"+btn.getAttribute("data-more"));if(m){var op=m.style.display==="none";m.style.display=op?"":"none";btn.classList.toggle("open",op);}});});
+    wrap.querySelectorAll(".exo-tool").forEach(function(btn){btn.addEventListener("click",function(){
+      var id=btn.getAttribute("data-ex"),t=btn.getAttribute("data-tool"),pn=document.getElementById("panel-"+id);if(!pn)return;
+      sessTool[id]=(sessTool[id]===t)?"":t;
+      pn.style.display=sessTool[id]?"":"none";
+      pn.querySelectorAll("[data-panel]").forEach(function(d){d.style.display=(d.getAttribute("data-panel")===sessTool[id])?"":"none";});
+      btn.parentNode.querySelectorAll(".exo-tool").forEach(function(x){var on=x===btn&&!!sessTool[id];x.style.borderColor=on?"var(--primary)":"";x.setAttribute("aria-pressed",on?"true":"false");});
+    });});
     function exoMeta(id){for(var q=0;q<p.exos.length;q++)if(p.exos[q].id===id)return p.exos[q];return null;}
+    function toolBtn(ex,t,emoji,label){var on=sessTool[ex.id]===t;return '<button type="button" class="rest-chip exo-tool" data-tool="'+t+'" data-ex="'+ex.id+'" aria-label="'+label+'" aria-pressed="'+(on?"true":"false")+'" style="font-size:18px;padding:5px 14px'+(on?";border-color:var(--primary)":"")+'">'+emoji+'</button>';}
     function pinVariant(k){var id=String(k).split("::")[0],m=exoMeta(id);if(!m||m._home||hasOwn(s.variant,id))return;if(!s.variant)s.variant={};s.variant[id]=String(k).indexOf("::")>=0?String(k).slice(id.length+2):"";}
     /* Repli automatique : quand toutes les séries d'un exo ont leurs reps (au moment où on quitte le champ), le bandeau se referme ; on peut le rouvrir. */
     function exComplete(k){var m=exoMeta(String(k).split("::")[0]);if(!m)return false;var arr=s.sets[k]||[];for(var q=0;q<m.sets;q++){var it=arr[q];if(!it||String(it.r).trim()==="")return false;}return true;}
@@ -2083,7 +2090,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
       band.addEventListener("click",tog);
       band.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog();}});
     });
-    wrap.querySelectorAll(".rest-chip").forEach(function(ch){ch.addEventListener("click",function(){startRest(parseInt(ch.getAttribute("data-sec"),10));});});
+    wrap.querySelectorAll(".rest-chip[data-sec]").forEach(function(ch){ch.addEventListener("click",function(){startRest(parseInt(ch.getAttribute("data-sec"),10));});});
     wrap.querySelectorAll(".rest-btns button[data-sec]").forEach(function(bt){bt.addEventListener("click",function(){startRest(parseInt(bt.getAttribute("data-sec"),10));});});
     var rs=wrap.querySelector("#restStop");if(rs)rs.addEventListener("click",stopRest);
     wrap.querySelector("#toggleDone").addEventListener("click",function(){s.done=!s.done;if(s.done&&!s.date)s.date=todayStr();if(s.done)linkSessionSport("Muscu",s.date);save();renderProgram();renderSessionDetail();});
@@ -3012,6 +3019,7 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
             var arr=ss.sets[k];if(!Array.isArray(arr)||!arr.some(setHas))continue;
             var V=k===e.id?"":k.slice(e.id.length+2),isH=(V==="Maison"&&!!e.home),nm=isH?e.home.name:e.name,u=(isH&&e.home.unit!==undefined)?e.home.unit:e.unit,key=normExName(nm),X=map[key];
             if(!X){X=map[key]={key:key,name:nm,sec:(u==="sec"||u==="min"),lbl:u==="min"?"min":"s",entries:[],last:0};list.push(X);}
+            X.def=isH?Object.assign({},e,e.home):e;
             X.entries.push({b:bb,w:w,c:c,V:isH?"":V,sets:arr});X.last=++t;
           }
         });
@@ -3020,12 +3028,27 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     list.sort(function(a,b){return b.last-a.last;});
     return {map:map,list:list};
   }
-  function exoSheetVal(X,en){
-    var i,top=0,r;
-    if(X.sec){for(i=0;i<en.sets.length;i++){r=num(en.sets[i]&&en.sets[i].r);if(!isNaN(r)&&r>top)top=r;}return top>0?{top:top,lbl:top+" "+X.lbl}:null;}
-    var best=exoBest1RM(en.sets);if(best){var v=Math.round(best.e);return {top:v,lbl:v+" kg",rm:true};}
+  function fmtKg(v){return String(Math.round(v*10)/10).replace(".",",");}
+  function exoSheetVal(X,en){   /* valeur d'une séance : charge max (kg) ; temps max pour les exos en durée ; à défaut répétitions max */
+    var i,top=0,r,k;
+    if(X.sec){for(i=0;i<en.sets.length;i++){r=num(en.sets[i]&&en.sets[i].r);if(!isNaN(r)&&r>top)top=r;}return top>0?{top:top,lbl:top+" "+X.lbl,u:X.lbl}:null;}
+    for(i=0;i<en.sets.length;i++){k=num(en.sets[i]&&en.sets[i].kg);if(!isNaN(k)&&k>top)top=k;}
+    if(top>0){var best=exoBest1RM(en.sets);return {top:top,lbl:fmtKg(top)+" kg",u:"kg",rm:true,e1:best?Math.round(best.e):null};}
     for(i=0;i<en.sets.length;i++){r=num(en.sets[i]&&en.sets[i].r);if(!isNaN(r)&&r>top)top=r;}
-    return top>0?{top:top,lbl:top+" reps"}:null;
+    return top>0?{top:top,lbl:top+" reps",u:"reps"}:null;
+  }
+  function exoSheetChart(rows){   /* même principe que la courbe du poids */
+    var n=rows.length;if(n<2)return '<div class="hist-cap">Une 2ᵉ séance et la courbe apparaît.</div>';
+    var W=320,H=92,pad=8,vals=rows.map(function(r){return r.m.top;}),min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+    if(max-min<1){max+=0.5;min-=0.5;}
+    function X(i){return pad+(i/(n-1))*(W-2*pad);}
+    function Y(v){return pad+(1-(v-min)/(max-min))*(H-2*pad);}
+    var pts=rows.map(function(r,i){return X(i)+","+Y(r.m.top);}).join(" ");
+    var dots=rows.map(function(r,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(r.m.top).toFixed(1)+'" r="2.6" fill="#F4622B"/>';}).join("");
+    var u=rows[0].m.u,d=vals[n-1]-vals[0],lab=function(r){return PROGRAM_BLOCKS[r.e.b].short+" S"+r.e.w;};
+    return '<svg viewBox="0 0 '+W+' '+H+'"><polyline class="ch-p" fill="none" stroke="#12466B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>'+dots+'</svg>'+
+      '<div style="display:flex;justify-content:space-between;font-size:11px;opacity:.7"><span>'+esc(lab(rows[0]))+'</span><span>'+esc(lab(rows[n-1]))+'</span></div>'+
+      '<div class="muted" style="margin-top:8px;font-size:13px">'+fmtKg(vals[0])+' '+u+' → '+fmtKg(vals[n-1])+' '+u+' · <b>'+(d>=0?"+":"")+fmtKg(d)+' '+u+'</b> sur '+n+' séances</div>';
   }
   function exoSheetHTML(){
     var D=exoSheetData();if(!D.list.length)return "";
@@ -3036,15 +3059,18 @@ function fqTokens(s){var STOP={de:1,du:1,des:1,au:1,aux:1,a:1,la:1,le:1,les:1,l:
     var rows=E.map(function(e){var m=exoSheetVal(X,e);return m?{e:e,m:m}:null;}).filter(Boolean);
     if(rows.some(function(r){return r.m.rm;}))rows=rows.filter(function(r){return r.m.rm;});
     rows=rows.slice(-12);
-    var mx=0,rec=null;rows.forEach(function(r){if(r.m.top>mx){mx=r.m.top;rec=r.m.lbl;}});
     var opts=D.list.map(function(x){return '<option value="'+esc(x.key)+'"'+(x.key===X.key?" selected":"")+'>'+esc(x.name)+'</option>';}).join("");
     var chips=vars.length>1?'<div class="fuel-seg" style="margin:10px 0 2px">'+vars.map(function(v){return '<button type="button" class="seg es-var'+(v===V?" on":"")+'" data-v="'+esc(v)+'">'+esc(v||"Sans variante")+'</button>';}).join("")+'</div>':(V?'<div class="hist-cap">Variante : '+esc(V)+'</div>':"");
-    var bars=rows.map(function(r){var pct=mx>0?Math.max(6,Math.round(r.m.top/mx*100)):6;return '<div class="hist-row"><span class="hist-wk" style="width:auto;min-width:46px">'+esc(PROGRAM_BLOCKS[r.e.b].short)+' S'+r.e.w+'</span><span class="hist-bar-wrap"><span class="hist-bar" style="width:'+pct+'%"></span></span><span class="hist-val">'+esc(r.m.lbl)+'</span></div>';}).join("");
-    var cap=X.sec?"Barres = meilleur temps tenu par séance.":(rows.length&&rows[0].m.rm?"Barres = 1RM estimé par séance (repère de progression).":"Barres = meilleur nombre de répétitions par séance.");
+    var cap=X.sec?"Courbe = meilleur temps tenu par séance.":(rows.length&&rows[0].m.rm?"Courbe = charge max de la séance.":"Courbe = meilleur nombre de répétitions par séance.");
     if(vars.length>1)cap+=" Chaque variante a son propre historique : haltères et machine ne se comparent pas.";
+    var mxTop=0,mxE1=0;rows.forEach(function(r){if(r.m.top>mxTop)mxTop=r.m.top;if(r.m.e1&&r.m.e1>mxE1)mxE1=r.m.e1;});
     var le=E[E.length-1],lt=le.sets.filter(setHas).map(function(x){return X.sec?((x.r!==""&&x.r!=null?x.r:"–")+" "+X.lbl):((x.kg!==""&&x.kg!=null?x.kg:"–")+"×"+(x.r!==""&&x.r!=null?x.r:"–"));}).join(" · ");
+    var rec=rows.length?(X.sec?mxTop+" "+X.lbl:(rows[0].m.rm?fmtKg(mxTop)+" kg"+(mxE1?" · 1RM est. "+mxE1+" kg":""):mxTop+" reps")):"";
     var foot='<div class="hist-last">'+(rec?'🏆 Record : '+esc(rec)+' · ':'')+'Dernière fois ('+esc(PROGRAM_BLOCKS[le.b].short)+' S'+le.w+') : '+esc(lt)+'</div>';
-    return '<div class="card pad"><div class="sec-title">💪 Fiche exercice</div><select class="exo-var" id="exoSheetPick">'+opts+'</select>'+chips+'<div class="exo-hist" style="margin-top:10px">'+bars+(bars?'<div class="hist-cap">'+cap+'</div>':'')+foot+'</div></div>';
+    var hint="";
+    if(!X.sec){var def=X.def,eb=baseFor(def.id,V,def.base);
+      hint='<details class="base-hint"><summary>⚖️ Poids en '+BASE_UNIT[eb]+' — comment le noter&nbsp;?</summary><div>'+baseHint(eb)+'<div class="hint-sets">🔢 Renseigne <b>'+def.sets+'</b> série'+(def.sets>1?'s':'')+' pour cet exercice (utilise « + série » si tu en fais plus).</div></div></details>';}
+    return '<div class="card pad"><div class="sec-title">💪 Fiche exercice</div><select class="exo-var" id="exoSheetPick">'+opts+'</select>'+chips+'<div class="exo-hist" style="margin-top:10px">'+(rows.length?exoSheetChart(rows)+'<div class="hist-cap">'+cap+'</div>':'')+foot+'</div>'+hint+'</div>';
   }
   function renderExoSheet(){
     var h=document.getElementById("exoSheet");if(!h)return;h.innerHTML=exoSheetHTML();
