@@ -239,5 +239,34 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    for(const fn of cases){const s=JSON.parse(seed());fn(s);
      for(const w of [1,2,3,4]){const e=await boot(JSON.stringify(s));tab(e.d,"v-sport");const cell=e.d.querySelector('.cell[data-b="b7"][data-w="'+w+'"][data-c="A"]');if(cell)cell.click();await wait(50);tab(e.d,"v-prog2");await wait(50);if(e.errs.length){n++;console.log("   erreur :",e.errs[0]);}}}
    ok(n===0,"séances abîmées (sets nul, variante invalide, extras nuls) : aucune erreur JS");}
+  // ---- 18. Séance : une ligne d'emojis (⏱ 🔀 🎬) ; poids « comment le noter » et courbe de charge dans la fiche Progrès ----
+  {const vm=require("vm"),G={};G.window=G;vm.createContext(G);vm.runInContext(rd("data.js"),G);
+   const exs=G.PROGRAM_BLOCKS.b7.prog.A.exos,id="a1",secEx=exs.find(x=>x.unit==="sec"||x.unit==="min");
+   const mk=o=>Object.assign({done:true,date:"2026-11-01",sets:{}},o);
+   const s=JSON.parse(seed());
+   s.sessions.b7_1_A=mk({sets:{[id+"::Haltères"]:[{kg:"24",r:"10"}]},variant:{[id]:"Haltères"}});
+   s.sessions.b7_2_A=mk({sets:{[id+"::Haltères"]:[{kg:"26",r:"10"}]},variant:{[id]:"Haltères"}});
+   s.sessions.b7_3_A=mk({sets:{[id+"::Haltères"]:[{kg:"28",r:"8"}]},variant:{[id]:"Haltères"}});
+   const e=await boot(JSON.stringify(s));tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="4"][data-c="A"]').click();await wait(80);
+   const SD=()=>e.d.getElementById("sessionDetail"),foot=x=>[...SD().querySelector('.exo[data-ex="'+x+'"] .exo-foot').querySelectorAll("button")].map(b=>b.textContent.trim()).join(" ");
+   ok(foot(id)==="⏱ 🔀 🎬"&&!/＋ infos|Repos conseillé|comment le noter/.test(SD().textContent),"séance : ligne d'emojis ⏱ 🔀 🎬, plus de « ＋ infos » ni de textes");
+   if(secEx)ok(foot(secEx.id)==="⏱ 🎬","exercice en durée : ⏱ 🎬 seulement (pas de variante)");
+   const tool=(x,tt)=>SD().querySelector('.exo-tool[data-ex="'+x+'"][data-tool="'+tt+'"]'),panel=x=>SD().querySelector("#panel-"+x),sub=(x,n)=>panel(x).querySelector('[data-panel="'+n+'"]');
+   ok(panel(id).style.display==="none","panneau fermé par défaut");
+   tool(id,"var").click();await wait(30);
+   ok(panel(id).style.display===""&&sub(id,"var").style.display===""&&sub(id,"demo").style.display==="none"&&!!sub(id,"var").querySelector(".exo-var"),"🔀 ouvre le sélecteur de variante");
+   tool(id,"demo").click();await wait(30);
+   ok(sub(id,"var").style.display==="none"&&sub(id,"demo").style.display===""&&!!sub(id,"demo").querySelector(".demo-link"),"🎬 ouvre technique & démo (un seul panneau à la fois)");
+   tool(id,"demo").click();await wait(30);
+   ok(panel(id).style.display==="none","re-toucher l'emoji referme");
+   tool(id,"var").click();await wait(30);
+   const sel=sub(id,"var").querySelector(".exo-var");sel.value="Machine";sel.dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(60);
+   ok(panel(id).style.display===""&&sub(id,"var").style.display===""&&sub(id,"var").querySelector(".exo-var").value==="Machine","changer de variante laisse le panneau ouvert");
+   // fiche exercice : courbe + poids
+   tab(e.d,"v-prog2");await wait(80);
+   const F=()=>e.d.getElementById("exoSheet");
+   ok(F().querySelectorAll("svg circle").length===3&&/24 kg → 28 kg/.test(F().textContent)&&/\+4 kg sur 3 séances/.test(F().textContent),"fiche : courbe de la charge max (24 → 28 kg, 3 séances)");
+   ok(/Poids en kg\/bras — comment le noter/.test(F().textContent),"fiche : « Poids en kg/bras — comment le noter » (variante Haltères)");
+   ok(e.errs.length===0,"séance / fiche : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
