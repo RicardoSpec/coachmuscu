@@ -12,7 +12,7 @@ function seed(o){o=o||{};const s={sessions:{},days:{},tri:{"1_nat":{done:true,da
   sportsUser:{nage:{on:true,cur:0,target:2,minutes:45,days:[],lvlBase:0,deadline:"",tickets:3},velo:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},course:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:""},muscu:{on:true,cur:0,target:0,minutes:45,days:[],lvlBase:0,deadline:o.dl||""}}}};
   const PB={b1:[5,"ABCD"],b2:[4,"ABCD"],b3:[8,"ABCD"],b4:[12,"ABCDE"],b5:[10,"ABCDEF"],b6:[2,"AC"]};
   for(const b in PB)for(let w=1;w<=PB[b][0];w++)for(const c of PB[b][1])s.sessions[(b==="b1"?w+"_"+c:b+"_"+w+"_"+c)]={done:true,date:"2026-11-01",sets:{}};
-  s.config.variantMig=1;   /* déjà migré : les tests d'historique sans variante visent le chemin legacy ; la migration a sa propre section (17) */
+  s.config.variantMig=1;s.config.variantMig2=1;   /* déjà migré : les tests d'historique sans variante visent le chemin legacy ; la migration a sa propre section (17) */
   return JSON.stringify(s);}
 function boot(ls,pre){return new Promise(res=>{const errs=[];
   const dom=new JSDOM(HTML,{runScripts:"dangerously",pretendToBeVisual:true,url:"https://x.test/",beforeParse(w){w.localStorage.setItem("suiviMuscu_v1",ls);if(pre)pre(w);
@@ -34,7 +34,7 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
   const inp=mt.querySelector(".dl-push");inp.value="2027-02-01";inp.dispatchEvent(new a.w.Event("change",{bubbles:true}));
   ok(a.st().config.objectivesCustom[0].deadline==="2027-02-01"&&!a.d.getElementById("muscuTitle").querySelector(".dl-exp"),"Repousser : date mise à jour, pastille retirée");
   // ---- 2. tickets (+1, +10, décompte) ----
-  const tx=()=>a.d.querySelector('#sportExtras .tix-row[data-sp="nage"]');
+  const tx=()=>a.d.querySelector('.tix-row[data-sp="nage"]');
   tx().querySelector('.tix-b[data-d="10"]').click();ok(a.st().config.sportsUser.nage.tickets===13,"tickets : +10");
   tx().querySelector('.tix-b[data-d="-1"]').click();ok(a.st().config.sportsUser.nage.tickets===12,"tickets : −1");
   // ---- 3. sorties libres ----
@@ -65,11 +65,11 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
   let z=await boot(seed());tab(z.d,"v-day");await wait(100);ok(z.errs.length===0&&z.w.SUPPS.length===0,"Journal avec 0 complément : aucune erreur, SUPPS vide");
   // ---- 7. échec de stockage -> alerte ----
   let c=await boot(seed());tab(c.d,"v-sport");c.w.Storage.prototype.setItem=function(){throw new Error("Quota");};
-  c.d.querySelector('#sportExtras .tix-row .tix-b[data-d="1"]').click();await wait(320);
+  c.d.querySelector('.tix-row[data-sp="nage"] .tix-b[data-d="1"]').click();await wait(320);
   const t=c.d.getElementById("fqToast");ok(t&&t.classList.contains("show")&&/Sauvegarde impossible/.test(t.textContent),"échec de stockage : alerte affichée");
   // ---- 8. regroupement des sauvegardes ----
   let e=await boot(seed());tab(e.d,"v-sport");const before=JSON.parse(e.w.localStorage.getItem("suiviMuscu_v1")).config.sportsUser.nage.tickets;
-  e.d.querySelector('#sportExtras .tix-row[data-sp="nage"] .tix-b[data-d="1"]').click();
+  e.d.querySelector('.tix-row[data-sp="nage"] .tix-b[data-d="1"]').click();
   const imm=JSON.parse(e.w.localStorage.getItem("suiviMuscu_v1")).config.sportsUser.nage.tickets;await wait(320);
   const aft=JSON.parse(e.w.localStorage.getItem("suiviMuscu_v1")).config.sportsUser.nage.tickets;
   ok(imm===before&&aft===before+1,"sauvegarde regroupée (écrite après ~200 ms)");
@@ -222,7 +222,7 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    const T=()=>e.d.getElementById("exoSheet").textContent;
    tab(e.d,"v-prog2");await wait(80);
    const pick=e.d.getElementById("exoSheetPick");
-   ok(!!pick&&[...pick.options].some(o=>o.textContent==="Développé couché barre"),"Progrès : fiche exercice listant les exercices saisis");
+   ok(!!pick&&[...pick.options].some(o=>o.textContent==="Développé couché"),"Progrès : fiche exercice listant les exercices saisis");
    ok(/Machine/.test(T())&&/63 kg/.test(T())&&/50×8/.test(T()),"fiche : variante la plus récente (Machine) sélectionnée, 1RM et dernière fois");
    [...e.d.querySelectorAll("#exoSheet .es-var")].find(b=>b.getAttribute("data-v")==="Haltères").click();await wait(40);
    ok(/32 kg/.test(T())&&/24×10/.test(T())&&!/63 kg/.test(T()),"fiche : chaque variante a son propre historique");
@@ -249,7 +249,7 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    s.sessions.b7_2_A=mk({sets:{[id+"::Haltères"]:[{kg:"26",r:"10"}]},variant:{[id]:"Haltères"}});
    s.sessions.b7_3_A=mk({sets:{[id+"::Haltères"]:[{kg:"28",r:"8"}]},variant:{[id]:"Haltères"}});
    const e=await boot(JSON.stringify(s));tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="4"][data-c="A"]').click();await wait(80);
-   const SD=()=>e.d.getElementById("sessionDetail"),foot=x=>[...SD().querySelector('.exo[data-ex="'+x+'"] .exo-foot').querySelectorAll("button")].map(b=>b.textContent.trim()).join(" ");
+   const SD=()=>e.d.getElementById("sessionDetail"),foot=x=>[...SD().querySelector('.exo[data-ex="'+x+'"] .exo-foot').querySelectorAll("button:not(.add-set-std):not(.del-set-std)")].map(b=>b.textContent.trim()).join(" ");
    ok(foot(id)==="⏱ 🔀 🎬"&&!/＋ infos|Repos conseillé|comment le noter/.test(SD().textContent),"séance : ligne d'emojis ⏱ 🔀 🎬, plus de « ＋ infos » ni de textes");
    if(secEx)ok(foot(secEx.id)==="⏱ 🎬","exercice en durée : ⏱ 🎬 seulement (pas de variante)");
    const tool=(x,tt)=>SD().querySelector('.exo-tool[data-ex="'+x+'"][data-tool="'+tt+'"]'),panel=x=>SD().querySelector("#panel-"+x),sub=(x,n)=>panel(x).querySelector('[data-panel="'+n+'"]');
@@ -276,31 +276,31 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    s0.sessions.b7_2_A=mk({sets:{"a2::Barre":[{kg:"42",r:"8"}]},variant:{a2:"Barre"}});                       // déjà rattaché : intact
    s0.sessions.b7_3_A=mk({sets:{"a1::Machine":[{kg:"90",r:"6"}]},variant:{a1:"Machine"}});                   // 2e variante pour la fiche
    s0.sessions.b7_4_A=mk({sets:{a6:[{kg:"7",r:"10"}],"a6::Poids du corps":[{kg:"6",r:"10"}],a8:[{kg:"",r:"30"}],a7:[{kg:"",r:""}]}});   // a6 : conflit ; a8 hors liste ; a7 vide
-   delete s0.config.variantMig;
+   delete s0.config.variantMig;delete s0.config.variantMig2;
    s0.days["2026-11-10"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
    s0.days["2026-11-11"]={mealItems:{dj:[{name:"riz",qty:"1",unit:"g",nut:{base:"1",baseUnit:"g",kcal:"100",prot:"40"}}]}};
    const e=await boot(JSON.stringify(s0));let st=e.st();const S=k=>st.sessions[k];
    ok(S("b7_1_C").sets["c7::Haltères"]&&S("b7_1_C").sets["c7::Haltères"][0].kg==="8"&&!hasKey(S("b7_1_C").sets,"c7")&&S("b7_1_C").variant.c7==="Haltères","migration : Oiseau (par bras) → Haltères (kg conservés, clé déplacée)");
    ok(S("b7_1_A").sets["a6::Poids du corps"]&&S("b7_1_A").variant.a6==="Poids du corps","migration : Relevés de jambes lestés (+kg) → Poids du corps");
    ok(S("b7_1_A").sets["a7::Poulie"]&&S("b7_1_A").variant.a7==="Poulie","migration : Extension triceps poulie (total) → Poulie");
-   ok(S("b7_1_A").sets.a1[0].kg==="60"&&!hasKey(S("b7_1_A").variant,"a1")&&S("b7_1_C").sets.c4[0].kg==="30"&&!hasKey(S("b7_1_C").variant,"c4"),"migration : unité ≠ variante (couché barre, curl barre → Haltères) : pas de conversion, historique intact sans variante");
+   ok(S("b7_1_A").sets["a1::Haltères"]&&S("b7_1_A").sets["a1::Haltères"][0].kg==="60"&&S("b7_1_A").variant.a1==="Haltères"&&S("b7_1_C").sets["c4::Haltères"][0].kg==="30","migration (2e passe) : couché barre / curl barre → Haltères selon tes réponses, kg inchangés (pas de conversion)");
    ok(S("b7_2_A").sets["a2::Barre"][0].kg==="42"&&S("b7_2_A").variant.a2==="Barre","migration : séance déjà rattachée à une variante : intacte");
    ok(S("b7_4_A").sets.a6[0].kg==="7"&&S("b7_4_A").sets["a6::Poids du corps"][0].kg==="6"&&!S("b7_4_A").variant,"migration : conflit (cible déjà saisie) : rien n'est fusionné ni écrasé");
    ok(S("b7_4_A").sets.a8[0].r==="30"&&Array.isArray(S("b7_4_A").sets.a7)&&!hasKey(S("b7_4_A").sets,"a7::Poulie"),"migration : exo hors liste / séries vides : intacts");
-   ok(st.config.variantMig===1&&st.config.variantMigLog.length===3,"migration : drapeau posé + journal des déplacements (3)");
+   ok(st.config.variantMig===1&&st.config.variantMig2===1&&st.config.variantMigLog.length===5,"migration : drapeaux posés + journal des déplacements (5)");
    const e2=await boot(JSON.stringify(st));const st2=e2.st();
-   ok(JSON.stringify(st2.sessions)===JSON.stringify(st.sessions)&&st2.config.variantMigLog.length===3,"migration : idempotente au démarrage suivant");
+   ok(JSON.stringify(st2.sessions)===JSON.stringify(st.sessions)&&st2.config.variantMigLog.length===5,"migration : idempotente au démarrage suivant");
    ok(e.errs.length===0,"migration : aucune erreur JS");
    // fiche exercice : 🔀 + réductible
    tab(e.d,"v-prog2");await wait(80);
    const F=()=>e.d.getElementById("exoSheet"),H=()=>F().querySelector("#exoSheetHead");
-   {const pk=F().querySelector("#exoSheetPick");pk.value="développé couché barre";pk.dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(40);}   // 2 variantes : Haltères (migrée) + Machine
+   {const pk=F().querySelector("#exoSheetPick");pk.value="développé couché";pk.dispatchEvent(new e.w.Event("change",{bubbles:true}));await wait(40);}   // 2 variantes : Haltères (migrée) + Machine
    ok(!!F().querySelector(".es-cyc")&&F().querySelector(".es-cyc").textContent==="🔀"&&H().getAttribute("aria-expanded")==="true"&&!!F().querySelector("#exoSheetPick"),"fiche : 🔀 présent, dépliée par défaut");
    const cur=()=>F().querySelector(".es-var.on").getAttribute("data-v");const v0=cur();
    F().querySelector(".es-cyc").click();await wait(40);const v1=cur();
    ok(v1!==v0&&H().getAttribute("aria-expanded")==="true","fiche : 🔀 passe à la variante suivante (reste dépliée)");
    H().click();await wait(40);
-   ok(H().getAttribute("aria-expanded")==="false"&&!F().querySelector("#exoSheetPick")&&!F().querySelector(".exo-hist")&&/développé couché barre/i.test(F().querySelector(".es-ctx").textContent)&&(v1===""||F().querySelector(".es-ctx").textContent.indexOf(v1)>=0),"fiche : réduite (titre + exo — variante seulement)");
+   ok(H().getAttribute("aria-expanded")==="false"&&!F().querySelector("#exoSheetPick")&&!F().querySelector(".exo-hist")&&/développé couché/i.test(F().querySelector(".es-ctx").textContent)&&(v1===""||F().querySelector(".es-ctx").textContent.indexOf(v1)>=0),"fiche : réduite (titre + exo — variante seulement)");
    const ctx0=F().querySelector(".es-ctx").textContent;
    F().querySelector(".es-cyc").click();await wait(40);
    ok(H().getAttribute("aria-expanded")==="false"&&F().querySelector(".es-ctx").textContent!==ctx0,"fiche réduite : 🔀 change de variante sans déplier");
@@ -364,7 +364,7 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    ok(!!e.d.querySelector("#progBlocks .blk-focus")&&T().getAttribute("aria-expanded")==="true","palier muscu : paragraphe affiché au tap sur « Palier X/X »");
    T().click();await wait(30);
    ok(!e.d.querySelector("#progBlocks .blk-focus"),"palier muscu : paragraphe re-masqué au 2e tap");
-   ok(e.d.getElementById("muscuApercu").innerHTML.trim()===""&&![...e.d.querySelectorAll("summary,.tp-head")].some(x=>/Vers ton objectif/.test(x.textContent)),"carte « Vers ton objectif … » supprimée (muscu et autres sports)");
+   ok(!e.d.getElementById("muscuApercu")&&![...e.d.querySelectorAll("summary,.tp-head")].some(x=>/Vers ton objectif/.test(x.textContent)),"carte « Vers ton objectif … » supprimée (muscu et autres sports)");
    // objectif déplié : « Palier X/N » en tête
    e.d.getElementById("settingsBtn").click();e.d.querySelectorAll(".set-grptog").forEach(b=>b.click());e.d.querySelectorAll(".set-sectog").forEach(b=>b.click());await wait(60);
    let found=false;const nb=e.d.querySelectorAll(".objc-exp").length;
@@ -397,5 +397,61 @@ const openSet=(d,grp,sec)=>{d.getElementById("settingsBtn").click();const g=d.qu
    const css=rd("style.css");
    ok(/\.blk-actions \.btn\{display:inline-block;width:auto;max-width:100%/.test(css)&&/\.blk-actions\{display:flex;justify-content:center;flex-wrap:wrap/.test(css),"palier : boutons emoji ne débordent plus (width:auto, retour à la ligne)");
    ok(e.errs.length===0,"v247 : aucune erreur JS");}
+  // ---- 20. v248 : date remontée, plus de « Séance ouverte » / légende, « + série » dans la ligne des logos, tickets 🎟️ par sport ----
+  {const e=await boot(seed()),ev=(el,t)=>el.dispatchEvent(new e.w.Event(t,{bubbles:true}));
+   tab(e.d,"v-sport");await wait(80);
+   ok(!e.d.querySelector("#progBlocks .legend")&&!/Prochaine|À faire/.test(e.d.getElementById("progBlocks").textContent),"palier : légende « Prochaine / Faite / À faire » supprimée");
+   const cell=()=>e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]');cell().click();await wait(80);
+   const sd=e.d.getElementById("sessionDetail");
+   ok(!/Séance ouverte/i.test(sd.textContent)&&![...sd.querySelectorAll(".eyebrow")].length,"séance : « Séance ouverte » supprimé");
+   if(!e.st().sessions.b7_1_A||!e.st().sessions.b7_1_A.done){e.d.getElementById("toggleDone").click();await wait(60);}
+   const dd=e.d.querySelector(".blk-actions #doneDate");
+   ok(!!dd&&!e.d.querySelector("#sessionDetail #doneDate")&&!/Faite le/.test(e.d.getElementById("sessionDetail").textContent),"séance faite : date dans la ligne 🔒 ✎ 📍, plus de « Faite le »");
+   ok(dd&&dd.previousElementSibling&&dd.previousElementSibling.classList.contains("blk-place"),"date : à droite de 📍, même ligne");
+   dd.value="2026-11-05";ev(dd,"change");await wait(40);
+   ok(e.st().sessions.b7_1_A.date==="2026-11-05"&&e.d.querySelector("#doneDate").value==="2026-11-05","date : modifiable depuis la ligne (enregistrée)");
+   // « + série » à droite de 🎬
+   const band=e.d.querySelector("#sessionDetail .exo-band");band.click();await wait(30);
+   const exId=band.getAttribute("data-exo"),body=()=>e.d.getElementById("body-"+exId),foot=()=>body().querySelector(".exo-foot");
+   const n0=body().querySelectorAll(".set").length;
+   ok(!body().querySelector(".setadd")&&!!foot().querySelector(".add-set-std")&&(foot().querySelector('.exo-tool[data-tool="demo"]').compareDocumentPosition(foot().querySelector(".add-set-std"))&4)===4,"exo : « + série » dans la ligne des logos, à droite de 🎬");
+   foot().querySelector(".add-set-std").click();await wait(60);
+   const b2=e.d.querySelector('#sessionDetail .exo-band[data-exo="'+exId+'"]');if(!b2.classList.contains("open")){b2.click();await wait(30);}
+   ok(body().querySelectorAll(".set").length===n0+1&&!!foot().querySelector(".del-set-std"),"exo : « + série » ajoute une série, « − série » apparaît à côté");
+   // tickets : 🎟️ seul, rangé dans le sport dédié
+   const tr=e.d.querySelector('#triTix .tix-row[data-sp="nage"]');
+   ok(!!tr&&!e.d.querySelector("#sportExtras .tix-row")&&![...e.d.querySelectorAll("h2")].some(h=>/Tickets d.entrée/.test(h.textContent)),"tickets : plus de section « Tickets d'entrée » séparée ; natation dans le pane Triathlon");
+   ok(tr&&tr.textContent.indexOf("🎟️")===0&&!/Piscine|Tickets|Laisse vide/i.test(tr.textContent),"tickets : seul le logo 🎟️ est affiché (pas de texte)");
+   const v0=e.st().config.sportsUser.nage.tickets;tr.querySelector('.tix-b[data-d="1"]').click();await wait(30);
+   ok(e.st().config.sportsUser.nage.tickets===v0+1&&e.d.querySelector('#triTix .tix-n').value===String(v0+1),"tickets : +1 enregistré et affiché");
+   ok(e.errs.length===0,"v248 : aucune erreur JS");}
+  {const s0=JSON.parse(seed());s0.config.sportsUser.escalade={on:true,cur:0,target:1,minutes:60,days:[],lvlBase:0,deadline:""};s0.config.objectivesCustom.push({id:"obj-esc-1",name:"Escalade",icon:"🧗",sports:["escalade"],deadline:"",kind:"sport"});
+   const e=await boot(JSON.stringify(s0));tab(e.d,"v-sport");await wait(80);
+   const er=e.d.querySelector('.so-card[data-sport="escalade"] .tix-row[data-sp="escalade"]');
+   ok(!!er&&er.textContent.indexOf("🎟️")===0,"tickets : escalade rangé dans la carte Escalade (🎟️ seul)");
+   er.querySelector('.tix-b[data-d="10"]').click();await wait(30);
+   ok(e.st().config.sportsUser.escalade.tickets===10,"tickets escalade : +10 enregistré");
+   ok(e.errs.length===0,"v248 (escalade) : aucune erreur JS");}
+  // ---- 21. v248 : titres sans variante ; 2e passe de migration depuis un état déjà migré une fois ----
+  {const e=await boot(seed());tab(e.d,"v-sport");
+   const titles=[];for(const [w,c] of [[1,"A"],[1,"C"],[2,"A"]]){e.d.querySelector('.cell[data-b="b7"][data-w="'+w+'"][data-c="'+c+'"]').click();await wait(60);e.d.querySelectorAll("#sessionDetail .exo-band .nm").forEach(n=>titles.push(n.textContent.trim()));}
+   const bad=titles.filter(x=>/ — |\b(barre|haltères?|poulie|machine)\b/i.test(x));
+   ok(titles.length>5&&bad.length===0,"titres d'exos : ni variante ni équipement"+(bad.length?" — restent : "+bad.join(" | "):""));
+   const dn=n=>{const d=require("vm");const G={};d.createContext(G);d.runInContext(rd("app.js").match(/function dispName[^\n]*/)[0]+";this.r=dispName("+JSON.stringify(n)+")",G);return G.r;};
+   const cases={"Développé couché (haltères/barre)":"Développé couché","Développé couché barre":"Développé couché","Rowing barre / machine":"Rowing","Écarté poulie / pec deck":"Écarté","Extension triceps à la poulie (corde)":"Extension triceps","Face pull (poulie)":"Face pull","Crunch à la poulie":"Crunch","Dips / développé machine":"Dips / développé","Rowing haltère 1 bras":"Rowing 1 bras","Développé militaire (debout/assis)":"Développé militaire (debout/assis)","Presse à cuisses":"Presse à cuisses","Barre fixe":"Barre fixe"};
+   const wrong=Object.keys(cases).filter(k=>dn(k)!==cases[k]).map(k=>k+" → "+dn(k));
+   ok(wrong.length===0,"titres : règles d'affichage sur les noms réels"+(wrong.length?" — "+wrong.join(" | "):""));
+   ok(e.errs.length===0,"v248 (titres) : aucune erreur JS");}
+  {const s1=JSON.parse(seed());s1.sessions.b7_1_A={done:true,date:"2026-11-01",sets:{a1:[{kg:"60",r:"8"}]}};s1.config.variantMig=1;delete s1.config.variantMig2;
+   const e=await boot(JSON.stringify(s1));const st=e.st();
+   ok(st.sessions.b7_1_A.sets["a1::Haltères"]&&st.sessions.b7_1_A.variant.a1==="Haltères"&&st.config.variantMig2===1,"migration : appareil déjà passé en 1re passe → la 2e passe rattache le reste");
+   ok(e.errs.length===0,"v248 (2e passe) : aucune erreur JS");}
+  // ---- 22. v249 : écarts réduits autour de la séance ----
+  {const e=await boot(seed());tab(e.d,"v-sport");e.d.querySelector('.cell[data-b="b7"][data-w="1"][data-c="A"]').click();await wait(80);
+   const css=rd("style.css"),sc=e.d.querySelector("#sessionDetail .sess-card");
+   ok(!!sc&&/\.sess-card\{padding:4px 16px 16px\}/.test(css)&&/\.blk-actions\{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:0\}/.test(css),"séance : marges réduites entre la ligne 🔒 ✎ 📍 et le bouton « Marquer / Annuler »");
+   ok(sc.querySelector("#toggleDone").parentNode.getAttribute("style")==="margin-top:0","séance : plus de marge haute devant le bouton");
+   ok(!/Séance ouverte|Prochaine|À faire/.test(e.d.getElementById("progBlocks").textContent+e.d.getElementById("sessionDetail").textContent),"séance : ni « Séance ouverte » ni légende");
+   ok(e.errs.length===0,"v249 : aucune erreur JS");}
   console.log(fails?("\n"+fails+" échec(s)"):"\nSMOKE OK");process.exit(fails?1:0);
 })();
