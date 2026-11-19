@@ -111,10 +111,6 @@ h2.page{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:2px 4px 14px
 .tip p{margin:0;font-size:12.5px;opacity:.9;line-height:1.5}
 
 /* ---------- Légende + grilles (Muscu / Triathlon) ---------- */
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--muted)}
-.legend span{display:flex;align-items:center;gap:5px}
-.legend i{width:11px;height:11px;border-radius:50%;display:inline-block}
-.dot-next{background:var(--accent)}
 .dot-done{background:#34a96a}
 .dot-todo{background:#c4cdd5}
 
@@ -135,7 +131,6 @@ table.grid td.wk .wkd{display:block;font-size:10px;color:#9aa7b3;font-weight:600
 .tcell .chk{position:absolute;top:2px;right:4px;font-size:10px}
 
 /* ---------- Détail de séance ---------- */
-.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:2px 4px 8px}
 .sd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .sd-head .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
 .sd-head h3{font-size:19px;font-weight:800;margin:3px 0 0;letter-spacing:-.02em}
@@ -188,7 +183,12 @@ table.grid td.wk .wkd{display:block;font-size:10px;color:#9aa7b3;font-weight:600
 .es-r{display:flex;align-items:center;gap:10px;margin-left:auto;flex:none}
 .es-head.open .exo-chev{transform:rotate(180deg)}
 .es-cyc{margin-top:0;font-size:18px;padding:5px 14px}
-.blk-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:10px}
+.blk-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:0}
+.sess-card{padding:4px 16px 16px}
+.blk-date{font:inherit;font-size:15px;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;color:var(--ink);min-width:0;max-width:100%}
+.tix-ic{flex:1;font-size:20px}
+.so-card .tix-row,#triTix .tix-row{padding:2px 0 8px}
+.exo-foot .add-set-std,.exo-foot .del-set-std{margin:0;padding:10px 12px}
 .blk-actions .btn{display:inline-block;width:auto;max-width:100%;flex:0 0 auto;min-width:56px;font-size:18px;padding:8px 16px;line-height:1}
 .lvl-tap{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
 .objc-pal{font-size:13px;font-weight:800;margin:0 0 8px}
@@ -931,7 +931,6 @@ nav.tabs .tab.on{color:var(--primary)}
 .pb-comp .pb-k{flex:1;min-width:0}
 
 /* ---- Ajout de série à la volée (exo standard) ---- */
-.setadd{display:flex;gap:8px;margin:4px 0 2px}
 .add-set-std,.del-set-std{border:1.5px dashed var(--line);background:#fff;border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--primary);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .del-set-std{color:var(--muted)}
 
@@ -1481,7 +1480,6 @@ nav.tabs .tab.on{color:var(--primary)}
 .lvl-arrow:disabled{opacity:.25;cursor:default}
 .lvl-mid{flex:1;text-align:center;min-width:0}
 .lvl-title{font-size:15px;font-weight:800;color:var(--ink)}
-.lvl-sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px}
 
 /* 2c — sports (bibliothèque) en cartes objectif dans Objectif */
 .so-card{margin-top:16px}
@@ -1719,7 +1717,6 @@ nav.tabs .tab.on{color:var(--primary)}
 /* Tickets d'entrée (piscine / escalade) */
 .tix-row{display:flex;align-items:center;gap:8px;padding:6px 0}
 .tix-row+.tix-row{border-top:1px solid var(--line)}
-.tix-nm{flex:1;font-weight:600}
 .tix-b{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg2,#fff);font-size:20px;line-height:1;cursor:pointer}
 .tix-n{width:64px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg2,#fff)}
 .tix-row.low .tix-n{border-color:#d9822b;color:#b45f06;font-weight:700}
@@ -1962,6 +1959,7 @@ nav.tabs .tab.on{color:var(--primary-ink)}
 .exo-name-in{background:var(--card)}
 .exo-del{background:var(--card)}
 .add-set{color:var(--primary-ink)}
+.blk-date{background:var(--card)}
 .sess-blk{color:var(--primary-ink)}
 .sess-badge{color:#e9aa67;background:#452f18;border:1px solid #544433}
 .sess-title{background:var(--card)}
